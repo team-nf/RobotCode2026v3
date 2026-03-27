@@ -1,0 +1,183 @@
+{
+  "hubs": [
+    {
+      "x": -8,
+      "y": -8,
+      "width": 1708,
+      "height": 1020,
+      "state": {
+        "sidebar": {
+          "width": 216,
+          "expanded": [
+            "/SmartDashboard/Intake Control Data",
+            "/Sim",
+            "/SmartDashboard/Shooter Control Data",
+            "/Sim/Swerve",
+            "/Sim/Swerve/CornerPoses"
+          ]
+        },
+        "tabs": {
+          "selected": 3,
+          "tabs": [
+            {
+              "type": 0,
+              "title": "",
+              "controller": null,
+              "controllerUUID": "aw9trr01b4uyrymb1tsye56u15p63zu5",
+              "renderer": "",
+              "controlsHeight": 0
+            },
+            {
+              "type": 6,
+              "title": "Statistics",
+              "controller": {
+                "sources": [
+                  {
+                    "type": "independent",
+                    "logKey": "NT:/SmartDashboard/Flywheel RPM",
+                    "logType": "Number",
+                    "visible": true,
+                    "options": {
+                      "color": "#2b66a2"
+                    }
+                  }
+                ],
+                "timeRange": "live-10",
+                "rangeMin": 1500,
+                "rangeMax": 2000,
+                "stepSize": 3.5
+              },
+              "controllerUUID": "ebzeg3hl3tydmqob5jo4eimk1t5wlbja",
+              "renderer": null,
+              "controlsHeight": 200
+            },
+            {
+              "type": 1,
+              "title": "Line Graph",
+              "controller": {
+                "leftSources": [],
+                "rightSources": [],
+                "discreteSources": [],
+                "leftLockedRange": null,
+                "rightLockedRange": null,
+                "leftUnitConversion": {
+                  "autoTarget": null,
+                  "preset": null
+                },
+                "rightUnitConversion": {
+                  "autoTarget": null,
+                  "preset": null
+                },
+                "leftFilter": 0,
+                "rightFilter": 0
+              },
+              "controllerUUID": "f0zo4hroqsqgsdw85myq5jyhaie22bvt",
+              "renderer": null,
+              "controlsHeight": 200
+            },
+            {
+              "type": 3,
+              "title": "3D Field",
+              "controller": {
+                "sources": [
+                  {
+                    "type": "gamePiece",
+                    "logKey": "NT:Sim/Fuels",
+                    "logType": "Translation3d[]",
+                    "visible": true,
+                    "options": {
+                      "variant": "Fuel"
+                    }
+                  },
+                  {
+                    "type": "gamePiece",
+                    "logKey": "NT:Sim/Hopper/Fuel Poses",
+                    "logType": "Pose3d[]",
+                    "visible": true,
+                    "options": {
+                      "variant": "Fuel"
+                    }
+                  },
+                  {
+                    "type": "robot",
+                    "logKey": "NT:Sim/SwervePose",
+                    "logType": "Pose2d",
+                    "visible": true,
+                    "options": {
+                      "model": "Orion"
+                    }
+                  },
+                  {
+                    "type": "component",
+                    "logKey": "NT:Sim/HoodPose",
+                    "logType": "Pose3d",
+                    "visible": true,
+                    "options": {}
+                  },
+                  {
+                    "type": "component",
+                    "logKey": "NT:Sim/IntakePose",
+                    "logType": "Pose3d",
+                    "visible": true,
+                    "options": {}
+                  },
+                  {
+                    "type": "component",
+                    "logKey": "NT:Sim/FunnelPose",
+                    "logType": "Pose3d",
+                    "visible": true,
+                    "options": {}
+                  }
+                ],
+                "game": "FRC:2026 Field"
+              },
+              "controllerUUID": "b5idzudyri7n6kef9zlqymwx0gr8sm7j",
+              "renderer": {
+                "cameraIndex": -1,
+                "orbitFov": 50,
+                "cameraPosition": [
+                  9.686760783580874,
+                  8.403603516453838,
+                  4.741580185105612
+                ],
+                "cameraTarget": [
+                  4.198798593723538,
+                  0.7615734586097901,
+                  0.28528064992137764
+                ]
+              },
+              "controlsHeight": 298
+            },
+            {
+              "type": 2,
+              "title": "2D Field",
+              "controller": {
+                "sources": [
+                  {
+                    "type": "robotLegacy",
+                    "logKey": "NT:/SmartDashboard/Field/Robot",
+                    "logType": "NumberArray",
+                    "visible": true,
+                    "options": {
+                      "bumpers": "",
+                      "format": "Pose2d",
+                      "units": "radians"
+                    }
+                  }
+                ],
+                "field": "FRC:2026 Field",
+                "orientation": 3,
+                "size": "large"
+              },
+              "controllerUUID": "fn3czhw1hy7z23ers6m63y38qvqspiah",
+              "renderer": null,
+              "controlsHeight": 200
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "satellites": [],
+  "version": "26.0.0"
+}
