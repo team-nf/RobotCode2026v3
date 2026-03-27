@@ -23,6 +23,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.HopperConstants;
 
@@ -76,7 +77,13 @@ public class HopperSubsystem extends SubsystemBase {
   }
 
   public void publishTelemetry() {
-    // Implement telemetry publishing here if needed
+    SmartDashboard.putNumber("Hopper/Motor1PositionRot", hopperMotor.getPosition().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1VelocityRps", hopperMotor.getVelocity().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1CurrentA", hopperMotor.getStatorCurrent().getValueAsDouble());
+
+    SmartDashboard.putNumber("Hopper/Motor2PositionRot", hopperMotor2.getPosition().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2VelocityRps", hopperMotor2.getVelocity().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2CurrentA", hopperMotor2.getStatorCurrent().getValueAsDouble());
   }
 
   // SIMULATION

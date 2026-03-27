@@ -11,13 +11,17 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.controls.PositionVoltage;
 
 import edu.wpi.first.units.measure.*;
-import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import static edu.wpi.first.units.Units.*;
 
-import javax.security.auth.login.FailedLoginException;
-
 public class IntakeConstants {
-    public static final int INTAKE_MOTOR_ID = 59;
+    // New hardware layout
+    public static final int INTAKE_LINEAR_MOTOR_ID = 60;
+    public static final int INTAKE_ROLLER_PRIMARY_MOTOR_ID = 61;
+    public static final int INTAKE_ROLLER_SECONDARY_MOTOR_ID = 62;
+
+    // Backward-compatible aliases for existing subsystem code (will be removed in next step)
+    public static final int INTAKE_MOTOR_ID = INTAKE_ROLLER_PRIMARY_MOTOR_ID;
+    public static final int INTAKE_ARM_MOTOR_ID = INTAKE_LINEAR_MOTOR_ID;
 
     public static final double INTAKE_KS = 0.5;
     public static final double INTAKE_KV = 0.0;
@@ -48,7 +52,27 @@ public class IntakeConstants {
                         .withSlot(0)
                         .withEnableFOC(false);
 
-    public static final double INTAKE_GEAR_REDUCTION = 20.0/12.0;
+    // Roller reduction
+    public static final double INTAKE_GEAR_REDUCTION = 20.0 / 12.0;
+
+    // Linear rack conversion (motor-side)
+    public static final Distance INTAKE_EXTENSION_PER_MOTOR_ROTATION = Millimeters.of(9.87);
+    public static final double INTAKE_LINEAR_METERS_PER_MOTOR_ROTATION = INTAKE_EXTENSION_PER_MOTOR_ROTATION.in(Meters);
+
+    // Linear extension targets
+    public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
+    public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(300);
+    public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(200);
+    public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
+    public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);
+
+    public static double extensionMetersToMotorRotations(double meters) {
+        return meters / INTAKE_LINEAR_METERS_PER_MOTOR_ROTATION;
+    }
+
+    public static double motorRotationsToExtensionMeters(double motorRotations) {
+        return motorRotations * INTAKE_LINEAR_METERS_PER_MOTOR_ROTATION;
+    }
 
     public static final AngularVelocity INTAKE_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
 
@@ -57,29 +81,23 @@ public class IntakeConstants {
     public static final AngularVelocity INTAKE_REVERSE_VELOCITY = RotationsPerSecond.of(-15.0); // in RPS
     public static final AngularVelocity INTAKE_REVERSE_FAILSAFE_VELOCITY = RotationsPerSecond.of(-5.0); // in RPS
     
-    // Optional arm motor constants (defaults provided). If you use a dedicated arm motor,
-    // set `INTAKE_ARM_MOTOR_ID` and override `INTAKE_ARM_MOTOR_CONFIG` and
-    // `INTAKE_ARM_POSITION_CONTROL` as needed.
-    // Default ID of -1 indicates "no dedicated arm motor configured"; callers may
-    // choose to fallback to using the intake motor instead.
+    // Compatibility fields: "ARM_*" names now represent linear position mapped as motor rotations.
+    public static final Angle INTAKE_ARM_DEPLOYED_ANGLE = Rotations.of(
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_DEPLOYED.in(Meters))
+    );
+    public static final Angle INTAKE_ARM_RETRACTED_ANGLE = Rotations.of(
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_RETRACTED.in(Meters))
+    );
+    public static final Angle INTAKE_ARM_START_ANGLE = INTAKE_ARM_RETRACTED_ANGLE;
 
-     /* 
-    public static final Angle INTAKE_ARM_DEPLOYED_ANGLE = Degrees.of(1);
-    public static final Angle INTAKE_ARM_RETRACTED_ANGLE = Degrees.of(110);
-    public static final Angle INTAKE_ARM_START_ANGLE = Degrees.of(120);
-    
-    public static final Angle INTAKE_FEED_ANGLE = Degrees.of(60);
-    public static final Angle INTAKE_ARM_BETWEEN_ANGLE = Degrees.of(17.5);
+    public static final Angle INTAKE_FEED_ANGLE = Rotations.of(
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_FEED.in(Meters))
+    );
+    public static final Angle INTAKE_ARM_BETWEEN_ANGLE = INTAKE_FEED_ANGLE;
 
-   */
-    public static final Angle INTAKE_ARM_DEPLOYED_ANGLE = Degrees.of(0);
-    public static final Angle INTAKE_ARM_RETRACTED_ANGLE = Degrees.of(0);
-    public static final Angle INTAKE_ARM_START_ANGLE = Degrees.of(0);
-    
-    public static final Angle INTAKE_FEED_ANGLE = Degrees.of(0);
-    public static final Angle INTAKE_ARM_BETWEEN_ANGLE = Degrees.of(0);
-    
-    public static final Angle INTAKE_ARM_ALLOWABLE_ERROR = Degrees.of(10);
+    public static final Angle INTAKE_ARM_ALLOWABLE_ERROR = Rotations.of(
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_ALLOWABLE_ERROR.in(Meters))
+    );
 
     public static final Angle INTAKE_ARM_DEPLOYED_WITH_OFFSET_ANGLE = INTAKE_ARM_DEPLOYED_ANGLE.plus(INTAKE_ARM_ALLOWABLE_ERROR.div(8));
 
@@ -90,8 +108,6 @@ public class IntakeConstants {
     public static final double INTAKE_ARM_KD = 0.3;
     public static final double INTAKE_ARM_KG = 0;
 
-    public static final int INTAKE_ARM_MOTOR_ID = 58;
-
     public static final TalonFXConfiguration INTAKE_ARM_MOTOR_CONFIG = INTAKE_MOTOR_CONFIG.clone()
                 .withSlot0(new Slot0Configs()
                 .withKS(INTAKE_ARM_KS)
@@ -101,7 +117,7 @@ public class IntakeConstants {
                 .withKD(INTAKE_ARM_KD)
                 .withKG(INTAKE_ARM_KG)
                 .withGravityType(GravityTypeValue.Arm_Cosine))
-                .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive))
+                .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.CounterClockwise_Positive))
                 .withVoltage(new VoltageConfigs()
                     .withPeakForwardVoltage(9)
                     .withPeakReverseVoltage(-9))
@@ -114,10 +130,11 @@ public class IntakeConstants {
                         .withSlot(0)
                         .withEnableFOC(false);
 
-    // Arm physical defaults for simulation
+    // Legacy compatibility for current subsystem (will be replaced by linear API next step)
+    // With linear conversion represented directly in motor rotations, keep reduction at 1.0.
     public static final Mass INTAKE_ARM_MASS = Kilograms.of(0.01);
     public static final Distance INTAKE_ARM_LENGTH = Meters.of(0.1);
-    public static final double INTAKE_ARM_GEAR_REDUCTION = 60.0/18.0*36/14*5;
+    public static final double INTAKE_ARM_GEAR_REDUCTION = 1.0;
     public static final double INTAKE_ARM_INERTIA = 1.0/3.0 * INTAKE_ARM_MASS.in(Kilogram) * Math.pow(INTAKE_ARM_LENGTH.in(Meters)/2, 2);
 
     // Physical defaults

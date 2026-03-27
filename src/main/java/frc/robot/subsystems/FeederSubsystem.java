@@ -21,6 +21,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.FeederConstants;
 
@@ -60,7 +61,9 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void publishTelemetry() {
-    // Implement telemetry publishing here if needed
+    SmartDashboard.putNumber("Feeder/MotorPositionRot", feederMotor.getPosition().getValueAsDouble());
+    SmartDashboard.putNumber("Feeder/MotorVelocityRps", feederMotor.getVelocity().getValueAsDouble());
+    SmartDashboard.putNumber("Feeder/MotorCurrentA", feederMotor.getStatorCurrent().getValueAsDouble());
   }
 
   // SIMULATION

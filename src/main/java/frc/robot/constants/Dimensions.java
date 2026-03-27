@@ -2,15 +2,9 @@ package frc.robot.constants;
 
 import static edu.wpi.first.units.Units.Meters;
 
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public final class Dimensions {
     // Robot dimensions
@@ -35,19 +29,10 @@ public final class Dimensions {
     public static final Distance RED_SHOOT_AREA_X_MAX = Meters.of(16);
     public static final Distance RED_SHOOT_AREA_Y_MIN = Meters.of(0.5);
     public static final Distance RED_SHOOT_AREA_Y_MAX = Meters.of(7.5);
-
-
-    public static final Pose3d LEFT_SHOOTER_POSE = new Pose3d(
-        Meters.of(-0.107), 
-        Meters.of(0.0825), 
-        Meters.of(0.416), 
-        new Rotation3d()    
-    );
-
-    public static final Pose3d RIGHT_SHOOTER_POSE = new Pose3d(
-        Meters.of(-0.107), 
-        Meters.of(-0.0825), 
-        Meters.of(0.416), 
+    public static final Pose3d SHOOTER_POSE = new Pose3d(
+        Meters.of(-0.1475), 
+        Meters.of(-0.1475), 
+        Meters.of(0.450), 
         new Rotation3d()    
     );
 

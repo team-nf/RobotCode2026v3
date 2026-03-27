@@ -2,16 +2,11 @@ package frc.robot.constants;
 
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Kilogram;
-import static edu.wpi.first.units.Units.KilogramMetersSquaredPerSecond;
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import java.net.http.HttpResponse.PushPromiseHandler;
-
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
-import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -22,16 +17,16 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.units.AngularMomentumUnit;
 import edu.wpi.first.units.measure.*;
 
 public class ShooterConstants {
     // Motor IDs
     public static final int FIRST_SHOOTER_MOTOR_ID = 51;
     public static final int SECOND_SHOOTER_MOTOR_ID = 52;
-    public static final int THIRD_SHOOTER_MOTOR_ID = 53;
-    public static final int FOURTH_SHOOTER_MOTOR_ID = 54;
     public static final int HOOD_MOTOR_ID = 55;
+    public static final int TURRET_MOTOR_ID = 56;
+    // Assumption: next free CAN ID is 57 for turret absolute encoder.
+    public static final int TURRET_CANCODER_ID = 57;
 
     // Shooter Math Constants
     public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.81; // in meters (2 inches)
@@ -42,6 +37,7 @@ public class ShooterConstants {
 
     public static final AngularVelocity FLYWHEEL_ALLOWABLE_ERROR = RotationsPerSecond.of(1.5); // Allowable error in radians per second
     public static final Angle HOOD_ALLOWABLE_ERROR = Degrees.of(1); // Allowable error in radians
+    public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(1.5);
 
     public static final double SHOOTER_KS = 0.15;
     public static final double SHOOTER_KV = 0.1195;
@@ -118,10 +114,52 @@ public class ShooterConstants {
                                                                     .withSlot(0)
                                                                     .withEnableFOC(false);
 
+    public static final double TURRET_KS = 0.0;
+    public static final double TURRET_KV = 0.0;
+    public static final double TURRET_KP = 20.0;
+    public static final double TURRET_KI = 0.0;
+    public static final double TURRET_KD = 0.0;
+
+    public static final Slot0Configs TURRET_PID_CONFIGS = new Slot0Configs()
+        .withKS(TURRET_KS)
+        .withKV(TURRET_KV)
+        .withKP(TURRET_KP)
+        .withKI(TURRET_KI)
+        .withKD(TURRET_KD);
+
+    public static final CurrentLimitsConfigs TURRET_CURRENT_LIMITS = new CurrentLimitsConfigs()
+        .withSupplyCurrentLimitEnable(true)
+        .withSupplyCurrentLimit(30)
+        .withStatorCurrentLimit(30);
+
+    public static final VoltageConfigs TURRET_VOLTAGE_CONFIGS = new VoltageConfigs()
+        .withPeakForwardVoltage(10)
+        .withPeakReverseVoltage(-10);
+
+    public static final MotorOutputConfigs TURRET_MOTOR_OUTPUT_CONFIGS = new MotorOutputConfigs()
+        .withInverted(InvertedValue.Clockwise_Positive)
+        .withNeutralMode(NeutralModeValue.Brake);
+
+    public static final TalonFXConfiguration TURRET_CONFIG = new TalonFXConfiguration()
+        .withSlot0(TURRET_PID_CONFIGS)
+        .withVoltage(TURRET_VOLTAGE_CONFIGS)
+        .withCurrentLimits(TURRET_CURRENT_LIMITS)
+        .withMotorOutput(TURRET_MOTOR_OUTPUT_CONFIGS);
+
+    public static final PositionVoltage TURRET_POSITION_CONTROL = new PositionVoltage(0)
+        .withSlot(0)
+        .withEnableFOC(false);
+
 
     // Physical Constants
     public static final double FLYWHEEL_GEAR_REDUCTION = 1.25;
     public static final double HOOD_GEAR_REDUCTION = 324.0/20.0*26/18*56/8;
+    public static final double TURRET_GEAR_REDUCTION = 32.8;
+
+    public static final double TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION = 45.0;
+    public static final double TURRET_ABSOLUTE_OFFSET_DEGREES = 0.0;
+    public static final Angle MIN_TURRET_ANGLE = Degrees.of(-350);
+    public static final Angle MAX_TURRET_ANGLE = Degrees.of(350);
 
     private static final Mass FLYWHEEL_MASS = Kilogram.of(0.4); 
     public static final Distance FLYWHEEL_RADIUS = Meters.of(0.05); // Radius of the flywheel in meters
@@ -149,6 +187,8 @@ public class ShooterConstants {
     public static final Distance HOOD_CENTER_OF_MASS = HOOD_LENGTH.times(0.5);
     public static final MomentOfInertia HOOD_INERTIA = 
         KilogramSquareMeters.of(HOOD_MASS.in(Kilogram) * Math.pow(HOOD_LENGTH.in(Meters), 2) / 3.0);
+
+    public static final MomentOfInertia TURRET_INERTIA = KilogramSquareMeters.of(0.001);
 
     public static final AngularVelocity MIN_FLYWHEEL_SPEED = RotationsPerSecond.of(500/60); // in RPS
     public static final AngularVelocity MAX_FLYWHEEL_SPEED = RotationsPerSecond.of(3750/60); // in RPS

@@ -1,13 +1,10 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Meters;
-
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
-import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.TheMachineConstants;
@@ -79,36 +76,52 @@ public class TheMachine {
         state = TheMachineState.INTAKE;
     }
 
-    public void getReady(double velocityRPS, double hoodAngleRotations) {
-        shooterSubsystem.shoot(velocityRPS, hoodAngleRotations);
+    public void getReady(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
+        shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.reverse();
         hopperSubsystem.reverse();
         intakeSubsystem.deploy();
         state = TheMachineState.GET_READY;
     }
 
-    public void shoot(double velocityRPS, double hoodAngleRotations) {
-        shooterSubsystem.shoot(velocityRPS, hoodAngleRotations);
+    public void getReady(double velocityRPS, double hoodAngleRotations) {
+        getReady(velocityRPS, hoodAngleRotations, 0.0);
+    }
+
+    public void shoot(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
+        shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feed();
         hopperSubsystem.feed();
         intakeSubsystem.feed();
         state = TheMachineState.SHOOT;
     }
 
-    public void getReadyPass(double velocityRPS, double hoodAngleRotations) {
-        shooterSubsystem.pass(velocityRPS, hoodAngleRotations);
+    public void shoot(double velocityRPS, double hoodAngleRotations) {
+        shoot(velocityRPS, hoodAngleRotations, 0.0);
+    }
+
+    public void getReadyPass(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
+        shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.reverse();
         hopperSubsystem.reverse();
         intakeSubsystem.deploy();
         state = TheMachineState.GET_READY_PASS;
     }
 
-    public void pass(double velocityRPS, double hoodAngleRotations) {
-        shooterSubsystem.pass(velocityRPS, hoodAngleRotations);
+    public void getReadyPass(double velocityRPS, double hoodAngleRotations) {
+        getReadyPass(velocityRPS, hoodAngleRotations, 0.0);
+    }
+
+    public void pass(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
+        shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feed();
         hopperSubsystem.feed();
         intakeSubsystem.feed();
         state = TheMachineState.PASS;
+    }
+
+    public void pass(double velocityRPS, double hoodAngleRotations) {
+        pass(velocityRPS, hoodAngleRotations, 0.0);
     }
 
     public void reverse() {
@@ -144,40 +157,54 @@ public class TheMachine {
         return shooterSubsystem.isReadyToShoot();
     }
 
-private StructPublisher<Pose3d> hoodPosePublisher = NetworkTableInstance.getDefault()
-  .getStructTopic("Sim/HoodPose", Pose3d.struct).publish();
-
-  private StructPublisher<Pose3d> funnelPosePublisher = NetworkTableInstance.getDefault()
-  .getStructTopic("Sim/FunnelPose", Pose3d.struct).publish();
-
   private StructPublisher<Pose3d> intakePosePublisher = NetworkTableInstance.getDefault()
   .getStructTopic("Sim/IntakePose", Pose3d.struct).publish();
 
+  private StructPublisher<Pose3d> shooterPosePublisher = NetworkTableInstance.getDefault()
+    .getStructTopic("Sim/ShooterPose", Pose3d.struct).publish();
+
+   private StructPublisher<Pose3d> hoodPosePublisher = NetworkTableInstance.getDefault()
+  .getStructTopic("Sim/HoodPose", Pose3d.struct).publish();
+
+
 
   public void calculateSubsytemPoses() {
+    double intakeExtensionMeters = intakeSubsystem.getIntakeExtensionMeters();
+    double intakeExtensionAngleRad = Math.toRadians(TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES);
+    double intakeExtensionX = intakeExtensionMeters * Math.cos(intakeExtensionAngleRad);
+    double intakeExtensionZ = intakeExtensionMeters * Math.sin(intakeExtensionAngleRad);
 
-    double hoodAngle = shooterSubsystem.getHoodPosition()*360;
+    SmartDashboard.putNumber("IntakeExtensionMeters", intakeExtensionMeters);
+        SmartDashboard.putNumber("IntakeExtensionAngleDeg", TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES);
 
-    Pose3d hoodPose = TheMachineConstants.HOOD_RETRACTED_POSE
-                            .rotateAround(TheMachineConstants.HOOD_RETRACTED_POSE.getTranslation(),new Rotation3d(0, Math.toRadians(hoodAngle), 0));
+    Pose3d intakePose = TheMachineConstants.INTAKE_RETRACTED_POSE
+                                                    .plus(new Transform3d(intakeExtensionX, 0, intakeExtensionZ, new Rotation3d(0, 0, 0)));
 
-    double intakeArmAngle = intakeSubsystem.getIntakeArmPosition()*360;
-    SmartDashboard.putNumber("IntakeArmAngle", intakeArmAngle);
 
-    Pose3d intakePose = TheMachineConstants.INTAKE_DEPLOYED_POSE
-                          .rotateAround(TheMachineConstants.INTAKE_DEPLOYED_POSE.getTranslation(), new Rotation3d(0, -Math.toRadians(intakeArmAngle), 0));
+    double turretYawRad = Math.toRadians(shooterSubsystem.getTurretAngleDegrees());
+    double hoodPitchRad = shooterSubsystem.getHoodPosition() * 2.0 * Math.PI;
+    Pose3d shooterZeroPose = TheMachineConstants.SHOOTER_ZERO_POSE;
+    Pose3d hoodZeroPose = TheMachineConstants.HOOD_RETRACTED_POSE;
 
-    Distance funnelExtension = Meters.of(0.0);
+    Pose3d shooterPose = new Pose3d(
+        shooterZeroPose.getTranslation(),
+        shooterZeroPose.getRotation().plus(new Rotation3d(0, 0, turretYawRad))
+    );
 
-    if(intakeArmAngle < 30) funnelExtension = Meters.of(0.3125);
-    else funnelExtension = Meters.of(0.3125).times(Math.cos(Math.toRadians(intakeArmAngle - 30)));
-    
-    Pose3d funnelPose = TheMachineConstants.FUNNEL_RETRACTED_POSE
-                          .plus(new Transform3d(funnelExtension.in(Meters), 0, 0, new Rotation3d(0, 0, 0)));
-    
-    hoodPosePublisher.set(hoodPose);
+    Transform3d shooterToHoodAtZero = new Transform3d(shooterZeroPose, hoodZeroPose);
+    Pose3d hoodYawPose = shooterPose.plus(shooterToHoodAtZero);
+    Pose3d hoodPose = hoodYawPose.rotateAround(
+        hoodYawPose.getTranslation(),
+        new Rotation3d(hoodPitchRad, 0, 0)
+    );
+
+    SmartDashboard.putNumber("Shooter/TurretPoseDeg", Math.toDegrees(turretYawRad));
+    SmartDashboard.putNumber("Shooter/HoodPoseDeg", Math.toDegrees(hoodPitchRad));
+
     intakePosePublisher.set(intakePose);
-    funnelPosePublisher.set(funnelPose);
+    shooterPosePublisher.set(shooterPose);
+    hoodPosePublisher.set(hoodPose);
+
   }
 
   public void publishTelemetry() {

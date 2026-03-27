@@ -1,9 +1,6 @@
 package frc.robot.utils;
 
-import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Radians;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import java.util.function.Supplier;
 
@@ -22,6 +19,7 @@ public class ShooterSim {
 
     private Supplier<Double> shooterRPSSupplier;
     private Supplier<Double> hoodAngleSupplier;
+    private Supplier<Double> turretAngleSupplier;
     private Supplier<ChassisSpeeds> chassisSpeedsSupplier;
     private Supplier<Pose2d> robotPoseSupplier;
     private Supplier<Boolean> shouldShootSupplier;
@@ -43,6 +41,10 @@ public class ShooterSim {
         this.hoodAngleSupplier = supplier;
     }
 
+    public void setTurretAngleSupplier(Supplier<Double> supplier) {
+        this.turretAngleSupplier = supplier;
+    }
+
     public void setChassisSpeedsSupplier(Supplier<ChassisSpeeds> supplier) {
         this.chassisSpeedsSupplier = supplier;
     }
@@ -57,7 +59,6 @@ public class ShooterSim {
 
     private double fuelPerSecondLimit = 6.0; // Default limit
     private double lastShootTime = 0;
-    private int fuelShotCount = 0;
 
     public void setFuelPerSecondLimit(double limit) {
         this.fuelPerSecondLimit = limit;
@@ -68,6 +69,7 @@ public class ShooterSim {
         FuelSim fuelSim = FuelSim.getInstance();
         double shooterRPS = shooterRPSSupplier.get();
         double hoodAngle = hoodAngleSupplier.get();
+        double turretAngleDeg = turretAngleSupplier.get();
 
         double currentTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
         double timeSinceLastShoot = currentTime - lastShootTime;
@@ -78,67 +80,34 @@ public class ShooterSim {
                     new Rotation3d(robotPoseSupplier.get().getRotation()));
 
             double launchAngle = Math.PI / 2 - Math.toRadians((hoodAngle)*360+18);
+            double worldYaw = robotPoseSupplier.get().getRotation().getRadians() + Math.toRadians(turretAngleDeg);
             double fuelVelocity = shooterRPS * 2 * Math.PI * SimConstants.SIMULATION_VELOCITY_TRANSFER_COEFFICIENT * ShooterConstants.FLYWHEEL_RADIUS.in(Meters);
 
-            Pose3d leftFuelShootPose = new Pose3d(
-                Dimensions.LEFT_SHOOTER_POSE.getX() + Dimensions.FUEL_SHOOTER_OFFSET.in(Meters) * Math.cos(hoodAngle*2*Math.PI),
-                Dimensions.LEFT_SHOOTER_POSE.getY(),
-                Dimensions.LEFT_SHOOTER_POSE.getZ() + Dimensions.FUEL_SHOOTER_OFFSET.in(Meters) * Math.sin(hoodAngle*2*Math.PI),
+            Pose3d fuelShootPose = new Pose3d(
+                Dimensions.SHOOTER_POSE.getX() + Dimensions.FUEL_SHOOTER_OFFSET.in(Meters) * Math.cos(hoodAngle * 2 * Math.PI),
+                Dimensions.SHOOTER_POSE.getY(),
+                Dimensions.SHOOTER_POSE.getZ() + Dimensions.FUEL_SHOOTER_OFFSET.in(Meters) * Math.sin(hoodAngle * 2 * Math.PI),
                 new Rotation3d()
             );
 
-            Pose3d rightFuelShootPose = new Pose3d(
-                Dimensions.RIGHT_SHOOTER_POSE.getX() + Dimensions.FUEL_SHOOTER_OFFSET.in(Meters) * Math.cos(hoodAngle*2*Math.PI),
-                Dimensions.RIGHT_SHOOTER_POSE.getY(),
-                Dimensions.RIGHT_SHOOTER_POSE.getZ() + Dimensions.FUEL_SHOOTER_OFFSET.in(Meters) * Math.sin(hoodAngle*2*Math.PI),
-                new Rotation3d()
+            Pose3d worldFuelShootPose = fuelShootPose.transformBy(robotPoseTransform);
+
+            double randomizedFuelVelocity = fuelVelocity * (1.0 + (Math.random() - 0.5) * 0.05);
+
+            Translation3d fuelVelocityVector = new Translation3d(
+                randomizedFuelVelocity * Math.cos(launchAngle) * Math.cos(worldYaw),
+                randomizedFuelVelocity * Math.cos(launchAngle) * Math.sin(worldYaw),
+                randomizedFuelVelocity * Math.sin(launchAngle)
             );
 
-            Pose3d worldLeftFuelShootPose = leftFuelShootPose.transformBy(robotPoseTransform)
-                                                .rotateAround(robotPoseTransform.getTranslation(), new Rotation3d(robotPoseSupplier.get().getRotation()));
-
-            Pose3d worldRightFuelShootPose = rightFuelShootPose.transformBy(robotPoseTransform)
-                                                .rotateAround(robotPoseTransform.getTranslation(), new Rotation3d(robotPoseSupplier.get().getRotation()));
-
-
-            double leftFuelVelocity = fuelVelocity*(1.0 + (Math.random() - 0.5) * 0.05); // Adding slight randomness
-
-            Translation3d leftFuelVelocityVector = new Translation3d(
-                leftFuelVelocity * Math.cos(launchAngle) * Math.cos(robotPoseSupplier.get().getRotation().getRadians()),
-                leftFuelVelocity * Math.cos(launchAngle) * Math.sin(robotPoseSupplier.get().getRotation().getRadians()),
-                leftFuelVelocity * Math.sin(launchAngle)
-            );
-
-            leftFuelVelocityVector = leftFuelVelocityVector.plus(new Translation3d(
+            fuelVelocityVector = fuelVelocityVector.plus(new Translation3d(
                 chassisSpeedsSupplier.get().vxMetersPerSecond,
                 chassisSpeedsSupplier.get().vyMetersPerSecond,
                 0
             ));
 
             hopperSim.removeFuelFromHopper();
-            fuelSim.spawnFuel(worldLeftFuelShootPose.getTranslation(), leftFuelVelocityVector);
-            fuelShotCount++;
-
-            if (hopperSim.getCurrentHopperLoad() > 0) {
-
-                double rightFuelVelocity = fuelVelocity*(1.0 + (Math.random() - 0.5) * 0.05); // Adding slight randomness
-
-                Translation3d rightFuelVelocityVector = new Translation3d(
-                    rightFuelVelocity * Math.cos(launchAngle) * Math.cos(robotPoseSupplier.get().getRotation().getRadians()),
-                    rightFuelVelocity * Math.cos(launchAngle) * Math.sin(robotPoseSupplier.get().getRotation().getRadians()),
-                    rightFuelVelocity * Math.sin(launchAngle)
-                );
-
-                rightFuelVelocityVector = rightFuelVelocityVector.plus(new Translation3d(
-                    chassisSpeedsSupplier.get().vxMetersPerSecond,
-                    chassisSpeedsSupplier.get().vyMetersPerSecond,
-                    0
-                ));
-
-                hopperSim.removeFuelFromHopper();
-                fuelSim.spawnFuel(worldRightFuelShootPose.getTranslation(), rightFuelVelocityVector);
-                fuelShotCount++;
-            }
+            fuelSim.spawnFuel(worldFuelShootPose.getTranslation(), fuelVelocityVector);
 
             lastShootTime = currentTime; // Update the last shoot time
         }

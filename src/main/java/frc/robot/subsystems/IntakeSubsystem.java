@@ -6,9 +6,6 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Radians;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import com.ctre.phoenix6.StatusCode;
@@ -25,7 +22,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
+import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
@@ -40,9 +37,9 @@ public class IntakeSubsystem extends SubsystemBase {
   private final PositionVoltage intakeArmPositionControl;
 
   private double intakeGoalVelocity;
-  private double intakeGoalArmAngle;
+  private double intakeGoalExtensionMeters;
   private double intakeTestRPM;
-  private double intakeTestAngle;
+  private double intakeTestExtensionMeters;
 
 
   /** Creates a new IntakeSubsystem. */
@@ -69,8 +66,10 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     
-    if(Robot.isReal()) intakeArmMotor.setPosition(
-        IntakeConstants.INTAKE_ARM_START_ANGLE.times(IntakeConstants.INTAKE_ARM_GEAR_REDUCTION));
+  if(Robot.isReal()) {
+    intakeArmMotor.setPosition(IntakeConstants.extensionMetersToMotorRotations(
+      IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters)));
+  }
 
     intakeVelocityControl = IntakeConstants.INTAKE_VELOCITY_CONTROL.clone();
     intakeArmPositionControl = IntakeConstants.INTAKE_ARM_POSITION_CONTROL.clone();
@@ -88,40 +87,57 @@ public class IntakeSubsystem extends SubsystemBase {
     );
   }
 
-  // --- Arm control ---
+  // --- Linear extension control ---
 
-  public void setIntakeArmPosition(double position) {
-    intakeArmMotor.setControl(
-      intakeArmPositionControl.withPosition(position * IntakeConstants.INTAKE_ARM_GEAR_REDUCTION)
+  public void setIntakeExtensionMeters(double extensionMeters) {
+    double clampedExtension = Math.max(
+      IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
+      Math.min(extensionMeters, IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters))
     );
+
+    double motorRotations = IntakeConstants.extensionMetersToMotorRotations(clampedExtension);
+    intakeArmMotor.setControl(intakeArmPositionControl.withPosition(motorRotations));
+  }
+
+  public double getIntakeExtensionMeters() {
+    double motorRotations = intakeArmMotor.getPosition().getValueAsDouble();
+    return IntakeConstants.motorRotationsToExtensionMeters(motorRotations);
+  }
+
+  // --- Compatibility wrappers (temporary) ---
+  public void setIntakeArmPosition(double position) {
+    setIntakeExtensionMeters(IntakeConstants.motorRotationsToExtensionMeters(position));
   }
 
   public void intakeArmZero() {
-    setIntakeArmPosition(IntakeConstants.INTAKE_ARM_RETRACTED_ANGLE.in(Rotations));
+    setIntakeExtensionMeters(IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters));
   }
 
   public double getIntakeArmPosition() {
-    return intakeArmMotor.getPosition().getValue()
-        .div(IntakeConstants.INTAKE_ARM_GEAR_REDUCTION).in(Rotations);
+    return IntakeConstants.extensionMetersToMotorRotations(getIntakeExtensionMeters());
   }
 
   public boolean isIntakeDeployed() {
-    return getIntakeArmPosition() <= IntakeConstants.INTAKE_ARM_DEPLOYED_ANGLE
-        .plus(IntakeConstants.INTAKE_ARM_ALLOWABLE_ERROR).in(Rotations);
+    return getIntakeExtensionMeters() >=
+        IntakeConstants.INTAKE_EXTENSION_DEPLOYED.minus(IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR).in(Meters);
   }
 
   public boolean isIntakeRetracted() {
-    return getIntakeArmPosition() >= IntakeConstants.INTAKE_ARM_RETRACTED_ANGLE
-        .minus(IntakeConstants.INTAKE_ARM_ALLOWABLE_ERROR).in(Rotations);
+    return getIntakeExtensionMeters() <=
+        IntakeConstants.INTAKE_EXTENSION_RETRACTED.plus(IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR).in(Meters);
   }
 
   public void publishTelemetry() {
-    //SmartDashboard.putNumber("Intake/Intake Arm Error", intakeArmMotor.getClosedLoopError().getValueAsDouble());
-    //SmartDashboard.putNumber("Intake/Intake Arm Position", getIntakeArmPosition());
-    //SmartDashboard.putNumber("Intake/Intake Arm Setpoint", intakeArmMotor.getClosedLoopReference().getValueAsDouble());
-    //SmartDashboard.putNumber("Intake/Intake Arm Voltage", intakeArmMotor.getMotorVoltage().getValueAsDouble());
-    //SmartDashboard.putNumber("Intake/Intake Arm Current", intakeArmMotor.getStatorCurrent().getValueAsDouble());
-    //SmartDashboard.putNumber("Intake/Intake Roller Velocity", intakeMotor.getVelocity().getValueAsDouble());
+    SmartDashboard.putNumber("Intake/RollerPositionRot", intakeMotor.getPosition().getValueAsDouble());
+    SmartDashboard.putNumber("Intake/RollerVelocityRps", intakeMotor.getVelocity().getValueAsDouble());
+    SmartDashboard.putNumber("Intake/RollerCurrentA", intakeMotor.getStatorCurrent().getValueAsDouble());
+
+    SmartDashboard.putNumber("Intake/ExtensionMotorPositionRot", intakeArmMotor.getPosition().getValueAsDouble());
+    SmartDashboard.putNumber("Intake/ExtensionMotorVelocityRps", intakeArmMotor.getVelocity().getValueAsDouble());
+    SmartDashboard.putNumber("Intake/ExtensionMotorCurrentA", intakeArmMotor.getStatorCurrent().getValueAsDouble());
+
+    SmartDashboard.putNumber("Intake/ExtensionAmountMeters", getIntakeExtensionMeters());
+    SmartDashboard.putNumber("Intake/ExtensionAmountMillimeters", getIntakeExtensionMeters() * 1000.0);
   }
 
   // --- SIMULATION ---
@@ -131,7 +147,7 @@ public class IntakeSubsystem extends SubsystemBase {
   private DCMotorSim intakeSim;
 
   private DCMotor intakeArmDcMotor;
-  private SingleJointedArmSim intakeArmSim;
+  private ElevatorSim intakeArmSim;
 
   private boolean isSimulationInitialized = false;
 
@@ -151,15 +167,15 @@ public class IntakeSubsystem extends SubsystemBase {
 
       // Arm sim
       intakeArmDcMotor = DCMotor.getKrakenX60(1);
-      intakeArmSim = new SingleJointedArmSim(
+    intakeArmSim = new ElevatorSim(
           intakeArmDcMotor,
-          IntakeConstants.INTAKE_ARM_GEAR_REDUCTION,
-          IntakeConstants.INTAKE_ARM_INERTIA,
-          IntakeConstants.INTAKE_ARM_LENGTH.in(Meters),
-          IntakeConstants.INTAKE_ARM_DEPLOYED_ANGLE.in(Radians),
-          IntakeConstants.INTAKE_ARM_START_ANGLE.in(Radians),
+      IntakeConstants.INTAKE_ARM_GEAR_REDUCTION,
+      IntakeConstants.INTAKE_ARM_MASS.in(edu.wpi.first.units.Units.Kilograms),
+      0.02,
+      IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
+      IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters),
           false,
-          IntakeConstants.INTAKE_ARM_START_ANGLE.in(Radians),
+      IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
           0.0,
           0.0);
       intakeArmMotor.getSimState().Orientation = ChassisReference.Clockwise_Positive;
@@ -184,10 +200,16 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeArmSim.setInput(intakeArmMotorSimState.getMotorVoltage());
       intakeArmSim.update(0.002);
 
+    double extensionMeters = intakeArmSim.getPositionMeters();
+    double extensionMetersPerSecond = intakeArmSim.getVelocityMetersPerSecond();
+
+    double armMotorRotations = IntakeConstants.extensionMetersToMotorRotations(extensionMeters);
+    double armMotorRps = IntakeConstants.extensionMetersToMotorRotations(extensionMetersPerSecond);
+
       intakeArmMotorSimState.setRawRotorPosition(
-          Radians.of(intakeArmSim.getAngleRads()).times(IntakeConstants.INTAKE_ARM_GEAR_REDUCTION));
+      edu.wpi.first.units.Units.Rotations.of(armMotorRotations));
       intakeArmMotorSimState.setRotorVelocity(
-          RadiansPerSecond.of(intakeArmSim.getVelocityRadPerSec()).times(IntakeConstants.INTAKE_ARM_GEAR_REDUCTION));
+      RotationsPerSecond.of(armMotorRps));
     }
   }
 
@@ -200,44 +222,44 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void close() {
     intakeGoalVelocity = 0;
-    intakeGoalArmAngle = IntakeConstants.INTAKE_ARM_RETRACTED_ANGLE.in(Rotations);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters);
     intakeStop();
-    intakeArmZero();
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
   }
 
   public void deploy() {
-    intakeGoalArmAngle = IntakeConstants.INTAKE_ARM_DEPLOYED_ANGLE.in(Rotations);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
     intakeGoalVelocity = 0;
-    setIntakeArmPosition(intakeGoalArmAngle);
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
     intakeStop();
   }
 
   public void intake() {
-    intakeGoalArmAngle = IntakeConstants.INTAKE_ARM_DEPLOYED_ANGLE.in(Rotations);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
     intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY.in(RotationsPerSecond);
-    setIntakeArmPosition(intakeGoalArmAngle);
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
     
   }
 
   public void intakeWithOffset() {
     intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY.in(RotationsPerSecond);
-    intakeGoalArmAngle = IntakeConstants.INTAKE_ARM_DEPLOYED_WITH_OFFSET_ANGLE.in(Rotations);
-    setIntakeArmPosition(intakeGoalArmAngle);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
   }
 
   public void feed() {
     intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY.in(RotationsPerSecond);
-    intakeGoalArmAngle = IntakeConstants.INTAKE_FEED_ANGLE.in(Rotations);
-    setIntakeArmPosition(intakeGoalArmAngle);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED.in(Meters);
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
   }
 
   public void reverse() {
     intakeGoalVelocity = IntakeConstants.INTAKE_REVERSE_VELOCITY.in(RotationsPerSecond);
-    intakeGoalArmAngle = IntakeConstants.INTAKE_ARM_DEPLOYED_ANGLE.in(Rotations);
-    setIntakeArmPosition(intakeGoalArmAngle);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
     if (isIntakeDeployed()) {
       setIntakeSpeed(intakeGoalVelocity);
     }
@@ -245,15 +267,15 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void idleBetween() {
     intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY.in(RotationsPerSecond);
-    intakeGoalArmAngle = IntakeConstants.INTAKE_ARM_BETWEEN_ANGLE.in(Rotations);
-    setIntakeArmPosition(intakeGoalArmAngle);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED.in(Meters);
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
   }
 
   public void test() {
     intakeGoalVelocity = intakeTestRPM;
-    intakeGoalArmAngle = intakeTestAngle;
-    setIntakeArmPosition(intakeGoalArmAngle);
+    intakeGoalExtensionMeters = intakeTestExtensionMeters;
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
   }
 

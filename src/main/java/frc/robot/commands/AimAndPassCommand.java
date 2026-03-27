@@ -12,16 +12,9 @@ import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.TheMachine;
-import frc.robot.constants.DriveConstants;
-import frc.robot.constants.PoseConstants;
-import frc.robot.constants.States.SwerveStates.SwerveState;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
@@ -33,7 +26,7 @@ public class AimAndPassCommand extends Command {
   private double MaxSpeed = 0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
   private double MaxAngularRate = RotationsPerSecond.of(1).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
-  private SwerveRequest.FieldCentricFacingAngle drive = new SwerveRequest.FieldCentricFacingAngle()
+  private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
 
@@ -44,17 +37,12 @@ public class AimAndPassCommand extends Command {
   private double targetAngle;
 
 
-  private double[] prevErrors = new double[10];
-  private double averageError = 0.0;
-
   /** Creates a new AimAndPass. */
   public AimAndPassCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
     this.driverController = joystick;
     this.theMachine = theMachine;
-
-    drive.HeadingController.setPID(DriveConstants.AIMED_DRIVING_kP, DriveConstants.AIMED_DRIVING_kI, DriveConstants.AIMED_DRIVING_KD);
 
     addRequirements(drivetrain);
     addRequirements(theMachine.getSubsystems());
@@ -73,14 +61,10 @@ public class AimAndPassCommand extends Command {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    prevErrors = new double[15];
-    for (int i = 0; i < prevErrors.length; i++) {
-      prevErrors[i] = 1.0;
-    }
   }
 
   private Pose2d robotPose = new Pose2d();
-  double angleError = 10;
+  double turretAngleDeg = 0;
 
   double velocityRPS = 0.0;
   double hoodAngle = 0.0;
@@ -90,22 +74,24 @@ public class AimAndPassCommand extends Command {
   public void execute() {
     
     robotPose = swerveDrivetrain.getPose();
-    angleError = targetAngle - robotPose.getRotation().getRadians();
-    angleError = Math.atan2(Math.sin(angleError), Math.cos(angleError));
+    turretAngleDeg = Math.toDegrees(Math.atan2(
+      Math.sin(targetAngle - robotPose.getRotation().getRadians()),
+      Math.cos(targetAngle - robotPose.getRotation().getRadians())
+    ));
 
     swerveDrivetrain.setControl(
         drive.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
             .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-            .withTargetDirection(new Rotation2d(targetAngle))// Drive counterclockwise with negative X (left)
+            .withRotationalRate(-driverController.getRightX() * MaxAngularRate)
     );
 
     velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentPose(robotPose);
     hoodAngle = ShooterCalculator.calculatePassHoodAngle();
 
-    if (Math.abs(angleError) < DriveConstants.AIMING_TOLERANCE_RADIANS) {
-      theMachine.pass(velocityRPS, hoodAngle);
+    if(theMachine.isShooterReady()) {
+      theMachine.pass(velocityRPS, hoodAngle, turretAngleDeg);
     } else {
-      theMachine.getReadyPass(velocityRPS, hoodAngle);
+      theMachine.getReadyPass(velocityRPS, hoodAngle, turretAngleDeg);
     }
  
   }

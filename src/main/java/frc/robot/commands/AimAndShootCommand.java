@@ -9,32 +9,23 @@ import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import org.w3c.dom.views.DocumentView;
-
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
-import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.TheMachine;
 import frc.robot.constants.Dimensions;
-import frc.robot.constants.DriveConstants;
 import frc.robot.constants.PoseConstants;
-import frc.robot.constants.States.SwerveStates.SwerveState;
+import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
@@ -57,7 +48,7 @@ public class AimAndShootCommand extends Command {
   private double MaxSpeed = 0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
   private double MaxAngularRate = RotationsPerSecond.of(2).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
-  private SwerveRequest.FieldCentricFacingAngle drive = new SwerveRequest.FieldCentricFacingAngle()
+  private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
 
@@ -80,8 +71,6 @@ public class AimAndShootCommand extends Command {
     this.swerveDrivetrain = drivetrain;
     this.driverController = joystick;
     this.theMachine = theMachine;
-
-    drive.HeadingController.setPID(DriveConstants.AIMED_DRIVING_kP, DriveConstants.AIMED_DRIVING_kI, DriveConstants.AIMED_DRIVING_KD);
 
     addRequirements(drivetrain);
     addRequirements(theMachine.getSubsystems());
@@ -131,8 +120,10 @@ public class AimAndShootCommand extends Command {
   double[] shootParams;
   double velocityRPS;
   double hoodAngle;
+  double turretAngleDeg;
 
   double filteredSpeedX = 0.0, filteredSpeedY = 0.0, filteredAngleError = 0.0;
+  private static final double TURRET_TOLERANCE_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
 
   double rawAngleError = 0.0;
   // Called every time the scheduler runs while the command is scheduled.
@@ -175,34 +166,26 @@ public class AimAndShootCommand extends Command {
     bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
 
 
-    if(!Container.isBlue) robotAngleToHub += Math.PI;
-
     swerveDrivetrain.setControl(
         drive.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
             .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-            .withTargetDirection(new Rotation2d(robotAngleToHub))// Drive counterclockwise with negative X (left)
+      .withRotationalRate(-driverController.getRightX() * MaxAngularRate)
     );
 
     // Create filtered speeds for shooter calculation
     shootParams = ShooterCalculator.calculateShootingParameters(filteredSpeedX, filteredSpeedY, robotPose, time);
     velocityRPS = shootParams[0];
     hoodAngle = shootParams[1];
+    turretAngleDeg = Math.toDegrees(Math.atan2(Math.sin(robotAngleToHub - heading), Math.cos(robotAngleToHub - heading)));
 
 
-  boolean onTarget = Math.abs(filteredAngleError) < DriveConstants.AIMING_TOLERANCE_RADIANS;
-
-  if (onTarget) {
-
-      if(theMachine.isShooterReady()) {
-        theMachine.shoot(velocityRPS, hoodAngle);
-      } else {
-        theMachine.getReady(velocityRPS, hoodAngle);
-      }
+    if(theMachine.isShooterReady()) {
+      theMachine.shoot(velocityRPS, hoodAngle, turretAngleDeg);
     } else {
-      theMachine.getReady(velocityRPS, hoodAngle);
+      theMachine.getReady(velocityRPS, hoodAngle, turretAngleDeg);
     }
 
-    aimOnTargetEntry.set(onTarget);
+    aimOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
     aimAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
     aimPosePublisher.set(new Pose3d(aimX, aimY, Dimensions.HUB_HEIGHT.in(Meters), new Rotation3d(0, 0, 0)));
 
