@@ -80,7 +80,7 @@ public class TheMachine {
         shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.reverse();
         hopperSubsystem.reverse();
-        intakeSubsystem.deploy();
+        intakeSubsystem.intake();
         state = TheMachineState.GET_READY;
     }
 
@@ -92,7 +92,7 @@ public class TheMachine {
         shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feed();
         hopperSubsystem.feed();
-        intakeSubsystem.feed();
+        intakeSubsystem.intake();
         state = TheMachineState.SHOOT;
     }
 
@@ -104,7 +104,7 @@ public class TheMachine {
         shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.reverse();
         hopperSubsystem.reverse();
-        intakeSubsystem.deploy();
+        intakeSubsystem.intake();
         state = TheMachineState.GET_READY_PASS;
     }
 
@@ -116,7 +116,7 @@ public class TheMachine {
         shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feed();
         hopperSubsystem.feed();
-        intakeSubsystem.feed();
+        intakeSubsystem.intake();
         state = TheMachineState.PASS;
     }
 
@@ -155,6 +155,12 @@ public class TheMachine {
     public boolean isShooterReady()
     {
         return shooterSubsystem.isReadyToShoot();
+    }
+
+    public boolean isAbleToIntake() {
+        return state == TheMachineState.INTAKE 
+        || state == TheMachineState.GET_READY_PASS || state == TheMachineState.PASS
+        || state == TheMachineState.GET_READY || state == TheMachineState.SHOOT;
     }
 
   private StructPublisher<Pose3d> intakePosePublisher = NetworkTableInstance.getDefault()

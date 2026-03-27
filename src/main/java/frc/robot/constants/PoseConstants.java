@@ -26,9 +26,9 @@ public class PoseConstants {
     public static final Pose2d BLUE_HUB_AIM_POSE = new Pose2d(4.61, 4.02, new Rotation2d());
     public static final Pose2d RED_HUB_AIM_POSE = new Pose2d(11.75, 4.02, new Rotation2d());
 
-    public static final Pose2d BLUE_PASS_1 = new Pose2d(1, 6, new Rotation2d());
-    public static final Pose2d BLUE_PASS_2 = new Pose2d(1,2, new Rotation2d());
+    public static final Pose2d BLUE_PASS_LEFT = new Pose2d(3.5, 6, new Rotation2d());
+    public static final Pose2d BLUE_PASS_RIGHT = new Pose2d(3.5,2, new Rotation2d());
 
-    public static final Pose2d RED_PASS_1 = new Pose2d(15.5, 6, new Rotation2d());
-    public static final Pose2d RED_PASS_2 = new Pose2d(15.5,2, new Rotation2d());
+    public static final Pose2d RED_PASS_LEFT = new Pose2d(12.5, 6, new Rotation2d());
+    public static final Pose2d RED_PASS_RIGHT = new Pose2d(12.5,2, new Rotation2d());
 }

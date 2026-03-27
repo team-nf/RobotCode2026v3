@@ -147,7 +147,7 @@ public final class ShooterCalculator {
     }
 
     public static double passRPSFormula(double x) {
-        double a = 350;
+        double a = 250;
         double b = 1500;
 
         double y = a * x + b;

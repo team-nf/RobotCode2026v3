@@ -69,7 +69,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
         applyConfig(flywheelMotor1, ShooterConstants.SHOOTER_CONFIG, "Flywheel Motor 1 (Leader)");
         applyConfig(flywheelMotor2, ShooterConstants.SHOOTER_CONFIG, "Flywheel Motor 2 (Follower)");
-        flywheelMotor2.setControl(new Follower(flywheelMotor1.getDeviceID(), MotorAlignmentValue.Aligned));
+    flywheelMotor2.setControl(new Follower(flywheelMotor1.getDeviceID(), MotorAlignmentValue.Opposed));
 
         applyConfig(hoodMotor, ShooterConstants.HOOD_CONFIG, "Hood Motor");
         applyConfig(turretMotor, ShooterConstants.TURRET_CONFIG, "Turret Motor");
@@ -110,8 +110,18 @@ public class ShooterSubsystem extends SubsystemBase {
 
     private double setTurretAngleDegrees(double requestedAngleDegrees) {
         double wrappedTargetDeg = wrapTurretTargetToCurrent(requestedAngleDegrees);
+        double currentAngleDeg = getTurretAngleDegrees();
+        double angleErrorDeg = Math.abs(normalizeToMinus180To180(wrappedTargetDeg - currentAngleDeg));
+        int turretPidSlot = angleErrorDeg <= ShooterConstants.TURRET_SMALL_ERROR_THRESHOLD_DEG
+            ? ShooterConstants.TURRET_AGGRESSIVE_SLOT
+            : ShooterConstants.TURRET_GENTLE_SLOT;
+
         double motorPosition = wrappedTargetDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
-        turretMotor.setControl(turretPositionControl.withPosition(motorPosition));
+        turretMotor.setControl(
+            turretPositionControl
+                .withSlot(turretPidSlot)
+                .withPosition(motorPosition)
+        );
         return wrappedTargetDeg;
     }
 
@@ -225,8 +235,8 @@ public class ShooterSubsystem extends SubsystemBase {
         return flywheelMotor1.getVelocity().getValueAsDouble() / ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
     }
 
-    public double getFlywheel2Velocity() {
-        return flywheelMotor2.getVelocity().getValueAsDouble() / ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
+    public double getFlywheel1SpeedAbs() {
+        return Math.abs(getFlywheel1Velocity());
     }
 
     /** Get the current hood position in rotations (mechanism side). */
@@ -245,8 +255,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Check if the flywheel is at the target speed within allowable error. */
     public boolean isFlywheelAtSpeed() {
-        return Math.abs(getFlywheel1Velocity() - flywheelGoalVelocity) < FLYWHEEL_ERROR_RPS
-            && Math.abs(getFlywheel2Velocity() - flywheelGoalVelocity) < FLYWHEEL_ERROR_RPS;
+        return Math.abs(getFlywheel1SpeedAbs() - Math.abs(flywheelGoalVelocity)) < FLYWHEEL_ERROR_RPS;
     }
 
     /** Check if the hood is at the target angle within allowable error. */
@@ -260,33 +269,45 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Check if the shooter is ready to fire (flywheel + hood + turret). */
     public boolean isReadyToShoot() {
-        return isFlywheelAtSpeed() && isHoodAtAngle() && isTurretAtAngle() && getFlywheel1Velocity() > 15;
+        return isFlywheelAtSpeed() && isHoodAtAngle() && isTurretAtAngle() && getFlywheel1SpeedAbs() > 15;
     }
 
     public void publishTelemetry() {
         double turretAngleClamped = Math.max(MIN_TURRET_DEG, Math.min(getTurretAngleDegrees(), MAX_TURRET_DEG));
+        double flywheelRps = getFlywheel1SpeedAbs();
+        double flywheelRpmError = (Math.abs(flywheelGoalVelocity) - flywheelRps) * 60.0;
+        double hoodDegError = (hoodGoalPosition - getHoodPosition()) * 360.0;
+        double turretDegError = turretGoalAngleDegrees - getTurretAngleDegrees();
 
-        SmartDashboard.putNumber("Shooter/Flywheel1PositionRot", flywheelMotor1.getPosition().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/Flywheel1VelocityRps", flywheelMotor1.getVelocity().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/Flywheel1CurrentA", flywheelMotor1.getStatorCurrent().getValueAsDouble());
+        SmartDashboard.putNumber("Shooter/Flywheel1VoltageV", flywheelMotor1.getMotorVoltage().getValueAsDouble());
 
-        SmartDashboard.putNumber("Shooter/Flywheel2PositionRot", flywheelMotor2.getPosition().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/Flywheel2VelocityRps", flywheelMotor2.getVelocity().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/Flywheel2CurrentA", flywheelMotor2.getStatorCurrent().getValueAsDouble());
+        SmartDashboard.putNumber("Shooter/Flywheel2VoltageV", flywheelMotor2.getMotorVoltage().getValueAsDouble());
 
         SmartDashboard.putNumber("Shooter/HoodMotorPositionRot", hoodMotor.getPosition().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/HoodMotorVelocityRps", hoodMotor.getVelocity().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/HoodMotorCurrentA", hoodMotor.getStatorCurrent().getValueAsDouble());
+        SmartDashboard.putNumber("Shooter/HoodMotorVoltageV", hoodMotor.getMotorVoltage().getValueAsDouble());
 
         SmartDashboard.putNumber("Shooter/TurretMotorPositionRot", turretMotor.getPosition().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/TurretMotorVelocityRps", turretMotor.getVelocity().getValueAsDouble());
         SmartDashboard.putNumber("Shooter/TurretMotorCurrentA", turretMotor.getStatorCurrent().getValueAsDouble());
+        SmartDashboard.putNumber("Shooter/TurretMotorVoltageV", turretMotor.getMotorVoltage().getValueAsDouble());
 
-        SmartDashboard.putNumber("Shooter/FlywheelRPS", getFlywheel1Velocity());
+        SmartDashboard.putNumber("Shooter/FlywheelRPS", flywheelRps);
         SmartDashboard.putNumber("Shooter/HoodAngleRot", getHoodPosition());
         SmartDashboard.putNumber("Shooter/HoodAngleDeg", getHoodPosition() * 360.0);
         SmartDashboard.putNumber("Shooter/TurretAngleDeg", turretAngleClamped);
         SmartDashboard.putNumber("Shooter/TurretGoalDeg", turretGoalAngleDegrees);
+        SmartDashboard.putNumber("Shooter/FlywheelRpmError", flywheelRpmError);
+        SmartDashboard.putNumber("Shooter/HoodDegError", hoodDegError);
+        SmartDashboard.putNumber("Shooter/TurretDegError", turretDegError);
+        SmartDashboard.putBoolean("Shooter/FlywheelReady", isFlywheelAtSpeed());
+        SmartDashboard.putBoolean("Shooter/HoodReady", isHoodAtAngle());
+        SmartDashboard.putBoolean("Shooter/TurretReady", isTurretAtAngle());
         SmartDashboard.putBoolean("Shooter/Ready", isReadyToShoot());
     }
 
@@ -369,9 +390,9 @@ public class ShooterSubsystem extends SubsystemBase {
                 flywheelSim.getAngularVelocity().times(ShooterConstants.FLYWHEEL_GEAR_REDUCTION));
 
             fw2SimState.setRawRotorPosition(
-                flywheelSim.getAngularPosition().times(ShooterConstants.FLYWHEEL_GEAR_REDUCTION));
+                flywheelSim.getAngularPosition().times(-ShooterConstants.FLYWHEEL_GEAR_REDUCTION));
             fw2SimState.setRotorVelocity(
-                flywheelSim.getAngularVelocity().times(ShooterConstants.FLYWHEEL_GEAR_REDUCTION));
+                flywheelSim.getAngularVelocity().times(-ShooterConstants.FLYWHEEL_GEAR_REDUCTION));
 
             // --- Hood sim update ---
             final var hoodSimState = hoodMotor.getSimState();

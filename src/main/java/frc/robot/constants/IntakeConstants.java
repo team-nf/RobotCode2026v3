@@ -123,8 +123,8 @@ public class IntakeConstants {
                     .withPeakReverseVoltage(-9))
                 .withCurrentLimits(new CurrentLimitsConfigs()
                     .withSupplyCurrentLimitEnable(true)
-                    .withSupplyCurrentLimit(39)
-                    .withStatorCurrentLimit(39));
+                    .withSupplyCurrentLimit(20)
+                    .withStatorCurrentLimit(20));
 
     public static final PositionVoltage INTAKE_ARM_POSITION_CONTROL = new PositionVoltage(0)
                         .withSlot(0)
@@ -132,9 +132,10 @@ public class IntakeConstants {
 
     // Legacy compatibility for current subsystem (will be replaced by linear API next step)
     // With linear conversion represented directly in motor rotations, keep reduction at 1.0.
-    public static final Mass INTAKE_ARM_MASS = Kilograms.of(0.01);
+    public static final Mass INTAKE_ARM_MASS = Kilograms.of(1);
+    public static final double INTAKE_ARM_GEAR_REDUCTION = 21.0;
+    public static final double INTAKE_SIM_DRUM_RADIUS_METERS = 0.33;
     public static final Distance INTAKE_ARM_LENGTH = Meters.of(0.1);
-    public static final double INTAKE_ARM_GEAR_REDUCTION = 1.0;
     public static final double INTAKE_ARM_INERTIA = 1.0/3.0 * INTAKE_ARM_MASS.in(Kilogram) * Math.pow(INTAKE_ARM_LENGTH.in(Meters)/2, 2);
 
     // Physical defaults

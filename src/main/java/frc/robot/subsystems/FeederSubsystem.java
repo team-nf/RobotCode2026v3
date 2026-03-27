@@ -64,6 +64,7 @@ public class FeederSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Feeder/MotorPositionRot", feederMotor.getPosition().getValueAsDouble());
     SmartDashboard.putNumber("Feeder/MotorVelocityRps", feederMotor.getVelocity().getValueAsDouble());
     SmartDashboard.putNumber("Feeder/MotorCurrentA", feederMotor.getStatorCurrent().getValueAsDouble());
+    SmartDashboard.putNumber("Feeder/MotorVoltageV", feederMotor.getMotorVoltage().getValueAsDouble());
   }
 
   // SIMULATION

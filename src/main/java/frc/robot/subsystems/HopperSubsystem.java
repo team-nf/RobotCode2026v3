@@ -80,10 +80,12 @@ public class HopperSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Hopper/Motor1PositionRot", hopperMotor.getPosition().getValueAsDouble());
     SmartDashboard.putNumber("Hopper/Motor1VelocityRps", hopperMotor.getVelocity().getValueAsDouble());
     SmartDashboard.putNumber("Hopper/Motor1CurrentA", hopperMotor.getStatorCurrent().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1VoltageV", hopperMotor.getMotorVoltage().getValueAsDouble());
 
     SmartDashboard.putNumber("Hopper/Motor2PositionRot", hopperMotor2.getPosition().getValueAsDouble());
     SmartDashboard.putNumber("Hopper/Motor2VelocityRps", hopperMotor2.getVelocity().getValueAsDouble());
     SmartDashboard.putNumber("Hopper/Motor2CurrentA", hopperMotor2.getStatorCurrent().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2VoltageV", hopperMotor2.getMotorVoltage().getValueAsDouble());
   }
 
   // SIMULATION

@@ -31,9 +31,6 @@ import frc.robot.utils.SwerveFieldContactSim;
 
 import static edu.wpi.first.units.Units.Meters;
 
-import java.util.jar.Attributes.Name;
-
-import com.fasterxml.jackson.databind.util.Named;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
@@ -41,7 +38,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
@@ -110,23 +106,15 @@ public class RobotContainer {
     m_driverController.b().onTrue(m_idleRetractedCommand);
     m_driverController.x().onTrue(m_intakeCommand);
 
-    m_driverController.a().whileTrue(m_aimAndPassCommand).onFalse(m_idleDeployedCommand);
-    m_driverController.y().whileTrue(m_aimAndShootCommand).onFalse(m_idleDeployedCommand);
-    
+    m_driverController.rightTrigger().whileTrue(
+      new ConditionalCommand(
+        new AimAndShootCommand(m_drivetrainSubsystem, m_driverController, m_theMachine),
+        new AimAndPassCommand(m_drivetrainSubsystem, m_driverController, m_theMachine),
+        m_drivetrainSubsystem::isRobotOnTheShootingZone
+      )
+    ).onFalse(m_idleDeployedCommand);
 
-    /* 
-    m_driverController.leftBumper().whileTrue(
-      new ConditionalCommand(new GoFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                             new GoFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                             m_drivetrainSubsystem::isRobotOnLeftSide));
-
-    m_driverController.rightBumper().whileTrue(
-      new ConditionalCommand(new ReturnFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                             new ReturnFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                             m_drivetrainSubsystem::isRobotOnLeftSide));
-    */
-
-    m_driverController.leftBumper().whileTrue(
+    m_driverController.leftTrigger().whileTrue(
       new ConditionalCommand(
         new ConditionalCommand(new GoFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
                                new GoFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
@@ -134,9 +122,8 @@ public class RobotContainer {
 
         new ConditionalCommand(new ReturnFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
                                new ReturnFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                               m_drivetrainSubsystem::isRobotOnLeftSide)
-                               .andThen(new AimAndShootCommand(m_drivetrainSubsystem, m_driverController, m_theMachine)),
-                              
+                               m_drivetrainSubsystem::isRobotOnLeftSide),
+
         m_drivetrainSubsystem::isRobotOnTheShootingZone
       ));
 
@@ -152,7 +139,11 @@ public class RobotContainer {
   }
 
   public void containerPeriodic() {
-    if(Robot.isSimulation()) m_theMachine.calculateSubsytemPoses();
+    if(Robot.isSimulation()) 
+      {
+        m_theMachine.calculateSubsytemPoses();
+        m_theMachine.publishTelemetry();
+      }
     //SmartDashboard.putData(CommandScheduler.getInstance());
     //m_theMachine.publishTelemetry();
   }
@@ -179,7 +170,7 @@ public class RobotContainer {
             Dimensions.BUMPER_LENGTH.div(2).plus(Dimensions.HOPPER_EXTENSION_LENGTH).in(Meters),
             -Dimensions.BUMPER_WIDTH.div(2).in(Meters),
             Dimensions.BUMPER_WIDTH.div(2).in(Meters),
-            () -> m_theMachine.isState(TheMachineState.INTAKE) 
+            () -> m_theMachine.isAbleToIntake()
                         && hopperSim.isHopperAbleToIntake(),
             hopperSim::addFuelToHopper);
 
@@ -190,6 +181,7 @@ public class RobotContainer {
 
     shooterSim.setShooterRPSSupplier(m_shooterSubsystem::getFlywheel1Velocity);
     shooterSim.setHoodAngleSupplier(m_shooterSubsystem::getHoodPosition);
+    shooterSim.setTurretAngleSupplier(m_shooterSubsystem::getTurretAngleDegrees);
     shooterSim.setRobotPoseSupplier(m_drivetrainSubsystem::getPose);
     shooterSim.setChassisSpeedsSupplier(m_drivetrainSubsystem::getFieldSpeeds);
     shooterSim.setShouldShootSupplier(() -> m_theMachine.isState(TheMachineState.SHOOT) || m_theMachine.isState(TheMachineState.PASS));
