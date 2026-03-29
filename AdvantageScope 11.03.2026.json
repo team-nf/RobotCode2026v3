@@ -3,11 +3,11 @@
     {
       "x": -8,
       "y": -8,
-      "width": 1708,
-      "height": 1020,
+      "width": 1722,
+      "height": 1034,
       "state": {
         "sidebar": {
-          "width": 216,
+          "width": 500,
           "expanded": [
             "/SmartDashboard/Intake Control Data",
             "/Sim",
@@ -104,15 +104,8 @@
                     "logType": "Pose2d",
                     "visible": true,
                     "options": {
-                      "model": "Orion"
+                      "model": "Ceza"
                     }
-                  },
-                  {
-                    "type": "component",
-                    "logKey": "NT:Sim/HoodPose",
-                    "logType": "Pose3d",
-                    "visible": true,
-                    "options": {}
                   },
                   {
                     "type": "component",
@@ -123,7 +116,14 @@
                   },
                   {
                     "type": "component",
-                    "logKey": "NT:Sim/FunnelPose",
+                    "logKey": "NT:Sim/ShooterPose",
+                    "logType": "Pose3d",
+                    "visible": true,
+                    "options": {}
+                  },
+                  {
+                    "type": "component",
+                    "logKey": "NT:Sim/HoodPose",
                     "logType": "Pose3d",
                     "visible": true,
                     "options": {}
@@ -136,17 +136,17 @@
                 "cameraIndex": -1,
                 "orbitFov": 50,
                 "cameraPosition": [
-                  9.686760783580874,
-                  8.403603516453838,
-                  4.741580185105612
+                  -9.694274330719372,
+                  5.238060540923005,
+                  0.3260670974583195
                 ],
                 "cameraTarget": [
-                  4.198798593723538,
-                  0.7615734586097901,
-                  0.28528064992137764
+                  -3.644569758674123,
+                  -0.3108231755573813,
+                  0.19646354788891388
                 ]
               },
-              "controlsHeight": 298
+              "controlsHeight": 0
             },
             {
               "type": 2,

@@ -50,7 +50,7 @@ public class TunerConstants {
 
     // The stator current at which the wheels start to slip;
     // This needs to be tuned to your individual robot
-    private static final Current kSlipCurrent = Amps.of(30);
+    private static final Current kSlipCurrent = Amps.of(102);
 
     // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
     // Some configs will be overwritten; check the `with*InitialConfigs()` API docum
@@ -62,7 +62,7 @@ public class TunerConstants {
             new CurrentLimitsConfigs()
                 // Swerve azimuth does not require much torque output, so we can set a relatively low
                 // stator current limit to help avoid brownouts without impacting performance.
-                .withStatorCurrentLimit(Amps.of(30))
+                .withStatorCurrentLimit(Amps.of(50))
                 .withStatorCurrentLimitEnable(true)
         );
 
@@ -93,8 +93,8 @@ public class TunerConstants {
     private static final int kPigeonId = 24;
 
     // These are only used for simulation
-    private static final MomentOfInertia kSteerInertia = KilogramSquareMeters.of(0.02);
-    private static final MomentOfInertia kDriveInertia = KilogramSquareMeters.of(0.02);
+    private static final MomentOfInertia kSteerInertia = KilogramSquareMeters.of(0.08);
+    private static final MomentOfInertia kDriveInertia = KilogramSquareMeters.of(0.08);
     // Simulated voltage necessary to overcome friction
     private static final Voltage kSteerFrictionVoltage = Volts.of(0.6);
     private static final Voltage kDriveFrictionVoltage = Volts.of(0.6);

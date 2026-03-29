@@ -1,6 +1,8 @@
 package frc.robot;
 
 import com.pathplanner.lib.commands.PathfindingCommand;
+import com.pathplanner.lib.pathfinding.LocalADStar;
+import com.pathplanner.lib.pathfinding.Pathfinding;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
@@ -24,6 +26,8 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     PathfindingCommand.warmupCommand();
+    Pathfinding.setPathfinder(new LocalADStar());
+
   }
 
   @Override

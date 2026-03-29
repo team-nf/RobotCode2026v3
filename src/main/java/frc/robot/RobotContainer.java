@@ -9,6 +9,7 @@ import frc.robot.commands.AimAndPassCommand;
 import frc.robot.commands.AimAndShootCommand;
 import frc.robot.commands.GoFromLeftTrenchCommand;
 import frc.robot.commands.GoFromRightTrenchCommand;
+import frc.robot.commands.GoToMidCommand;
 import frc.robot.commands.IdleDeployedCommand;
 import frc.robot.commands.IdleRetractedCommand;
 import frc.robot.commands.IntakeCommand;
@@ -113,6 +114,8 @@ public class RobotContainer {
         m_drivetrainSubsystem::isRobotOnTheShootingZone
       )
     ).onFalse(m_idleDeployedCommand);
+
+    m_driverController.y().whileTrue(new GoToMidCommand(m_drivetrainSubsystem, m_theMachine)).onFalse(m_idleRetractedCommand);
 
     m_driverController.leftTrigger().whileTrue(
       new ConditionalCommand(
