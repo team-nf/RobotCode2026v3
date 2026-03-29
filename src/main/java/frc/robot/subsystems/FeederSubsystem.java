@@ -7,7 +7,9 @@ package frc.robot.subsystems;
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -30,6 +32,10 @@ public class FeederSubsystem extends SubsystemBase {
   private TalonFX feederMotor;
 
   private final VelocityVoltage feederVelocityControl;
+  private final StatusSignal<?> feederPositionSignal;
+  private final StatusSignal<?> feederVelocitySignal;
+  private final StatusSignal<?> feederCurrentSignal;
+  private final StatusSignal<?> feederVoltageSignal;
 
   private double feederGoalVelocity;
   private double feederTestRPM;
@@ -46,6 +52,11 @@ public class FeederSubsystem extends SubsystemBase {
     if (!status.isOK()) {
       System.out.println("Could not apply configs, error code: " + status.toString());
     }
+
+    feederPositionSignal = feederMotor.getPosition(false);
+    feederVelocitySignal = feederMotor.getVelocity(false);
+    feederCurrentSignal = feederMotor.getStatorCurrent(false);
+    feederVoltageSignal = feederMotor.getMotorVoltage(false);
     
     feederVelocityControl = FeederConstants.FEEDER_VELOCITY_CONTROL.clone();
   }
@@ -61,10 +72,18 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void publishTelemetry() {
-    SmartDashboard.putNumber("Feeder/MotorPositionRot", feederMotor.getPosition().getValueAsDouble());
-    SmartDashboard.putNumber("Feeder/MotorVelocityRps", feederMotor.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Feeder/MotorCurrentA", feederMotor.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Feeder/MotorVoltageV", feederMotor.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Feeder/MotorPositionRot", feederPositionSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Feeder/MotorVelocityRps", feederVelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Feeder/MotorCurrentA", feederCurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Feeder/MotorVoltageV", feederVoltageSignal.getValueAsDouble());
+  }
+
+  private void refreshStatusSignals() {
+    BaseStatusSignal.refreshAll(
+        feederPositionSignal,
+        feederVelocitySignal,
+        feederCurrentSignal,
+        feederVoltageSignal);
   }
 
   // SIMULATION
@@ -135,6 +154,6 @@ public class FeederSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // This method will be called once per scheduler run
+    refreshStatusSignals();
   }
 }

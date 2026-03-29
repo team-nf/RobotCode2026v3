@@ -107,6 +107,7 @@ public class AimAndShootCommand extends Command {
   }
 
   private Pose2d robotPose = new Pose2d();
+  private Pose2d shooterPose = new Pose2d();
   double robotAngleToHub =  0;
 
   double heading;
@@ -131,10 +132,11 @@ public class AimAndShootCommand extends Command {
   public void execute() {
     
     robotPose = swerveDrivetrain.getPose();
+  shooterPose = ShooterCalculator.getShooterPoseFromRobotPose(robotPose);
     speeds = swerveDrivetrain.getFieldSpeeds();
     heading = robotPose.getRotation().getRadians();
 
-    distance = hubAimPose.getTranslation().getDistance(robotPose.getTranslation());
+  distance = hubAimPose.getTranslation().getDistance(shooterPose.getTranslation());
     time = ShooterCalculator.flightTimeOfFuelFormula(distance);
 
     filteredSpeedX = 0.0;
@@ -154,7 +156,7 @@ public class AimAndShootCommand extends Command {
     aimX = hubAimPose.getX() - (filteredSpeedX * time);
     aimY = hubAimPose.getY() - (filteredSpeedY * time);
 
-    robotAngleToHub = Math.atan2(aimY - robotPose.getY(), aimX - robotPose.getX());
+  robotAngleToHub = Math.atan2(aimY - shooterPose.getY(), aimX - shooterPose.getX());
     rawAngleError = robotAngleToHub - heading;
     // Normalize angle error to [-π, π]
     rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));

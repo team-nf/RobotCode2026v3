@@ -8,7 +8,9 @@ import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
@@ -38,6 +40,17 @@ public class IntakeSubsystem extends SubsystemBase {
 
   private final VelocityVoltage intakeVelocityControl;
   private final PositionVoltage intakeArmPositionControl;
+
+  private final StatusSignal<?> intakeVelocitySignal;
+  private final StatusSignal<?> intakeCurrentSignal;
+  private final StatusSignal<?> intakeVoltageSignal;
+  private final StatusSignal<?> intake2VelocitySignal;
+  private final StatusSignal<?> intake2CurrentSignal;
+  private final StatusSignal<?> intake2VoltageSignal;
+  private final StatusSignal<?> intakeArmPositionSignal;
+  private final StatusSignal<?> intakeArmVelocitySignal;
+  private final StatusSignal<?> intakeArmCurrentSignal;
+  private final StatusSignal<?> intakeArmVoltageSignal;
 
   private double intakeGoalVelocity;
   private double intakeGoalExtensionMeters;
@@ -87,6 +100,19 @@ public class IntakeSubsystem extends SubsystemBase {
 
     intakeVelocityControl = IntakeConstants.INTAKE_VELOCITY_CONTROL.clone();
     intakeArmPositionControl = IntakeConstants.INTAKE_ARM_POSITION_CONTROL.clone();
+
+    intakeVelocitySignal = intakeMotor.getVelocity(false);
+    intakeCurrentSignal = intakeMotor.getStatorCurrent(false);
+    intakeVoltageSignal = intakeMotor.getMotorVoltage(false);
+
+    intake2VelocitySignal = intakeMotor2.getVelocity(false);
+    intake2CurrentSignal = intakeMotor2.getStatorCurrent(false);
+    intake2VoltageSignal = intakeMotor2.getMotorVoltage(false);
+
+    intakeArmPositionSignal = intakeArmMotor.getPosition(false);
+    intakeArmVelocitySignal = intakeArmMotor.getVelocity(false);
+    intakeArmCurrentSignal = intakeArmMotor.getStatorCurrent(false);
+    intakeArmVoltageSignal = intakeArmMotor.getMotorVoltage(false);
   }
 
   // --- Roller control ---
@@ -114,7 +140,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public double getIntakeExtensionMeters() {
-    double motorRotations = intakeArmMotor.getPosition().getValueAsDouble();
+    double motorRotations = intakeArmPositionSignal.getValueAsDouble();
     return IntakeConstants.motorRotationsToExtensionMeters(motorRotations);
   }
 
@@ -129,23 +155,39 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void publishTelemetry() {
-    SmartDashboard.putNumber("Intake/RollerVelocityRps", intakeMotor.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/RollerCurrentA", intakeMotor.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/RollerVoltageV", intakeMotor.getMotorVoltage().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/Roller2VelocityRps", intakeMotor2.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/Roller2CurrentA", intakeMotor2.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/Roller2VoltageV", intakeMotor2.getMotorVoltage().getValueAsDouble());
+    double extensionMeters = getIntakeExtensionMeters();
 
-    SmartDashboard.putNumber("Intake/ExtensionMotorPositionRot", intakeArmMotor.getPosition().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/ExtensionMotorVelocityRps", intakeArmMotor.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/ExtensionMotorCurrentA", intakeArmMotor.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Intake/ExtensionMotorVoltageV", intakeArmMotor.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Intake/RollerVelocityRps", intakeVelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/RollerCurrentA", intakeCurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/RollerVoltageV", intakeVoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/Roller2VelocityRps", intake2VelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/Roller2CurrentA", intake2CurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/Roller2VoltageV", intake2VoltageSignal.getValueAsDouble());
 
-    SmartDashboard.putNumber("Intake/ExtensionAmountMeters", getIntakeExtensionMeters());
-    SmartDashboard.putNumber("Intake/ExtensionAmountMillimeters", getIntakeExtensionMeters() * 1000.0);
+    SmartDashboard.putNumber("Intake/ExtensionMotorPositionRot", intakeArmPositionSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/ExtensionMotorVelocityRps", intakeArmVelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/ExtensionMotorCurrentA", intakeArmCurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/ExtensionMotorVoltageV", intakeArmVoltageSignal.getValueAsDouble());
+
+    SmartDashboard.putNumber("Intake/ExtensionAmountMeters", extensionMeters);
+    SmartDashboard.putNumber("Intake/ExtensionAmountMillimeters", extensionMeters * 1000.0);
     if (isSimulationInitialized && intakeArmSim != null) {
       SmartDashboard.putNumber("Intake/SimExtensionMeters", intakeArmSim.getPositionMeters());
     }
+  }
+
+  private void refreshStatusSignals() {
+    BaseStatusSignal.refreshAll(
+        intakeVelocitySignal,
+        intakeCurrentSignal,
+        intakeVoltageSignal,
+        intake2VelocitySignal,
+        intake2CurrentSignal,
+        intake2VoltageSignal,
+        intakeArmPositionSignal,
+        intakeArmVelocitySignal,
+        intakeArmCurrentSignal,
+        intakeArmVoltageSignal);
   }
 
   // --- SIMULATION ---
@@ -298,6 +340,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // This method will be called once per scheduler run
+    refreshStatusSignals();
   }
 }

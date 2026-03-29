@@ -7,7 +7,9 @@ package frc.robot.subsystems;
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityVoltage;
@@ -34,6 +36,14 @@ public class HopperSubsystem extends SubsystemBase {
 
 
   private final VelocityVoltage hopperVelocityControl;
+  private final StatusSignal<?> hopper1PositionSignal;
+  private final StatusSignal<?> hopper1VelocitySignal;
+  private final StatusSignal<?> hopper1CurrentSignal;
+  private final StatusSignal<?> hopper1VoltageSignal;
+  private final StatusSignal<?> hopper2PositionSignal;
+  private final StatusSignal<?> hopper2VelocitySignal;
+  private final StatusSignal<?> hopper2CurrentSignal;
+  private final StatusSignal<?> hopper2VoltageSignal;
 
   private double hopperGoalVelocity;
   private double hopperTestRPM;
@@ -62,6 +72,16 @@ public class HopperSubsystem extends SubsystemBase {
     }
 
     hopperMotor2.setControl(new Follower(hopperMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+
+    hopper1PositionSignal = hopperMotor.getPosition(false);
+    hopper1VelocitySignal = hopperMotor.getVelocity(false);
+    hopper1CurrentSignal = hopperMotor.getStatorCurrent(false);
+    hopper1VoltageSignal = hopperMotor.getMotorVoltage(false);
+
+    hopper2PositionSignal = hopperMotor2.getPosition(false);
+    hopper2VelocitySignal = hopperMotor2.getVelocity(false);
+    hopper2CurrentSignal = hopperMotor2.getStatorCurrent(false);
+    hopper2VoltageSignal = hopperMotor2.getMotorVoltage(false);
     
     hopperVelocityControl = HopperConstants.HOPPER_VELOCITY_CONTROL.clone();
   }
@@ -77,15 +97,27 @@ public class HopperSubsystem extends SubsystemBase {
   }
 
   public void publishTelemetry() {
-    SmartDashboard.putNumber("Hopper/Motor1PositionRot", hopperMotor.getPosition().getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor1VelocityRps", hopperMotor.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor1CurrentA", hopperMotor.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor1VoltageV", hopperMotor.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1PositionRot", hopper1PositionSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1VelocityRps", hopper1VelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1CurrentA", hopper1CurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1VoltageV", hopper1VoltageSignal.getValueAsDouble());
 
-    SmartDashboard.putNumber("Hopper/Motor2PositionRot", hopperMotor2.getPosition().getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor2VelocityRps", hopperMotor2.getVelocity().getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor2CurrentA", hopperMotor2.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor2VoltageV", hopperMotor2.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2PositionRot", hopper2PositionSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2VelocityRps", hopper2VelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2CurrentA", hopper2CurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2VoltageV", hopper2VoltageSignal.getValueAsDouble());
+  }
+
+  private void refreshStatusSignals() {
+    BaseStatusSignal.refreshAll(
+        hopper1PositionSignal,
+        hopper1VelocitySignal,
+        hopper1CurrentSignal,
+        hopper1VoltageSignal,
+        hopper2PositionSignal,
+        hopper2VelocitySignal,
+        hopper2CurrentSignal,
+        hopper2VoltageSignal);
   }
 
   // SIMULATION
@@ -169,6 +201,6 @@ public class HopperSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // This method will be called once per scheduler run
+    refreshStatusSignals();
   }
 }

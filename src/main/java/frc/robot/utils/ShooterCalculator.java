@@ -7,9 +7,11 @@ package frc.robot.utils;
 import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.Robot;
+import frc.robot.constants.Dimensions;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
 
@@ -32,8 +34,22 @@ public final class ShooterCalculator {
             : PoseConstants.RED_HUB_AIM_POSE.getTranslation();
     }
 
+    private static final Transform2d SHOOTER_OFFSET_FROM_ROBOT = new Transform2d(
+        Dimensions.SHOOTER_POSE.getX(),
+        Dimensions.SHOOTER_POSE.getY(),
+        Rotation2d.kZero
+    );
+
+    public static Pose2d getShooterPoseFromRobotPose(Pose2d robotPose) {
+        return robotPose.transformBy(SHOOTER_OFFSET_FROM_ROBOT);
+    }
+
+    public static Translation2d getShooterTranslation(Pose2d robotPose) {
+        return getShooterPoseFromRobotPose(robotPose).getTranslation();
+    }
+
     public static double getDistanceToHub(Pose2d pose) {
-        return getHubTranslation().getDistance(pose.getTranslation());
+        return getHubTranslation().getDistance(getShooterTranslation(pose));
     }
 
     // Reusable result array to avoid allocation every loop
@@ -41,13 +57,14 @@ public final class ShooterCalculator {
 
     public static double getDistanceToHubWithSpeedCalculation(double filteredSpeedX, double filteredSpeedY, Pose2d pose, double time) {
         Translation2d hub = getHubTranslation();
-        double dx = hub.getX() - filteredSpeedX * time - pose.getX();
-        double dy = hub.getY() - filteredSpeedY * time - pose.getY();
+        Translation2d shooterTranslation = getShooterTranslation(pose);
+        double dx = hub.getX() - filteredSpeedX * time - shooterTranslation.getX();
+        double dy = hub.getY() - filteredSpeedY * time - shooterTranslation.getY();
         return Math.hypot(dx, dy);
     }
 
     public static double getXDistanceToHub(Pose2d pose) {
-        return Math.abs(getHubTranslation().getX() - pose.getTranslation().getX());
+        return Math.abs(getHubTranslation().getX() - getShooterTranslation(pose).getX());
     }
 
     public static double[] calculateShootingParameters(double filteredSpeedX, double filteredSpeedY, Pose2d pose, double time) {

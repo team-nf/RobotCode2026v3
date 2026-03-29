@@ -86,6 +86,7 @@ public class AimAndPassCommand extends Command {
   }
 
   private Pose2d robotPose = new Pose2d();
+  private Pose2d shooterPose = new Pose2d();
   private double filteredAngleError = 0.0;
 
   private double velocityRPS = 0.0;
@@ -116,6 +117,7 @@ public class AimAndPassCommand extends Command {
   public void execute() {
 
     robotPose = swerveDrivetrain.getPose();
+  shooterPose = ShooterCalculator.getShooterPoseFromRobotPose(robotPose);
     passAimPose = selectPassAimPose(robotPose);
 
     filteredAngleError = 0.0;
@@ -128,7 +130,7 @@ public class AimAndPassCommand extends Command {
     aimY = passAimPose.getY();
 
     heading = robotPose.getRotation().getRadians();
-    robotAngleToPass = Math.atan2(aimY - robotPose.getY(), aimX - robotPose.getX());
+  robotAngleToPass = Math.atan2(aimY - shooterPose.getY(), aimX - shooterPose.getX());
     rawAngleError = robotAngleToPass - heading;
     rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
 

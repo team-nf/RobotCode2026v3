@@ -10,7 +10,9 @@ import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
@@ -47,6 +49,22 @@ public class ShooterSubsystem extends SubsystemBase {
     private final PositionVoltage hoodPositionControl;
     private final PositionVoltage turretPositionControl;
 
+    private final StatusSignal<?> flywheel1VelocitySignal;
+    private final StatusSignal<?> flywheel1CurrentSignal;
+    private final StatusSignal<?> flywheel1VoltageSignal;
+    private final StatusSignal<?> flywheel2VelocitySignal;
+    private final StatusSignal<?> flywheel2CurrentSignal;
+    private final StatusSignal<?> flywheel2VoltageSignal;
+    private final StatusSignal<?> hoodPositionSignal;
+    private final StatusSignal<?> hoodVelocitySignal;
+    private final StatusSignal<?> hoodCurrentSignal;
+    private final StatusSignal<?> hoodVoltageSignal;
+    private final StatusSignal<?> turretPositionSignal;
+    private final StatusSignal<?> turretVelocitySignal;
+    private final StatusSignal<?> turretCurrentSignal;
+    private final StatusSignal<?> turretVoltageSignal;
+    private final StatusSignal<?> turretAbsolutePositionSignal;
+
     private static final double MIN_HOOD_ROT = ShooterConstants.MIN_HOOD_ANGLE.in(Rotations);
     private static final double MAX_HOOD_ROT = ShooterConstants.MAX_HOOD_ANGLE.in(Rotations);
     private static final double MIN_TURRET_DEG = ShooterConstants.MIN_TURRET_ANGLE.in(edu.wpi.first.units.Units.Degrees);
@@ -77,6 +95,26 @@ public class ShooterSubsystem extends SubsystemBase {
         flywheelVelocityControl = ShooterConstants.SHOOTER_VELOCITY_CONTROL.clone();
         hoodPositionControl = ShooterConstants.HOOD_POSITION_CONTROL.clone();
         turretPositionControl = ShooterConstants.TURRET_POSITION_CONTROL.clone();
+
+        flywheel1VelocitySignal = flywheelMotor1.getVelocity(false);
+        flywheel1CurrentSignal = flywheelMotor1.getStatorCurrent(false);
+        flywheel1VoltageSignal = flywheelMotor1.getMotorVoltage(false);
+
+        flywheel2VelocitySignal = flywheelMotor2.getVelocity(false);
+        flywheel2CurrentSignal = flywheelMotor2.getStatorCurrent(false);
+        flywheel2VoltageSignal = flywheelMotor2.getMotorVoltage(false);
+
+        hoodPositionSignal = hoodMotor.getPosition(false);
+        hoodVelocitySignal = hoodMotor.getVelocity(false);
+        hoodCurrentSignal = hoodMotor.getStatorCurrent(false);
+        hoodVoltageSignal = hoodMotor.getMotorVoltage(false);
+
+        turretPositionSignal = turretMotor.getPosition(false);
+        turretVelocitySignal = turretMotor.getVelocity(false);
+        turretCurrentSignal = turretMotor.getStatorCurrent(false);
+        turretVoltageSignal = turretMotor.getMotorVoltage(false);
+
+        turretAbsolutePositionSignal = turretAbsoluteEncoder.getAbsolutePosition(false);
 
         syncTurretMotorToAbsoluteEncoder();
     }
@@ -159,8 +197,28 @@ public class ShooterSubsystem extends SubsystemBase {
         flywheelMotor1.set(0.0);
     }
 
+    private void refreshStatusSignals() {
+        BaseStatusSignal.refreshAll(
+            flywheel1VelocitySignal,
+            flywheel1CurrentSignal,
+            flywheel1VoltageSignal,
+            flywheel2VelocitySignal,
+            flywheel2CurrentSignal,
+            flywheel2VoltageSignal,
+            hoodPositionSignal,
+            hoodVelocitySignal,
+            hoodCurrentSignal,
+            hoodVoltageSignal,
+            turretPositionSignal,
+            turretVelocitySignal,
+            turretCurrentSignal,
+            turretVoltageSignal,
+            turretAbsolutePositionSignal);
+    }
+
     public void syncTurretMotorToAbsoluteEncoder() {
-        double absoluteEncoderRot = turretAbsoluteEncoder.getAbsolutePosition().getValueAsDouble();
+        turretAbsolutePositionSignal.refresh();
+        double absoluteEncoderRot = turretAbsolutePositionSignal.getValueAsDouble();
         double absoluteTurretDeg = absoluteEncoderRot
                 * ShooterConstants.TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION
                 + ShooterConstants.TURRET_ABSOLUTE_OFFSET_DEGREES;
@@ -232,7 +290,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Get the current flywheel velocity in RPS (mechanism side). */
     public double getFlywheel1Velocity() {
-        return flywheelMotor1.getVelocity().getValueAsDouble() / ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
+        return flywheel1VelocitySignal.getValueAsDouble() / ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
     }
 
     public double getFlywheel1SpeedAbs() {
@@ -241,11 +299,11 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Get the current hood position in rotations (mechanism side). */
     public double getHoodPosition() {
-        return hoodMotor.getPosition().getValueAsDouble() / ShooterConstants.HOOD_GEAR_REDUCTION;
+        return hoodPositionSignal.getValueAsDouble() / ShooterConstants.HOOD_GEAR_REDUCTION;
     }
 
     public double getTurretAngleDegrees() {
-        return turretMotor.getPosition().getValueAsDouble() / ShooterConstants.TURRET_GEAR_REDUCTION * 360.0;
+        return turretPositionSignal.getValueAsDouble() / ShooterConstants.TURRET_GEAR_REDUCTION * 360.0;
     }
 
     // Pre-cached allowable error thresholds
@@ -279,23 +337,23 @@ public class ShooterSubsystem extends SubsystemBase {
         double hoodDegError = (hoodGoalPosition - getHoodPosition()) * 360.0;
         double turretDegError = turretGoalAngleDegrees - getTurretAngleDegrees();
 
-        SmartDashboard.putNumber("Shooter/Flywheel1VelocityRps", flywheelMotor1.getVelocity().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel1CurrentA", flywheelMotor1.getStatorCurrent().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel1VoltageV", flywheelMotor1.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel1VelocityRps", flywheel1VelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel1CurrentA", flywheel1CurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel1VoltageV", flywheel1VoltageSignal.getValueAsDouble());
 
-        SmartDashboard.putNumber("Shooter/Flywheel2VelocityRps", flywheelMotor2.getVelocity().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel2CurrentA", flywheelMotor2.getStatorCurrent().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel2VoltageV", flywheelMotor2.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel2VelocityRps", flywheel2VelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel2CurrentA", flywheel2CurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel2VoltageV", flywheel2VoltageSignal.getValueAsDouble());
 
-        SmartDashboard.putNumber("Shooter/HoodMotorPositionRot", hoodMotor.getPosition().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/HoodMotorVelocityRps", hoodMotor.getVelocity().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/HoodMotorCurrentA", hoodMotor.getStatorCurrent().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/HoodMotorVoltageV", hoodMotor.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/HoodMotorPositionRot", hoodPositionSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/HoodMotorVelocityRps", hoodVelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/HoodMotorCurrentA", hoodCurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/HoodMotorVoltageV", hoodVoltageSignal.getValueAsDouble());
 
-        SmartDashboard.putNumber("Shooter/TurretMotorPositionRot", turretMotor.getPosition().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/TurretMotorVelocityRps", turretMotor.getVelocity().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/TurretMotorCurrentA", turretMotor.getStatorCurrent().getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/TurretMotorVoltageV", turretMotor.getMotorVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/TurretMotorPositionRot", turretPositionSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/TurretMotorVelocityRps", turretVelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/TurretMotorCurrentA", turretCurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/TurretMotorVoltageV", turretVoltageSignal.getValueAsDouble());
 
         SmartDashboard.putNumber("Shooter/FlywheelRPS", flywheelRps);
         SmartDashboard.putNumber("Shooter/HoodAngleRot", getHoodPosition());
@@ -431,6 +489,6 @@ public class ShooterSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        // This method will be called once per scheduler run
+        refreshStatusSignals();
     }
 }
