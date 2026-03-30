@@ -117,10 +117,12 @@ public class ShooterConstants {
                                                                     .withEnableFOC(false);
 
     public static final double TURRET_AGGRESSIVE_KS = 1.0;
-    public static final double TURRET_AGGRESSIVE_KV = 0.0;
-    public static final double TURRET_AGGRESSIVE_KP = 48.0;
+    public static final double TURRET_AGGRESSIVE_KV = 10.0;
+    public static final double TURRET_AGGRESSIVE_KP = 60.0;
     public static final double TURRET_AGGRESSIVE_KI = 0.0;
     public static final double TURRET_AGGRESSIVE_KD = 0.0;
+    public static final double TURRET_AGGRESSIVE_KA = 30.0;
+
 
     public static final double TURRET_GENTLE_KS = 1;
     public static final double TURRET_GENTLE_KV = 0.0;
@@ -138,7 +140,8 @@ public class ShooterConstants {
         .withKV(TURRET_AGGRESSIVE_KV)
         .withKP(TURRET_AGGRESSIVE_KP)
         .withKI(TURRET_AGGRESSIVE_KI)
-        .withKD(TURRET_AGGRESSIVE_KD);
+        .withKD(TURRET_AGGRESSIVE_KD)
+        .withKA(TURRET_AGGRESSIVE_KA);
 
     public static final Slot1Configs TURRET_GENTLE_PID_CONFIGS = new Slot1Configs()
         .withKS(TURRET_GENTLE_KS)
@@ -149,12 +152,12 @@ public class ShooterConstants {
 
     public static final CurrentLimitsConfigs TURRET_CURRENT_LIMITS = new CurrentLimitsConfigs()
         .withSupplyCurrentLimitEnable(true)
-        .withSupplyCurrentLimit(30)
-        .withStatorCurrentLimit(30);
+        .withSupplyCurrentLimit(39)
+        .withStatorCurrentLimit(39);
 
     public static final VoltageConfigs TURRET_VOLTAGE_CONFIGS = new VoltageConfigs()
-        .withPeakForwardVoltage(10)
-        .withPeakReverseVoltage(-10);
+        .withPeakForwardVoltage(12)
+        .withPeakReverseVoltage(-12);
 
     public static final MotorOutputConfigs TURRET_MOTOR_OUTPUT_CONFIGS = new MotorOutputConfigs()
         .withInverted(InvertedValue.Clockwise_Positive)

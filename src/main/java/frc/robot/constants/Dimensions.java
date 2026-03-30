@@ -29,6 +29,7 @@ public final class Dimensions {
     public static final Distance RED_SHOOT_AREA_X_MAX = Meters.of(16);
     public static final Distance RED_SHOOT_AREA_Y_MIN = Meters.of(0.5);
     public static final Distance RED_SHOOT_AREA_Y_MAX = Meters.of(7.5);
+    
     public static final Pose3d SHOOTER_POSE =
              new Pose3d(-0.1475, 0.1475, 0.52, new Rotation3d(0, 0, 0));
 

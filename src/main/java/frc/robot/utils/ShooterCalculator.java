@@ -14,6 +14,7 @@ import frc.robot.Robot;
 import frc.robot.constants.Dimensions;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
+import frc.robot.constants.TheMachineConstants;
 
 public final class ShooterCalculator {
 
@@ -35,8 +36,8 @@ public final class ShooterCalculator {
     }
 
     private static final Transform2d SHOOTER_OFFSET_FROM_ROBOT = new Transform2d(
-        Dimensions.SHOOTER_POSE.getX(),
-        Dimensions.SHOOTER_POSE.getY(),
+        TheMachineConstants.SHOOTER_ROTATION_AXIS.getX(),
+        TheMachineConstants.SHOOTER_ROTATION_AXIS.getY(),
         Rotation2d.kZero
     );
 
