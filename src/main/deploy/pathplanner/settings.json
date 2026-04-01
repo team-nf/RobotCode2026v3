@@ -4,6 +4,7 @@
   "holonomicMode": true,
   "pathFolders": [
     "AutoTrench",
+    "TrenchAndHuman",
     "UnderLeftDouble"
   ],
   "autoFolders": [],
