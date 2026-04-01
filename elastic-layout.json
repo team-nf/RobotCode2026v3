@@ -194,19 +194,6 @@
             }
           },
           {
-            "title": "Status",
-            "x": 1472.0,
-            "y": 0.0,
-            "width": 192.0,
-            "height": 128.0,
-            "type": "Large Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Phase/Status",
-              "period": 0.06,
-              "data_type": "string"
-            }
-          },
-          {
             "title": "Robot",
             "x": 896.0,
             "y": 768.0,
@@ -266,6 +253,20 @@
               "topic": "/SmartDashboard/RawYaw",
               "period": 0.06,
               "data_type": "double",
+              "show_submit_button": false
+            }
+          },
+          {
+            "title": "State",
+            "x": 1472.0,
+            "y": 0.0,
+            "width": 192.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/TheMachine/State",
+              "period": 0.06,
+              "data_type": "string",
               "show_submit_button": false
             }
           }

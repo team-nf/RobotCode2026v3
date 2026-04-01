@@ -1,5 +1,8 @@
 package frc.robot;
 
+import java.util.function.Supplier;
+
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -8,11 +11,14 @@ import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.TheMachineConstants;
+import frc.robot.constants.PoseConstants;
 import frc.robot.constants.States.TheMachineStates.TheMachineState;
 import frc.robot.subsystems.FeederSubsystem;
 import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
+import frc.robot.utils.Container;
+import frc.robot.utils.ShooterCalculator;
 
 public class TheMachine {
 
@@ -24,12 +30,51 @@ public class TheMachine {
     private TheMachineState state = TheMachineState.IDLE_RETRACTED;
 
     private boolean intakeWithOffset = false;
-    
-    public TheMachine(ShooterSubsystem shooterSubsystem, HopperSubsystem hopperSubsystem, IntakeSubsystem intakeSubsystem, FeederSubsystem feederSubsystem) {
+
+    private Supplier<Pose2d> robotPose2dSupplier;
+    private Pose2d goalHubPose;
+
+    public TheMachine(ShooterSubsystem shooterSubsystem, HopperSubsystem hopperSubsystem, IntakeSubsystem intakeSubsystem, FeederSubsystem feederSubsystem, 
+                                            Supplier<Pose2d> robotPose2dSupplier) {
         this.shooterSubsystem = shooterSubsystem;
         this.hopperSubsystem = hopperSubsystem;
         this.intakeSubsystem = intakeSubsystem;
         this.feederSubsystem = feederSubsystem;
+
+        this.robotPose2dSupplier = robotPose2dSupplier;
+
+        if(Container.isBlue)
+        {
+            goalHubPose = PoseConstants.BLUE_HUB_AIM_POSE;
+        }
+        else
+        {
+            goalHubPose = PoseConstants.RED_HUB_AIM_POSE;
+        }
+    
+    }
+
+    private double goalTurretAngleForHub;
+    private Pose2d robotPose2d;
+
+    Pose2d shooterPose2d;
+    double robotHeadingRad;
+    double shooterToHubAngleRad;
+    public void setTurretAngleToHubWithoutShooting() {
+        robotPose2d = robotPose2dSupplier.get();
+        shooterPose2d = ShooterCalculator.getShooterPoseFromRobotPose(robotPose2d);
+
+        robotHeadingRad = robotPose2d.getRotation().getRadians();
+        shooterToHubAngleRad = Math.atan2(
+            goalHubPose.getY() - shooterPose2d.getY(),
+            goalHubPose.getX() - shooterPose2d.getX());
+
+        goalTurretAngleForHub = Math.toDegrees(
+            Math.atan2(
+                Math.sin(shooterToHubAngleRad - robotHeadingRad),
+                Math.cos(shooterToHubAngleRad - robotHeadingRad)));
+
+        shooterSubsystem.setTurretAngleDegrees(goalTurretAngleForHub);
     }
 
     public void zero() {
@@ -218,6 +263,8 @@ public class TheMachine {
     feederSubsystem.publishTelemetry();
     hopperSubsystem.publishTelemetry();
     intakeSubsystem.publishTelemetry();
+
+    SmartDashboard.putString("TheMachine/State", state.toString());
   }
 
   public SubsystemBase[] getSubsystems() {

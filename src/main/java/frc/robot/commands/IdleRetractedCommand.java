@@ -23,7 +23,9 @@ public class IdleRetractedCommand extends Command {
   }
 
   @Override
-  public void execute() {}
+  public void execute() {
+    theMachine.setTurretAngleToHubWithoutShooting();
+  }
 
   @Override
   public void end(boolean interrupted) {}

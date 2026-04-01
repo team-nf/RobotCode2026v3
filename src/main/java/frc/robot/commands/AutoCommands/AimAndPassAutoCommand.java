@@ -1,0 +1,164 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
+package frc.robot.commands.AutoCommands;
+
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest;
+
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.networktables.BooleanEntry;
+import edu.wpi.first.networktables.DoubleEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.TheMachine;
+import frc.robot.constants.PoseConstants;
+import frc.robot.constants.ShooterConstants;
+import frc.robot.constants.TunerConstants;
+import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.utils.Container;
+import frc.robot.utils.ShooterCalculator;
+
+/* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
+public class AimAndPassAutoCommand extends Command {
+
+  private final DoubleEntry passAngleErrorEntry = NetworkTableInstance.getDefault()
+      .getDoubleTopic("/PASS/AimAngleError").getEntry(0.0);
+
+  private final StructPublisher<Pose3d> passAimPosePublisher = NetworkTableInstance.getDefault()
+      .getStructTopic("/PASS/AimPose3d", Pose3d.struct)
+      .publish();
+
+  private final BooleanEntry passOnTargetEntry = NetworkTableInstance.getDefault()
+      .getBooleanTopic("/PASS/AimOnTarget").getEntry(false);
+
+  private double MaxSpeed = 0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+  private double MaxAngularRate = RotationsPerSecond.of(0.4).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
+
+  private CommandXboxController driverController;
+  private CommandSwerveDrivetrain swerveDrivetrain;
+  private TheMachine theMachine;
+
+  private Pose2d passAimPose;
+
+  private static final int FILTER_SIZE = 2;
+  private final double[] angleErrorBuffer = new double[FILTER_SIZE];
+  private int bufferIndex = 0;
+
+  private static final double TURRET_TOLERANCE_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
+
+
+  /** Creates a new AimAndPass. */
+  public AimAndPassAutoCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
+    // Use addRequirements() here to declare subsystem dependencies.
+    this.swerveDrivetrain = drivetrain;
+    this.driverController = joystick;
+    this.theMachine = theMachine;
+
+    addRequirements(theMachine.getSubsystems());
+
+    passAimPose = Container.isBlue ? PoseConstants.BLUE_PASS_RIGHT : PoseConstants.RED_PASS_RIGHT;
+  }
+
+  // Called when the command is initially scheduled.
+  @Override
+  public void initialize() {
+    for (int i = 0; i < FILTER_SIZE; i++) {
+      angleErrorBuffer[i] = 0.0;
+    }
+    bufferIndex = 0;
+
+    passAimPose = Container.isBlue ? PoseConstants.BLUE_PASS_RIGHT : PoseConstants.RED_PASS_RIGHT;
+  }
+
+  private Pose2d robotPose = new Pose2d();
+  private Pose2d shooterPose = new Pose2d();
+  private double filteredAngleError = 0.0;
+
+  private double velocityRPS = 0.0;
+  private double hoodAngle = 0.0;
+  private double turretAngleDeg = 0.0;
+
+  double laneSplitY;
+  boolean onLeftSide;
+  private Pose2d selectPassAimPose(Pose2d currentPose) {
+    laneSplitY = (PoseConstants.BLUE_PASS_LEFT.getY() + PoseConstants.BLUE_PASS_RIGHT.getY()) * 0.5;
+    onLeftSide = currentPose.getY() >= laneSplitY;
+
+    if (Container.isBlue) {
+      return onLeftSide ? PoseConstants.BLUE_PASS_LEFT : PoseConstants.BLUE_PASS_RIGHT;
+    }
+    return onLeftSide ? PoseConstants.RED_PASS_LEFT : PoseConstants.RED_PASS_RIGHT;
+  }
+
+  double aimX ;
+  double aimY ;
+
+  double heading ;
+  double robotAngleToPass;
+  double rawAngleError;
+
+  // Called every time the scheduler runs while the command is scheduled.
+  @Override
+  public void execute() {
+
+    robotPose = swerveDrivetrain.getPose();
+  shooterPose = ShooterCalculator.getShooterPoseFromRobotPose(robotPose);
+    passAimPose = selectPassAimPose(robotPose);
+
+    filteredAngleError = 0.0;
+    for (int i = 0; i < FILTER_SIZE; i++) {
+      filteredAngleError += angleErrorBuffer[i];
+    }
+    filteredAngleError /= FILTER_SIZE;
+
+    aimX = passAimPose.getX();
+    aimY = passAimPose.getY();
+
+    heading = robotPose.getRotation().getRadians();
+  robotAngleToPass = Math.atan2(aimY - shooterPose.getY(), aimX - shooterPose.getX());
+    rawAngleError = robotAngleToPass - heading;
+    rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
+
+    angleErrorBuffer[bufferIndex] = rawAngleError;
+    bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
+
+    turretAngleDeg = Math.toDegrees(Math.atan2(
+      Math.sin(robotAngleToPass - heading),
+      Math.cos(robotAngleToPass - heading)
+    ));
+
+    velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentPose(robotPose);
+    hoodAngle = ShooterCalculator.calculatePassHoodAngle();
+
+    if(theMachine.isShooterReady()) {
+      theMachine.pass(velocityRPS, hoodAngle, turretAngleDeg);
+    } else {
+      theMachine.getReadyPass(velocityRPS, hoodAngle, turretAngleDeg);
+    }
+
+    passOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
+    passAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
+    passAimPosePublisher.set(new Pose3d(aimX, aimY, 0.0, new Rotation3d(0, 0, 0)));
+ 
+  }
+
+  // Called once the command ends or is interrupted.
+  @Override
+  public void end(boolean interrupted) {}
+
+  // Returns true when the command should end.
+  @Override
+  public boolean isFinished() {
+    return false;
+  }
+}

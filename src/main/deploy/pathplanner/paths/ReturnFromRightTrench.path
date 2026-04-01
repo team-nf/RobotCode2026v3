@@ -66,7 +66,7 @@
     "rotation": 0.5589654808321499
   },
   "reversed": false,
-  "folder": null,
+  "folder": "AutoTrench",
   "idealStartingState": {
     "velocity": 2.0,
     "rotation": 0.0

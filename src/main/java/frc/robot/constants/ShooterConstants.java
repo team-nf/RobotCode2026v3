@@ -18,6 +18,8 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.units.measure.*;
 import frc.robot.Robot;
 
@@ -39,7 +41,8 @@ public class ShooterConstants {
 
     public static final AngularVelocity FLYWHEEL_ALLOWABLE_ERROR = RotationsPerSecond.of(1.5); // Allowable error in radians per second
     public static final Angle HOOD_ALLOWABLE_ERROR = Degrees.of(1.5); // Allowable error in radians
-    public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(2);
+    public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(4);
+    public static final AngularVelocity TURRET_ALLOWABLE_SPEED_TO_SHOOT = RotationsPerSecond.of(15);
 
     public static final double SHOOTER_KS = 0.05;
     public static final double SHOOTER_KV = 0.115;
@@ -47,7 +50,6 @@ public class ShooterConstants {
     public static final double SHOOTER_KI = 0.0;
     public static final double SHOOTER_KD = 0.001;
     public static final double SHOOTER_KA = 0.005; 
-
 
     public static final MotorOutputConfigs SHOOTER_MOTOR_OUTPUT_CONFIGS = new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive);
     public static final Slot0Configs SHOOTER_PID_CONFIGS = new Slot0Configs()
@@ -127,10 +129,10 @@ public class ShooterConstants {
     public static final double TURRET_GENTLE_KS = 1;
     public static final double TURRET_GENTLE_KV = 0.0;
     public static final double TURRET_GENTLE_KP = 8.0;
-    public static final double TURRET_GENTLE_KI = 0.0;
+    public static final double TURRET_GENTLE_KI = 1;
     public static final double TURRET_GENTLE_KD = 0.01;
 
-    public static final double TURRET_SMALL_ERROR_THRESHOLD_DEG = 12.0;
+    public static final double TURRET_SMALL_ERROR_THRESHOLD_DEG = 16.0;
 
     public static final int TURRET_AGGRESSIVE_SLOT = 0;
     public static final int TURRET_GENTLE_SLOT = 1;
@@ -202,7 +204,6 @@ public class ShooterConstants {
     public static final Angle MAX_HOOD_ANGLE = Degrees.of(20);
     public static final Angle PASS_HOOD_ANGLE = Degrees.of(10);
     public static final Angle HOOD_ANGLE_OFFSET = Degrees.of(18);
-
 
     public static final Angle MIN_HOOD_MOTOR_ANGLE = MIN_HOOD_ANGLE.times(HOOD_GEAR_REDUCTION);
     public static final Angle MAX_HOOD_MOTOR_ANGLE = MAX_HOOD_ANGLE.times(HOOD_GEAR_REDUCTION);

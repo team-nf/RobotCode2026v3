@@ -2,7 +2,7 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.commands;
+package frc.robot.commands.AutoCommands;
 
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
@@ -37,7 +37,7 @@ import frc.robot.utils.Container;
 import frc.robot.utils.ShooterCalculator;
 
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
-public class AimAndShootCommand extends Command {
+public class AimAndShootAutoCommand extends Command {
   
   private final DoubleEntry aimAngleErrorEntry = NetworkTableInstance.getDefault()
       .getDoubleTopic("/AIM/AimAngleError").getEntry(0.0);
@@ -47,8 +47,6 @@ public class AimAndShootCommand extends Command {
     .publish();
   private final BooleanEntry aimOnTargetEntry = NetworkTableInstance.getDefault()
     .getBooleanTopic("/AIM/AimOnTarget").getEntry(false);
-
-  
 
   private double MaxSpeed = 0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
   private double MaxAngularRate = RotationsPerSecond.of(0.35).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
@@ -63,11 +61,6 @@ public class AimAndShootCommand extends Command {
         TheMachineConstants.SHOOTER_ROTATION_AXIS.getY(),
         Rotation2d.kZero
     );
-
-  private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
-            .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
-            .withDriveRequestType(DriveRequestType.OpenLoopVoltage)
-            .withCenterOfRotation(SHOOTER_CENTER_OF_ROTATION); // Use open-loop control for drive motors
 
   private CommandXboxController driverController;
   private CommandSwerveDrivetrain swerveDrivetrain;
@@ -84,13 +77,12 @@ public class AimAndShootCommand extends Command {
   private int validSampleCount = 0;
 
   /** Creates a new AimAndPass. */
-  public AimAndShootCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
+  public AimAndShootAutoCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
     this.driverController = joystick;
     this.theMachine = theMachine;
 
-    addRequirements(drivetrain);
     addRequirements(theMachine.getSubsystems());
     
     if(Container.isBlue)
@@ -217,13 +209,6 @@ public class AimAndShootCommand extends Command {
     filteredAngleError = Math.atan2(sumSin, sumCos);
 
     bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
-
-
-    swerveDrivetrain.setControl(
-        drive.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
-            .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-      .withRotationalRate(-driverController.getRightX() * MaxAngularRate)
-    );
 
     // Create filtered speeds for shooter calculation
     shootParams = ShooterCalculator.calculateShootingParameters(filteredSpeedX, filteredSpeedY, robotPose, time);

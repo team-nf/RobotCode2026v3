@@ -16,7 +16,6 @@ public class IdleDeployedCommand extends Command {
   public IdleDeployedCommand(TheMachine theMachine) {
     this.theMachine = theMachine;
     addRequirements(theMachine.getSubsystems());
-
     // Use addRequirements() here to declare subsystem dependencies.
   }
 
@@ -28,7 +27,9 @@ public class IdleDeployedCommand extends Command {
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
-  public void execute() {}
+  public void execute() {
+    theMachine.setTurretAngleToHubWithoutShooting();
+  }
 
   // Called once the command ends or is interrupted.
   @Override

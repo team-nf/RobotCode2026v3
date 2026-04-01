@@ -4,7 +4,6 @@
 
 package frc.robot;
 
-import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.AimAndPassCommand;
 import frc.robot.commands.AimAndShootCommand;
 import frc.robot.commands.GoFromLeftTrenchCommand;
@@ -16,7 +15,10 @@ import frc.robot.commands.IntakeCommand;
 import frc.robot.commands.ReturnFromLeftTrenchCommand;
 import frc.robot.commands.ReturnFromRightTrenchCommand;
 import frc.robot.commands.SwerveTeleopCommand;
+import frc.robot.commands.AutoCommands.AimAndPassAutoCommand;
+import frc.robot.commands.AutoCommands.AimAndShootAutoCommand;
 import frc.robot.constants.Dimensions;
+import frc.robot.constants.TheMachineConstants;
 import frc.robot.constants.States.TheMachineStates.TheMachineState;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -32,6 +34,9 @@ import frc.robot.utils.SwerveFieldContactSim;
 
 import static edu.wpi.first.units.Units.Meters;
 
+import java.util.jar.Attributes.Name;
+
+import com.fasterxml.jackson.databind.util.Named;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
@@ -40,6 +45,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 public class RobotContainer {
@@ -62,19 +69,22 @@ public class RobotContainer {
   private final IdleDeployedCommand m_idleDeployedCommand;
   private final IntakeCommand m_intakeCommand;
 
+  private final AimAndPassAutoCommand m_aimAndPassAutoCommand;
+  private final AimAndShootAutoCommand m_aimAndShootAutoCommand;
+
   public RobotContainer() {
     Container.isBlue = DriverStation.getAlliance().map(a -> a == DriverStation.Alliance.Blue).orElse(true);
 
     m_driverController =
-        new CommandXboxController(OperatorConstants.kDriverControllerPort);
+        new CommandXboxController(TheMachineConstants.DRIVER_CONTROLLER_PORT_ID);
 
     m_drivetrainSubsystem = TunerConstants.createDrivetrain();
 
-    m_shooterSubsystem = new ShooterSubsystem();
+    m_shooterSubsystem = new ShooterSubsystem(m_drivetrainSubsystem::getHeading);
     m_feederSubsystem = new FeederSubsystem();
     m_hopperSubsystem = new HopperSubsystem();
     m_intakeSubsystem = new IntakeSubsystem();
-    m_theMachine = new TheMachine(m_shooterSubsystem, m_hopperSubsystem, m_intakeSubsystem, m_feederSubsystem);
+    m_theMachine = new TheMachine(m_shooterSubsystem, m_hopperSubsystem, m_intakeSubsystem, m_feederSubsystem, m_drivetrainSubsystem::getPose);
 
     m_swerveTeleopCommand = new SwerveTeleopCommand(m_drivetrainSubsystem, m_driverController);
 
@@ -83,6 +93,9 @@ public class RobotContainer {
     m_idleRetractedCommand = new IdleRetractedCommand(m_theMachine);
     m_idleDeployedCommand = new IdleDeployedCommand(m_theMachine);
     m_intakeCommand = new IntakeCommand(m_theMachine);
+
+    m_aimAndPassAutoCommand = new AimAndPassAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine);
+    m_aimAndShootAutoCommand = new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine);
 
     configureBindings();
 
@@ -109,8 +122,8 @@ public class RobotContainer {
 
     m_driverController.rightTrigger().whileTrue(
       new ConditionalCommand(
-        new AimAndShootCommand(m_drivetrainSubsystem, m_driverController, m_theMachine),
-        new AimAndPassCommand(m_drivetrainSubsystem, m_driverController, m_theMachine),
+        m_aimAndShootCommand,
+        m_aimAndPassCommand,
         m_drivetrainSubsystem::isRobotOnTheShootingZone
       )
     ).onFalse(m_idleDeployedCommand);
@@ -130,11 +143,19 @@ public class RobotContainer {
         m_drivetrainSubsystem::isRobotOnTheShootingZone
       ));
 
-    NamedCommands.registerCommand("IdleRetractedCommand", new IdleRetractedCommand(m_theMachine));
-    NamedCommands.registerCommand("IdleDeployedCommand", new IdleDeployedCommand(m_theMachine));
-    NamedCommands.registerCommand("IntakeCommand", new IntakeCommand(m_theMachine));
-    NamedCommands.registerCommand("AimAndPassCommand", new AimAndPassCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
-    NamedCommands.registerCommand("AimAndShootCommand", new AimAndShootCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
+
+    NamedCommands.registerCommand("IdleRetractedNC", m_idleRetractedCommand);
+    NamedCommands.registerCommand("IdleDeployedNC", m_idleDeployedCommand);
+    NamedCommands.registerCommand("IntakeNC", m_intakeCommand);
+    NamedCommands.registerCommand("AimAndPassNC", m_aimAndPassAutoCommand);
+    NamedCommands.registerCommand("AimAndShootNC", m_aimAndShootAutoCommand);
+    NamedCommands.registerCommand("WaitForHoodToBeClosedNC", new WaitUntilCommand(m_shooterSubsystem::isHoodClosed));
+    NamedCommands.registerCommand("AutoShootSequenceNC", 
+      new SequentialCommandGroup(
+        m_aimAndShootAutoCommand.withTimeout(5),
+        m_idleDeployedCommand.until(m_shooterSubsystem::isHoodClosed)
+      )
+    );
   }
 
   public Command getAutonomousCommand() {

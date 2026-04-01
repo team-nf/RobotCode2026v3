@@ -92,12 +92,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
 
-    private boolean autoAimEnabled = true;
-
     private NetworkTable llTable = NetworkTableInstance.getDefault().getTable("LL");
-    private BooleanEntry autoAimEnabledEntry = llTable.getBooleanTopic("AutoAimEnabled").getEntry(true);
-    private BooleanEntry llLeftEnabledEntry = llTable.getBooleanTopic("LL-Left_Enabled").getEntry(true);
-    private BooleanEntry llRightEnabledEntry = llTable.getBooleanTopic("LL-Right_Enabled").getEntry(true);
+    private BooleanEntry llTurretEnabledEntry = llTable.getBooleanTopic("LL-Turret_Enabled").getEntry(true);
+    private BooleanEntry llFixedEnabledEntry = llTable.getBooleanTopic("LL-Fixed_Enabled").getEntry(true);
     private BooleanEntry disabledLocoEnabledEntry = llTable.getBooleanTopic("DisabledLocoEnabled").getEntry(true);
 
     private Field2d confField2d = new Field2d();
@@ -260,11 +257,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return m_sysIdRoutineToApply.dynamic(direction);
     }
 
-    public boolean isAutoAimDisabled()
-    {
-        return !autoAimEnabled;
-    }
-
     public Pose2d getPose() {
         return getState().Pose;
     }
@@ -292,10 +284,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }
-
-        autoAimEnabledEntry.set(autoAimEnabled);
-        autoAimEnabled = autoAimEnabledEntry.get(autoAimEnabled);
-
 
         updateStartConditions();
 
@@ -439,8 +427,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             resetPose(initialStartPose2d);
         }
 
-        llLeftEnabledEntry.set(true);
-        llRightEnabledEntry.set(true);
+        llTurretEnabledEntry.set(true);
+        llFixedEnabledEntry.set(true);
         disabledLocoEnabledEntry.set(true);
     }
 
@@ -525,134 +513,144 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return getState().Speeds.omegaRadiansPerSecond * (180.0 / Math.PI);
     }
 
+    LimelightHelpers.IMUData imuData;
     public void addVisionMeasurementMT2() {
         // First, tell Limelight your robot's current orientation
-    double robotYaw = getHeading();
-    LimelightHelpers.SetRobotOrientation_NoFlush("limelight-left", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-    LimelightHelpers.SetRobotOrientation("limelight-right", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        double robotYaw = getHeading();
+        LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
-    // Get the pose estimate
-    LimelightHelpers.PoseEstimate limelightMeasurementLeft = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-left");
-    LimelightHelpers.PoseEstimate limelightMeasurementRight = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-right");
-    
-    boolean doRejectUpdate = false;
-    boolean doRejectLeft = false;
-    boolean doRejectRight = false;
-    
-    if(Math.abs(getGyroRate()) > 360)
-    {
-        doRejectUpdate = true;
-    }
+        imuData = LimelightHelpers.getIMUData("limelight-turret");
+
+        // Get the pose estimate
+        LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-turret");
+        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-4-1");
+        
+        boolean doRejectUpdate = false;
+        boolean doRejectTurret = false;
+        boolean doRejectFixed = false;
 
 
-    //if(drivetrain.swerveDataSupplier().get().swerveControlState == SwerveState.AIMING) doRejectUpdate = true;
-
-    if(limelightMeasurementLeft != null)
-    {
-    if(limelightMeasurementLeft.tagCount == 0)
+        
+        if(Math.abs(getGyroRate()) > 360)
         {
-            doRejectLeft = true;
-        }
-    }
-    else doRejectLeft = true;
-
-    if(limelightMeasurementRight != null)
-    {
-    if(limelightMeasurementRight.tagCount == 0)
-        {
-            doRejectRight = true;
-        }
-    }
-    else doRejectRight = true;
-
-
-    if(!doRejectUpdate)
-    {
-        if(!doRejectLeft && llLeftEnabledEntry.get(true))
-        {
-            setVisionMeasurementStdDevs(VecBuilder.fill(.6,.6,9999999));
-            addVisionMeasurement(
-            limelightMeasurementLeft.pose,
-            limelightMeasurementLeft.timestampSeconds
-            );
+            doRejectUpdate = true;
         }
 
-        if(!doRejectRight && llRightEnabledEntry.get(true))
+
+        //if(drivetrain.swerveDataSupplier().get().swerveControlState == SwerveState.AIMING) doRejectUpdate = true;
+
+        if(limelightMeasurementTurret != null)
         {
-            setVisionMeasurementStdDevs(VecBuilder.fill(.6,.6,9999999));
-            addVisionMeasurement(
-            limelightMeasurementRight.pose,
-            limelightMeasurementRight.timestampSeconds
-            );
+        if(limelightMeasurementTurret.tagCount == 0)
+            {
+                doRejectTurret = true;
+            }
+        if(Math.abs(imuData.accelZ) > 120.0)
+            {
+                doRejectTurret = true;
+            }
         }
-    }
+        else doRejectTurret = true;
+
+        if(limelightMeasurementFixed != null)
+        {
+        if(limelightMeasurementFixed.tagCount == 0)
+            {
+                doRejectFixed = true;
+            }
+        }
+        else doRejectFixed = true;
+
+
+        if(!doRejectUpdate)
+        {
+            if(!doRejectTurret && llTurretEnabledEntry.get(true))
+            {
+                setVisionMeasurementStdDevs(VecBuilder.fill(.6,.6,9999999));
+                addVisionMeasurement(
+                limelightMeasurementTurret.pose,
+                limelightMeasurementTurret.timestampSeconds
+                );
+            }
+
+            if(!doRejectFixed && llFixedEnabledEntry.get(true))
+            {
+                setVisionMeasurementStdDevs(VecBuilder.fill(.6,.6,9999999));
+                addVisionMeasurement(
+                limelightMeasurementFixed.pose,
+                limelightMeasurementFixed.timestampSeconds
+                );
+            }
+        }
     }
 
     public void addVisionMeasurementMT1() {
         // First, tell Limelight your robot's current orientation
     double robotYaw = getHeading();
-    LimelightHelpers.SetRobotOrientation_NoFlush("limelight-left", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-    LimelightHelpers.SetRobotOrientation("limelight-right", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+    LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+    LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
     // Get the pose estimate
-    LimelightHelpers.PoseEstimate limelightMeasurementLeft = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-left");
-    LimelightHelpers.PoseEstimate limelightMeasurementRight = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-right");
+    LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
+    LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-4-1");
     
     boolean doRejectUpdate = false;
-    boolean doRejectLeft = false;
-    boolean doRejectRight = false;
+    boolean doRejectTurret = false;
+    boolean doRejectFixed = false;
+
     
     if(Math.abs(getGyroRate()) > 360)
     {
         doRejectUpdate = true;
     }
 
-    if(limelightMeasurementLeft != null)
+    if(limelightMeasurementTurret != null)
     {
-        if(limelightMeasurementLeft.tagCount < 1)
+        if(limelightMeasurementTurret.tagCount < 1)
             {
-                doRejectLeft = true;
+                doRejectTurret = true;
             }
 
-        if(limelightMeasurementLeft.avgTagDist > 3.5)
+        if(limelightMeasurementTurret.avgTagDist > 3.5)
             {
-                doRejectLeft = true;
+                doRejectTurret = true;
             }
     }
-    else doRejectLeft = true;
+    else doRejectTurret = true;
 
-    if(limelightMeasurementRight != null)
+    if(limelightMeasurementFixed != null)
     {
-    if(limelightMeasurementRight.tagCount < 1)
+    if(limelightMeasurementFixed.tagCount < 1)
         {
-            doRejectRight = true;
+            doRejectFixed = true;
         }
-        if(limelightMeasurementLeft.avgTagDist > 3.5)
+        if(limelightMeasurementFixed.avgTagDist > 3.5)
             {
-                doRejectLeft = true;
+                doRejectFixed = true;
             }
     }
-    else doRejectRight = true;
+    else doRejectFixed = true;
 
 
     if(!doRejectUpdate)
     {
-        if(!doRejectLeft && llLeftEnabledEntry.get(true))
+        if(!doRejectTurret && llTurretEnabledEntry.get(true))
         {
             setVisionMeasurementStdDevs(VecBuilder.fill(.5,.5,9999999));
 
             addVisionMeasurement(
-            limelightMeasurementLeft.pose,
-            limelightMeasurementLeft.timestampSeconds
+            limelightMeasurementTurret.pose,
+            limelightMeasurementTurret.timestampSeconds
             );
         }
 
-        if(!doRejectRight && llRightEnabledEntry.get(true))
+        if(!doRejectFixed && llFixedEnabledEntry.get(true))
         {
             setVisionMeasurementStdDevs(VecBuilder.fill(.5,.5,9999999));
             addVisionMeasurement(
-            limelightMeasurementRight.pose,
-            limelightMeasurementRight.timestampSeconds
+            limelightMeasurementFixed.pose,
+            limelightMeasurementFixed.timestampSeconds
             );
         }
     }
@@ -662,34 +660,34 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     {
         double robotYaw = 0;
 
-        LimelightHelpers.PoseEstimate limelightMeasurementRight = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-right");
+        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-4-1");
 
-        if(limelightMeasurementRight != null && limelightMeasurementRight.tagCount > 0)
+        if(limelightMeasurementFixed != null && limelightMeasurementFixed.tagCount > 0)
         {
-            if (limelightMeasurementRight.avgTagDist < 3.0) {
-                resetPose(limelightMeasurementRight.pose);
-                robotYaw = limelightMeasurementRight.pose.getRotation().getDegrees();
+            if (limelightMeasurementFixed.avgTagDist < 3.0) {
+                resetPose(limelightMeasurementFixed.pose);
+                robotYaw = limelightMeasurementFixed.pose.getRotation().getDegrees();
             }
         }
         else
         {
-            LimelightHelpers.PoseEstimate limelightMeasurementLeft = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-left");
-            if(limelightMeasurementLeft != null && limelightMeasurementLeft.tagCount > 0)
+            LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
+            if(limelightMeasurementTurret != null && limelightMeasurementTurret.tagCount > 0)
                 {
-                    if (limelightMeasurementLeft.avgTagDist < 3.0) {
-                        resetPose(limelightMeasurementLeft.pose);
-                        robotYaw = limelightMeasurementLeft.pose.getRotation().getDegrees();
+                    if (limelightMeasurementTurret.avgTagDist < 3.0) {
+                        resetPose(limelightMeasurementTurret.pose);
+                        robotYaw = limelightMeasurementTurret.pose.getRotation().getDegrees();
 
                     }
                 }
         }
         
-        LimelightHelpers.SetRobotOrientation_NoFlush("limelight-left", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-        LimelightHelpers.SetIMUMode("limelight-left", 1);
+        LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetIMUMode("limelight-turret", 1);
   
         
-        LimelightHelpers.SetRobotOrientation("limelight-right", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-        LimelightHelpers.SetIMUMode("limelight-right", 1);
+        LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetIMUMode("limelight-4-1", 1);
     }
 
     private boolean isMode1Set = false;
@@ -711,12 +709,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             double robotYaw = getPose().getRotation().getDegrees();
 
 
-            LimelightHelpers.SetRobotOrientation_NoFlush("limelight-left", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-            LimelightHelpers.SetIMUMode("limelight-left", 0);
+            LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+            LimelightHelpers.SetIMUMode("limelight-turret", 0);
     
             
-            LimelightHelpers.SetRobotOrientation("limelight-right", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-            LimelightHelpers.SetIMUMode("limelight-right", 0);
+            LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+            LimelightHelpers.SetIMUMode("limelight-4-1", 0);
             isLLReady = true;
         }
 
@@ -783,11 +781,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     {
         if(Container.isBlue)
         {
-            return (getPose().getX() < 4.0);
+            return (getPose().getX() < 4.45);
         }
         else
         {
-            return (getPose().getX() > 12.0);
+            return (getPose().getX() > 12);
         }
     }
 }
