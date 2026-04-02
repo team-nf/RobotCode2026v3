@@ -4,7 +4,6 @@
 
 package frc.robot.constants;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.Robot;
 
 /** Add your docs here. */

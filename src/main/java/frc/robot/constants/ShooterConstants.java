@@ -18,8 +18,6 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.units.measure.*;
 import frc.robot.Robot;
 
@@ -43,6 +41,8 @@ public class ShooterConstants {
     public static final Angle HOOD_ALLOWABLE_ERROR = Degrees.of(1.5); // Allowable error in radians
     public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(4);
     public static final AngularVelocity TURRET_ALLOWABLE_SPEED_TO_SHOOT = RotationsPerSecond.of(15);
+
+    public static final double TURRET_LOOKAHEAD_SEC = 0.1;
 
     public static final double SHOOTER_KS = 0.05;
     public static final double SHOOTER_KV = 0.115;

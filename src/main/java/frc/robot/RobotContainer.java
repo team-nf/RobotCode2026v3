@@ -34,9 +34,6 @@ import frc.robot.utils.SwerveFieldContactSim;
 
 import static edu.wpi.first.units.Units.Meters;
 
-import java.util.jar.Attributes.Name;
-
-import com.fasterxml.jackson.databind.util.Named;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
@@ -69,9 +66,6 @@ public class RobotContainer {
   private final IdleDeployedCommand m_idleDeployedCommand;
   private final IntakeCommand m_intakeCommand;
 
-  private final AimAndPassAutoCommand m_aimAndPassAutoCommand;
-  private final AimAndShootAutoCommand m_aimAndShootAutoCommand;
-
   public RobotContainer() {
     Container.isBlue = DriverStation.getAlliance().map(a -> a == DriverStation.Alliance.Blue).orElse(true);
 
@@ -93,9 +87,6 @@ public class RobotContainer {
     m_idleRetractedCommand = new IdleRetractedCommand(m_theMachine);
     m_idleDeployedCommand = new IdleDeployedCommand(m_theMachine);
     m_intakeCommand = new IntakeCommand(m_theMachine);
-
-    m_aimAndPassAutoCommand = new AimAndPassAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine);
-    m_aimAndShootAutoCommand = new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine);
 
     configureBindings();
 
@@ -144,16 +135,16 @@ public class RobotContainer {
       ));
 
 
-    NamedCommands.registerCommand("IdleRetractedNC", m_idleRetractedCommand);
-    NamedCommands.registerCommand("IdleDeployedNC", m_idleDeployedCommand);
-    NamedCommands.registerCommand("IntakeNC", m_intakeCommand);
-    NamedCommands.registerCommand("AimAndPassNC", m_aimAndPassAutoCommand);
-    NamedCommands.registerCommand("AimAndShootNC", m_aimAndShootAutoCommand);
+    NamedCommands.registerCommand("IdleRetractedNC", new IdleRetractedCommand(m_theMachine));
+    NamedCommands.registerCommand("IdleDeployedNC", new IdleDeployedCommand(m_theMachine));
+    NamedCommands.registerCommand("IntakeNC", new IntakeCommand(m_theMachine));
+    NamedCommands.registerCommand("AimAndPassNC", new AimAndPassAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
+    NamedCommands.registerCommand("AimAndShootNC", new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
     NamedCommands.registerCommand("WaitForHoodToBeClosedNC", new WaitUntilCommand(m_shooterSubsystem::isHoodClosed));
     NamedCommands.registerCommand("AutoShootSequenceNC", 
       new SequentialCommandGroup(
-        m_aimAndShootAutoCommand.withTimeout(5),
-        m_idleDeployedCommand.until(m_shooterSubsystem::isHoodClosed)
+        new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine).withTimeout(5),
+        new IdleDeployedCommand(m_theMachine).until(m_shooterSubsystem::isHoodClosed)
       )
     );
   }
@@ -168,6 +159,8 @@ public class RobotContainer {
         m_theMachine.calculateSubsytemPoses();
         m_theMachine.publishTelemetry();
       }
+
+    m_theMachine.machinePeriodic();
     //SmartDashboard.putData(CommandScheduler.getInstance());
     //m_theMachine.publishTelemetry();
   }

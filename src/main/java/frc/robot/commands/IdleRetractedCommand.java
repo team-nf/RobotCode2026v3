@@ -24,7 +24,6 @@ public class IdleRetractedCommand extends Command {
 
   @Override
   public void execute() {
-    theMachine.setTurretAngleToHubWithoutShooting();
   }
 
   @Override

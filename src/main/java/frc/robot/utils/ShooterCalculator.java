@@ -11,7 +11,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.Robot;
-import frc.robot.constants.Dimensions;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TheMachineConstants;

@@ -5,13 +5,8 @@
 package frc.robot.commands.AutoCommands;
 
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
-import com.ctre.phoenix6.swerve.SwerveRequest;
-
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -31,7 +26,6 @@ import frc.robot.constants.Dimensions;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TheMachineConstants;
-import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
 import frc.robot.utils.ShooterCalculator;
@@ -48,9 +42,6 @@ public class AimAndShootAutoCommand extends Command {
   private final BooleanEntry aimOnTargetEntry = NetworkTableInstance.getDefault()
     .getBooleanTopic("/AIM/AimOnTarget").getEntry(false);
 
-  private double MaxSpeed = 0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
-  private double MaxAngularRate = RotationsPerSecond.of(0.35).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
-
   private static final Translation2d SHOOTER_CENTER_OF_ROTATION =
       new Translation2d(
           TheMachineConstants.SHOOTER_ROTATION_AXIS.getX(),
@@ -62,7 +53,6 @@ public class AimAndShootAutoCommand extends Command {
         Rotation2d.kZero
     );
 
-  private CommandXboxController driverController;
   private CommandSwerveDrivetrain swerveDrivetrain;
   private TheMachine theMachine;
 
@@ -75,12 +65,11 @@ public class AimAndShootAutoCommand extends Command {
   private final double[] angleErrorBuffer = new double[FILTER_SIZE];
   private int bufferIndex = 0;
   private int validSampleCount = 0;
-
+  
   /** Creates a new AimAndPass. */
   public AimAndShootAutoCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
-    this.driverController = joystick;
     this.theMachine = theMachine;
 
     addRequirements(theMachine.getSubsystems());
@@ -138,7 +127,7 @@ public class AimAndShootAutoCommand extends Command {
 
   double filteredSpeedX = 0.0, filteredSpeedY = 0.0, filteredAngleError = 0.0;
   private static final double TURRET_TOLERANCE_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
-  private static final double TURRET_LOOKAHEAD_SEC = 0.04;
+  private static final double TURRET_LOOKAHEAD_SEC = ShooterConstants.TURRET_LOOKAHEAD_SEC;
 
   double rawAngleError = 0.0;
   double shooterSpeedX = 0.0;

@@ -12,7 +12,8 @@ import edu.wpi.first.units.measure.*;
 import static edu.wpi.first.units.Units.*;
 
 public class FeederConstants {
-    public static final int FEEDER_MOTOR_ID = 31;
+    public static final int FEEDER_BELT_MOTOR_ID = 31;
+    public static final int FEEDER_FEED_MOTOR_ID = 32;
 
     public static final double FEEDER_KS = 0.4;
     public static final double FEEDER_KV = 0.0;
@@ -20,7 +21,27 @@ public class FeederConstants {
     public static final double FEEDER_KI = 0.0;
     public static final double FEEDER_KD = 0.01;
 
-    public static final TalonFXConfiguration FEEDER_MOTOR_CONFIG = new TalonFXConfiguration()
+    public static final TalonFXConfiguration FEEDER_BELT_MOTOR_CONFIG = new TalonFXConfiguration()
+            .withSlot0(new Slot0Configs()
+                .withKS(FEEDER_KS)
+                .withKV(FEEDER_KV)
+                .withKP(FEEDER_KP)
+                .withKI(FEEDER_KI)
+                .withKD(FEEDER_KD))
+
+            .withVoltage(new VoltageConfigs()
+                .withPeakForwardVoltage(9)
+                .withPeakReverseVoltage(-9))
+
+            .withCurrentLimits(new CurrentLimitsConfigs()
+                .withSupplyCurrentLimitEnable(true)
+                .withSupplyCurrentLimit(30)
+                .withStatorCurrentLimit(30))
+                
+            .withMotorOutput(new MotorOutputConfigs()
+                .withInverted(InvertedValue.Clockwise_Positive));
+
+    public static final TalonFXConfiguration FEEDER_FEED_MOTOR_CONFIG = new TalonFXConfiguration()
             .withSlot0(new Slot0Configs()
                 .withKS(FEEDER_KS)
                 .withKV(FEEDER_KV)
@@ -44,7 +65,10 @@ public class FeederConstants {
                         .withSlot(0)
                         .withEnableFOC(false);
 
+    // Feed motor reduction
     public static final double FEEDER_GEAR_REDUCTION = 2.0;
+    // Belt motor reduction
+    public static final double FEEDER_BELT_GEAR_REDUCTION = 2.0;
 
     public static final AngularVelocity FEEDER_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
 

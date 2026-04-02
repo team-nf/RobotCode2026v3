@@ -6,8 +6,6 @@ package frc.robot.constants;
 
 import static edu.wpi.first.units.Units.*;
 
-import java.nio.file.Path;
-
 import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.units.measure.AngularVelocity;

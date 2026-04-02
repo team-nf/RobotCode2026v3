@@ -2,12 +2,8 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.constants.States.SwerveStates.SwerveState;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import edu.wpi.first.units.measure.*;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.XboxController;
 
 import static edu.wpi.first.units.Units.*;
 

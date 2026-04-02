@@ -123,7 +123,7 @@ public class TheMachine {
 
     public void getReady(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
-        feederSubsystem.reverse();
+        feederSubsystem.feed_get_ready();
         hopperSubsystem.reverse();
         intakeSubsystem.intake();
         state = TheMachineState.GET_READY;
@@ -147,7 +147,7 @@ public class TheMachine {
 
     public void getReadyPass(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
-        feederSubsystem.reverse();
+        feederSubsystem.feed_get_ready();
         hopperSubsystem.reverse();
         intakeSubsystem.intake();
         state = TheMachineState.GET_READY_PASS;
@@ -265,9 +265,27 @@ public class TheMachine {
     intakeSubsystem.publishTelemetry();
 
     SmartDashboard.putString("TheMachine/State", state.toString());
+        SmartDashboard.putBoolean("TheMachine/ManualOverrideEnabled", shooterSubsystem.isManualOverrideEnabled());
   }
 
   public SubsystemBase[] getSubsystems() {
     return new SubsystemBase[] {shooterSubsystem, feederSubsystem, hopperSubsystem, intakeSubsystem};
+  }
+
+    public boolean isManualOverrideEnabled() {
+                return shooterSubsystem.isManualOverrideEnabled();
+    }
+
+  public void machinePeriodic()
+  {
+        if (!shooterSubsystem.isManualOverrideEnabled()) {
+    if(state == TheMachineState.INTAKE || state == TheMachineState.IDLE
+        || state == TheMachineState.IDLE_DEPLOYED || state == TheMachineState.IDLE_RETRACTED
+     )
+        {
+            setTurretAngleToHubWithoutShooting();
+        }
+        return;
+     }
   }
 }

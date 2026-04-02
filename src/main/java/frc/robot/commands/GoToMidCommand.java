@@ -4,25 +4,16 @@
 
 package frc.robot.commands;
 
-import java.io.IOException;
-
-import org.json.simple.parser.ParseException;
-import org.opencv.core.Mat;
-
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.util.FileVersionException;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import frc.robot.TheMachine;
 import frc.robot.constants.DriveConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import frc.robot.utils.Container;
 
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class GoToMidCommand extends ParallelCommandGroup {

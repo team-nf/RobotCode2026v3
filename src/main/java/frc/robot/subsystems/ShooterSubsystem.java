@@ -10,6 +10,7 @@ import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import java.util.EnumSet;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.BaseStatusSignal;
@@ -24,14 +25,15 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.sim.ChassisReference;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.networktables.BooleanEntry;
+import edu.wpi.first.networktables.BooleanTopic;
+import edu.wpi.first.networktables.NetworkTableEvent;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
@@ -44,6 +46,13 @@ import frc.robot.utils.LimelightHelpers;
 import frc.robot.utils.ShooterCalculator;
 
 public class ShooterSubsystem extends SubsystemBase {
+
+    private final BooleanTopic manualOverrideTopic = NetworkTableInstance.getDefault()
+        .getBooleanTopic("Conf/TheMachine/ManualOverrideEnabled");
+    private final BooleanEntry manualOverrideEntry = manualOverrideTopic.getEntry(false);
+    private boolean manualOverrideEnabled = false;
+    @SuppressWarnings("unused")
+    private final int manualOverrideListenerHandle;
 
     // Flywheel motors: motor1 leader + motor2 follower
     private TalonFX flywheelMotor1;
@@ -86,6 +95,14 @@ public class ShooterSubsystem extends SubsystemBase {
     private double turretTestAngleDegrees;
 
     public ShooterSubsystem(Supplier<Double> robotYawSupplier) {
+
+        manualOverrideEntry.setDefault(false);
+        manualOverrideEnabled = manualOverrideEntry.get(false);
+        manualOverrideListenerHandle = NetworkTableInstance.getDefault().addListener(
+            manualOverrideTopic,
+            EnumSet.of(NetworkTableEvent.Kind.kValueAll),
+            event -> manualOverrideEnabled = manualOverrideEntry.get(false)
+        );
 
         flywheelMotor1 = new TalonFX(ShooterConstants.FIRST_SHOOTER_MOTOR_ID);
         flywheelMotor2 = new TalonFX(ShooterConstants.SECOND_SHOOTER_MOTOR_ID);
@@ -260,11 +277,26 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Set flywheel speed + hood angle + turret angle (degrees). */
     public void shoot(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
-        flywheelGoalVelocity = velocityRPS;
-        hoodGoalPosition = hoodAngleRotations;
-        setFlywheelSpeed(flywheelGoalVelocity);
-        setHoodAngle(hoodGoalPosition);
-        turretGoalAngleDegrees = setTurretAngleDegrees(turretAngleDegrees);
+
+        if(!manualOverrideEnabled)
+        {
+            flywheelGoalVelocity = velocityRPS;
+            hoodGoalPosition = hoodAngleRotations;
+            turretGoalAngleDegrees = setTurretAngleDegrees(turretAngleDegrees);
+            setFlywheelSpeed(flywheelGoalVelocity);
+            setHoodAngle(hoodGoalPosition);
+            return;
+        }
+        else
+        {
+            flywheelGoalVelocity = 35;
+            hoodGoalPosition = 0.0;
+            turretGoalAngleDegrees = setTurretAngleDegrees(0);
+            setFlywheelSpeed(flywheelGoalVelocity);
+            setHoodAngle(hoodGoalPosition);
+            return;
+        }
+        
     }
 
     /** Backward-compatible overload that keeps turret at 0 deg. */
@@ -345,6 +377,10 @@ public class ShooterSubsystem extends SubsystemBase {
         return isFlywheelAtSpeed() && isHoodAtAngle() && isTurretAtAngle() && getFlywheel1SpeedAbs() > 15;
     }
 
+    public boolean isManualOverrideEnabled() {
+        return manualOverrideEnabled;
+    }
+
     public boolean isHoodClosed() {
         return getHoodPosition() <  0.01;
     }
@@ -386,6 +422,7 @@ public class ShooterSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Shooter/HoodReady", isHoodAtAngle());
         SmartDashboard.putBoolean("Shooter/TurretReady", isTurretAtAngle());
         SmartDashboard.putBoolean("Shooter/Ready", isReadyToShoot());
+        SmartDashboard.putBoolean("Shooter/ManualOverrideEnabled", manualOverrideEnabled);
     }
 
     // ===== SIMULATION =====

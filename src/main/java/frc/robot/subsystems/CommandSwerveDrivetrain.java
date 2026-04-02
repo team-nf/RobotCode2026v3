@@ -2,19 +2,11 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
 
-import java.io.IOException;
-import java.lang.annotation.Retention;
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import org.json.simple.parser.ParseException;
-
 import com.ctre.phoenix6.SignalLogger;
-import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.Utils;
-import com.ctre.phoenix6.hardware.Pigeon2;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
@@ -22,28 +14,18 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.path.PathPoint;
-import com.pathplanner.lib.pathfinding.Pathfinder;
-import com.pathplanner.lib.util.FileVersionException;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
-import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -53,15 +35,10 @@ import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.Subsystem;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
-import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.constants.PoseConstants;
-import frc.robot.constants.States.SwerveStates.SwerveState;
 import frc.robot.constants.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.utils.Container;
 import frc.robot.utils.LimelightHelpers;
@@ -78,7 +55,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final double kSimLoopPeriod = 0.001; // 4 ms
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
-    private Pigeon2 imu;
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
     /* Red alliance sees forward as 180 degrees (toward blue alliance wall) */
@@ -96,8 +72,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private BooleanEntry llTurretEnabledEntry = llTable.getBooleanTopic("LL-Turret_Enabled").getEntry(true);
     private BooleanEntry llFixedEnabledEntry = llTable.getBooleanTopic("LL-Fixed_Enabled").getEntry(true);
     private BooleanEntry disabledLocoEnabledEntry = llTable.getBooleanTopic("DisabledLocoEnabled").getEntry(true);
-
-    private Field2d confField2d = new Field2d();
 
     private final SendableChooser<String> startPoseChooser = new SendableChooser<>();
     private Pose2d initialStartPose2d = new Pose2d(0, 0, new Rotation2d());
@@ -121,6 +95,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     );
 
     /* SysId routine for characterizing steer. This is used to find PID gains for the steer motors. */
+    @SuppressWarnings("unused")
     private final SysIdRoutine m_sysIdRoutineSteer = new SysIdRoutine(
         new SysIdRoutine.Config(
             null,        // Use default ramp rate (1 V/s)
@@ -141,6 +116,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      * This is used to find PID gains for the FieldCentricFacingAngle HeadingController.
      * See the documentation of SwerveRequest.SysIdSwerveRotation for info on importing the log to SysId.
      */
+    @SuppressWarnings("unused")
     private final SysIdRoutine m_sysIdRoutineRotation = new SysIdRoutine(
         new SysIdRoutine.Config(
             /* This is in radians per second², but SysId only supports "volts per second" */
@@ -181,7 +157,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, modules);
-        imu = new Pigeon2(drivetrainConstants.Pigeon2Id);
         if (Utils.isSimulation()) {
             startSimThread();
         }

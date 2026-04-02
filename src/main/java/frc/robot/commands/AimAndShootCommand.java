@@ -12,6 +12,7 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -82,6 +83,10 @@ public class AimAndShootCommand extends Command {
   private final double[] angleErrorBuffer = new double[FILTER_SIZE];
   private int bufferIndex = 0;
   private int validSampleCount = 0;
+
+  private SlewRateLimiter joyXSlewLimiter = new SlewRateLimiter(2.5); 
+  private SlewRateLimiter joyYSlewLimiter = new SlewRateLimiter(2.5);
+
 
   /** Creates a new AimAndPass. */
   public AimAndShootCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
@@ -218,10 +223,9 @@ public class AimAndShootCommand extends Command {
 
     bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
 
-
     swerveDrivetrain.setControl(
-        drive.withVelocityX(-driverController.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
-            .withVelocityY(-driverController.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+        drive.withVelocityX(-joyYSlewLimiter.calculate(driverController.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
+            .withVelocityY(-joyXSlewLimiter.calculate(driverController.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
       .withRotationalRate(-driverController.getRightX() * MaxAngularRate)
     );
 
@@ -238,11 +242,12 @@ public class AimAndShootCommand extends Command {
       theMachine.getReady(velocityRPS, hoodAngle, turretAngleDeg);
     }
 
-    aimOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
-    aimAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
+
 
     if(Robot.isSimulation()) {
       aimPosePublisher.set(new Pose3d(aimX, aimY, Dimensions.HUB_HEIGHT.in(Meters), new Rotation3d(0, 0, 0)));
+      aimOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
+      aimAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
     }
 
   }

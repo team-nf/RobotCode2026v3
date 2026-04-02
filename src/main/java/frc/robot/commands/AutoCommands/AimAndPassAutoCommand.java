@@ -4,13 +4,6 @@
 
 package frc.robot.commands.AutoCommands;
 
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-
-import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
-import com.ctre.phoenix6.swerve.SwerveRequest;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -23,7 +16,6 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.TheMachine;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
-import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
 import frc.robot.utils.ShooterCalculator;
@@ -41,10 +33,6 @@ public class AimAndPassAutoCommand extends Command {
   private final BooleanEntry passOnTargetEntry = NetworkTableInstance.getDefault()
       .getBooleanTopic("/PASS/AimOnTarget").getEntry(false);
 
-  private double MaxSpeed = 0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
-  private double MaxAngularRate = RotationsPerSecond.of(0.4).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
-
-  private CommandXboxController driverController;
   private CommandSwerveDrivetrain swerveDrivetrain;
   private TheMachine theMachine;
 
@@ -61,7 +49,6 @@ public class AimAndPassAutoCommand extends Command {
   public AimAndPassAutoCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
-    this.driverController = joystick;
     this.theMachine = theMachine;
 
     addRequirements(theMachine.getSubsystems());

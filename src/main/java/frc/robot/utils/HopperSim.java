@@ -4,18 +4,12 @@ import static edu.wpi.first.units.Units.Meters;
 
 import java.util.function.Supplier;
 
-import org.opencv.dnn.Net;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.constants.Dimensions;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -24,7 +18,6 @@ public class HopperSim {
 
 
     private final double hopperCapacityDeployed = 48;
-    private final double hopperCapacityRetracted = 24;
     private final double fuelDiameter = 0.15;
 
     private double hopperMaxCapacity = hopperCapacityDeployed;
