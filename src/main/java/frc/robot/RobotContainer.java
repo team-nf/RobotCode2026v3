@@ -15,6 +15,7 @@ import frc.robot.commands.IntakeCommand;
 import frc.robot.commands.ReturnFromLeftTrenchCommand;
 import frc.robot.commands.ReturnFromRightTrenchCommand;
 import frc.robot.commands.SwerveTeleopCommand;
+import frc.robot.commands.TestMachineCommand;
 import frc.robot.commands.AutoCommands.AimAndPassAutoCommand;
 import frc.robot.commands.AutoCommands.AimAndShootAutoCommand;
 import frc.robot.constants.Dimensions;
@@ -46,6 +47,12 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
+/**
+ * Central wiring point for subsystems, commands, driver controls, and autonomous options.
+ *
+ * <p>If you are onboarding, start here: this file shows which button triggers which behavior and
+ * how autonomous commands are exposed to the dashboard.
+ */
 public class RobotContainer {
 
   private final SendableChooser<Command> autoChooser;
@@ -65,8 +72,10 @@ public class RobotContainer {
   private final IdleRetractedCommand m_idleRetractedCommand;
   private final IdleDeployedCommand m_idleDeployedCommand;
   private final IntakeCommand m_intakeCommand;
+  private final TestMachineCommand m_testMachineCommand;
 
   public RobotContainer() {
+    // Resolve alliance once at startup for mirrored-field calculations.
     Container.isBlue = DriverStation.getAlliance().map(a -> a == DriverStation.Alliance.Blue).orElse(true);
 
     m_driverController =
@@ -87,9 +96,11 @@ public class RobotContainer {
     m_idleRetractedCommand = new IdleRetractedCommand(m_theMachine);
     m_idleDeployedCommand = new IdleDeployedCommand(m_theMachine);
     m_intakeCommand = new IntakeCommand(m_theMachine);
+    m_testMachineCommand = new TestMachineCommand(m_theMachine);
 
     configureBindings();
 
+    // Toggle this to true to expose only autos prefixed with "comp" during events.
     boolean isCompetition = false;
     autoChooser = AutoBuilder.buildAutoChooserWithOptionsModifier(
       (stream) -> isCompetition
@@ -105,12 +116,19 @@ public class RobotContainer {
   }
 
   private void configureBindings() {
-
+    // Default: field-centric teleop drive runs whenever no other drivetrain command is scheduled.
     m_drivetrainSubsystem.setDefaultCommand(m_swerveTeleopCommand);
 
+    // B -> stow intake and settle machine.
     m_driverController.b().onTrue(m_idleRetractedCommand);
+
+    // X -> begin intake state machine.
     m_driverController.x().onTrue(m_intakeCommand);
 
+    // Right trigger:
+    // - In shooting zone: aim + shoot
+    // - Elsewhere: aim + pass
+    // On release: return to deployed idle (safe transition).
     m_driverController.rightTrigger().whileTrue(
       new ConditionalCommand(
         m_aimAndShootCommand,
@@ -119,8 +137,15 @@ public class RobotContainer {
       )
     ).onFalse(m_idleDeployedCommand);
 
+    // Y -> pathfind to midfield alignment preset. Release returns to stowed idle.
     m_driverController.y().whileTrue(new GoToMidCommand(m_drivetrainSubsystem, m_theMachine)).onFalse(m_idleRetractedCommand);
 
+    // A -> run NetworkTables-driven machine test mode while held.
+    m_driverController.a().whileTrue(m_testMachineCommand).onFalse(m_idleRetractedCommand);
+
+    // Left trigger behavior depends on current zone:
+    // - From shooting zone, go out to trench pickup path (left/right based on side)
+    // - Outside shooting zone, return from trench back toward shooting area
     m_driverController.leftTrigger().whileTrue(
       new ConditionalCommand(
         new ConditionalCommand(new GoFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
@@ -134,12 +159,14 @@ public class RobotContainer {
         m_drivetrainSubsystem::isRobotOnTheShootingZone
       ));
 
-
+    // Named commands are used by PathPlanner autos.
+    // Keep names stable once autos are authored to avoid broken references.
     NamedCommands.registerCommand("IdleRetractedNC", new IdleRetractedCommand(m_theMachine));
     NamedCommands.registerCommand("IdleDeployedNC", new IdleDeployedCommand(m_theMachine));
     NamedCommands.registerCommand("IntakeNC", new IntakeCommand(m_theMachine));
     NamedCommands.registerCommand("AimAndPassNC", new AimAndPassAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
     NamedCommands.registerCommand("AimAndShootNC", new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
+    NamedCommands.registerCommand("TestMachineNC", new TestMachineCommand(m_theMachine));
     NamedCommands.registerCommand("WaitForHoodToBeClosedNC", new WaitUntilCommand(m_shooterSubsystem::isHoodClosed));
     NamedCommands.registerCommand("AutoShootSequenceNC", 
       new SequentialCommandGroup(
@@ -150,22 +177,26 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand() {
+    // The chooser is published on SmartDashboard as "Conf/Auto Chooser".
     return autoChooser.getSelected();
   }
 
   public void containerPeriodic() {
+    // Sim-only pose publishing for AdvantageScope / field visualization.
     if(Robot.isSimulation()) 
       {
-        m_theMachine.calculateSubsytemPoses();
+        m_theMachine.calculateSubsystemPoses();
         m_theMachine.publishTelemetry();
       }
 
+    // Always run machine periodic, both real robot and simulation.
     m_theMachine.machinePeriodic();
     //SmartDashboard.putData(CommandScheduler.getInstance());
     //m_theMachine.publishTelemetry();
   }
 
   private void configureSims() {
+    // Shared singleton sim models.
     FuelSim fuelSim = FuelSim.getInstance();
     HopperSim hopperSim = HopperSim.getInstance();
     ShooterSim shooterSim = ShooterSim.getInstance();
@@ -173,6 +204,7 @@ public class RobotContainer {
     SwerveFieldContactSim.getInstance().setSwerveDrivetrain(m_drivetrainSubsystem);
     SwerveFieldContactSim.getInstance().setIntakeDeployedSupplier(() -> m_intakeSubsystem.isIntakeDeployed());
 
+    // Spawn initial game pieces and register robot geometry/intake pickup volume.
     fuelSim.spawnStartingFuel();
 
     fuelSim.registerRobot(
@@ -193,6 +225,7 @@ public class RobotContainer {
 
     fuelSim.start();
 
+    // Wire subsystem state into simulation behavior.
     hopperSim.setRobotPoseSupplier(m_drivetrainSubsystem::getPose);
     hopperSim.setShouldRemoveFuelSupplier(() -> m_theMachine.isState(TheMachineState.REVERSE));
 

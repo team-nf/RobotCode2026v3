@@ -6,7 +6,6 @@ package frc.robot.commands.AutoCommands;
 
 import static edu.wpi.first.units.Units.Meters;
 
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -30,6 +29,12 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
 import frc.robot.utils.ShooterCalculator;
 
+/**
+ * Autonomous variant of hub aiming + shooting assist.
+ *
+ * <p>Unlike teleop version, this command does not write drive requests and is intended to run
+ * alongside an auto path/positioning command.
+ */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class AimAndShootAutoCommand extends Command {
   
@@ -66,7 +71,7 @@ public class AimAndShootAutoCommand extends Command {
   private int bufferIndex = 0;
   private int validSampleCount = 0;
   
-  /** Creates a new AimAndPass. */
+  /** Creates a new AimAndShootAutoCommand. */
   public AimAndShootAutoCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
@@ -96,6 +101,7 @@ public class AimAndShootAutoCommand extends Command {
     bufferIndex = 0;
     validSampleCount = 0;
 
+    // Re-resolve alliance hub target in case DS alliance changed while disabled.
     if(Container.isBlue)
     {
       hubAimPose = PoseConstants.BLUE_HUB_AIM_POSE;
@@ -138,7 +144,7 @@ public class AimAndShootAutoCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    
+    // 1) Gather drivetrain state and derive shooter point kinematics.
     robotPose = swerveDrivetrain.getPose();
     shooterPose = robotPose.transformBy(SHOOTER_OFFSET_FROM_ROBOT);
     speeds = swerveDrivetrain.getFieldSpeeds();
@@ -173,7 +179,7 @@ public class AimAndShootAutoCommand extends Command {
     filteredSpeedX /= validSampleCount;
     filteredSpeedY /= validSampleCount;
 
-    // Predict where the shooter and chassis heading will be when the turret reaches setpoint.
+    // 2) Predict where shooter/chassis will be when turret reaches setpoint.
     predictedShooterX = shooterPose.getX() + filteredSpeedX * TURRET_LOOKAHEAD_SEC;
     predictedShooterY = shooterPose.getY() + filteredSpeedY * TURRET_LOOKAHEAD_SEC;
     predictedHeading = heading + speeds.omegaRadiansPerSecond * TURRET_LOOKAHEAD_SEC;
@@ -199,13 +205,13 @@ public class AimAndShootAutoCommand extends Command {
 
     bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
 
-    // Create filtered speeds for shooter calculation
+    // 3) Solve shooter parameters from filtered motion estimate and predicted aim point.
     shootParams = ShooterCalculator.calculateShootingParameters(filteredSpeedX, filteredSpeedY, robotPose, time);
     velocityRPS = shootParams[0];
     hoodAngle = shootParams[1];
     turretAngleDeg = Math.toDegrees(Math.atan2(Math.sin(robotAngleToHub - predictedHeading), Math.cos(robotAngleToHub - predictedHeading)));
 
-
+    // Feed only once shooter is ready; otherwise stay in spin-up state.
     if(theMachine.isShooterReady()) {
       theMachine.shoot(velocityRPS, hoodAngle, turretAngleDeg);
     } else {
@@ -216,6 +222,7 @@ public class AimAndShootAutoCommand extends Command {
     aimAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
 
     if(Robot.isSimulation()) {
+      // Publish simulated aiming telemetry for dashboards/3D overlays.
       aimPosePublisher.set(new Pose3d(aimX, aimY, Dimensions.HUB_HEIGHT.in(Meters), new Rotation3d(0, 0, 0)));
     }
 
@@ -224,8 +231,6 @@ public class AimAndShootAutoCommand extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {}
-
-
 
   // Returns true when the command should end.
   @Override

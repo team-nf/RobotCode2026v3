@@ -20,6 +20,12 @@ import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.utils.Container;
 import frc.robot.utils.ShooterCalculator;
 
+/**
+ * High-level mechanism coordinator ("state machine") for shooter, feeder, hopper, and intake.
+ *
+ * <p>This class defines the intent-level actions (intake, shoot, pass, idle...), then delegates
+ * low-level motor behavior to the subsystems.
+ */
 public class TheMachine {
 
     private final ShooterSubsystem shooterSubsystem;
@@ -27,8 +33,10 @@ public class TheMachine {
     private final IntakeSubsystem intakeSubsystem;
     private final FeederSubsystem feederSubsystem;
 
+    // Current orchestrated machine mode.
     private TheMachineState state = TheMachineState.IDLE_RETRACTED;
 
+    // Optional intake mode that changes extension behavior.
     private boolean intakeWithOffset = false;
 
     private Supplier<Pose2d> robotPose2dSupplier;
@@ -43,6 +51,7 @@ public class TheMachine {
 
         this.robotPose2dSupplier = robotPose2dSupplier;
 
+        // Choose the alliance-correct hub pose for aiming calculations.
         if(Container.isBlue)
         {
             goalHubPose = PoseConstants.BLUE_HUB_AIM_POSE;
@@ -60,6 +69,10 @@ public class TheMachine {
     Pose2d shooterPose2d;
     double robotHeadingRad;
     double shooterToHubAngleRad;
+
+    /**
+     * Aim turret toward the hub using current field pose, without enabling feed/shoot actions.
+     */
     public void setTurretAngleToHubWithoutShooting() {
         robotPose2d = robotPose2dSupplier.get();
         shooterPose2d = ShooterCalculator.getShooterPoseFromRobotPose(robotPose2d);
@@ -77,6 +90,7 @@ public class TheMachine {
         shooterSubsystem.setTurretAngleDegrees(goalTurretAngleForHub);
     }
 
+    /** Reset mechanisms to a known zero-like safe state. */
     public void zero() {
         shooterSubsystem.zero();
         feederSubsystem.zero();
@@ -85,6 +99,7 @@ public class TheMachine {
         state = TheMachineState.ZERO;
     }
 
+    /** Intake stowed, shooter resting, feeder reversed to prevent accidental feed. */
     public void idleRetracted() {
         shooterSubsystem.rest();
         feederSubsystem.reverse();
@@ -93,6 +108,7 @@ public class TheMachine {
         state = TheMachineState.IDLE_RETRACTED;
     }
 
+    /** Intake deployed but otherwise idle. */
     public void idleDeployed() {
         shooterSubsystem.rest();
         feederSubsystem.reverse();
@@ -101,6 +117,7 @@ public class TheMachine {
         state = TheMachineState.IDLE_DEPLOYED;
     }
 
+    /** Neutral between-state used by command transitions. */
     public void idle() {
         shooterSubsystem.rest();
         feederSubsystem.reverse();
@@ -109,6 +126,7 @@ public class TheMachine {
         state = TheMachineState.IDLE;
     }
 
+    /** Run intake pipeline (intake + hopper path) while shooter stays at rest. */
     public void intake() {
         shooterSubsystem.rest();
         feederSubsystem.reverse();
@@ -121,9 +139,10 @@ public class TheMachine {
         state = TheMachineState.INTAKE;
     }
 
+    /** Spin up for shooting without feeding into flywheels yet. */
     public void getReady(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
-        feederSubsystem.feed_get_ready();
+        feederSubsystem.feedGetReady();
         hopperSubsystem.reverse();
         intakeSubsystem.intake();
         state = TheMachineState.GET_READY;
@@ -133,6 +152,7 @@ public class TheMachine {
         getReady(velocityRPS, hoodAngleRotations, 0.0);
     }
 
+    /** Shoot at requested setpoints. */
     public void shoot(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feed();
@@ -145,9 +165,10 @@ public class TheMachine {
         shoot(velocityRPS, hoodAngleRotations, 0.0);
     }
 
+    /** Spin up for passing without feeding yet. */
     public void getReadyPass(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
-        feederSubsystem.feed_get_ready();
+        feederSubsystem.feedGetReady();
         hopperSubsystem.reverse();
         intakeSubsystem.intake();
         state = TheMachineState.GET_READY_PASS;
@@ -157,6 +178,7 @@ public class TheMachine {
         getReadyPass(velocityRPS, hoodAngleRotations, 0.0);
     }
 
+    /** Pass mode feeds cargo at pass setpoints. */
     public void pass(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feed();
@@ -169,6 +191,7 @@ public class TheMachine {
         pass(velocityRPS, hoodAngleRotations, 0.0);
     }
 
+    /** Reverse all cargo-path motors to clear jams. */
     public void reverse() {
         shooterSubsystem.zero();
         feederSubsystem.reverse();
@@ -177,11 +200,29 @@ public class TheMachine {
         state = TheMachineState.REVERSE;
     }
 
+    /** Open-loop/manual test mode. */
     public void test() {
         shooterSubsystem.test();
         feederSubsystem.feed();
         hopperSubsystem.feed();
         intakeSubsystem.feed();
+        state = TheMachineState.TEST;
+    }
+
+    /**
+     * Open-loop/manual test mode with explicit per-subsystem setpoints.
+     */
+    public void test(double shooterFlywheelRps,
+                     double shooterHoodRot,
+                     double shooterTurretDeg,
+                     double feederRps,
+                     double hopperRps,
+                     double intakeRps,
+                     double intakeExtensionMeters) {
+        shooterSubsystem.test(shooterFlywheelRps, shooterHoodRot, shooterTurretDeg);
+        feederSubsystem.test(feederRps);
+        hopperSubsystem.test(hopperRps);
+        intakeSubsystem.test(intakeRps, intakeExtensionMeters);
         state = TheMachineState.TEST;
     }
 
@@ -208,84 +249,91 @@ public class TheMachine {
         || state == TheMachineState.GET_READY || state == TheMachineState.SHOOT;
     }
 
-  private StructPublisher<Pose3d> intakePosePublisher = NetworkTableInstance.getDefault()
-  .getStructTopic("Sim/IntakePose", Pose3d.struct).publish();
+    private StructPublisher<Pose3d> intakePosePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("Sim/IntakePose", Pose3d.struct).publish();
 
-  private StructPublisher<Pose3d> shooterPosePublisher = NetworkTableInstance.getDefault()
-    .getStructTopic("Sim/ShooterPose", Pose3d.struct).publish();
+    private StructPublisher<Pose3d> shooterPosePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("Sim/ShooterPose", Pose3d.struct).publish();
 
-   private StructPublisher<Pose3d> hoodPosePublisher = NetworkTableInstance.getDefault()
-  .getStructTopic("Sim/HoodPose", Pose3d.struct).publish();
+    private StructPublisher<Pose3d> hoodPosePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("Sim/HoodPose", Pose3d.struct).publish();
 
+    public void calculateSubsystemPoses() {
+        // Intake extension pose from extension distance + fixed extension angle.
+        double intakeExtensionMeters = intakeSubsystem.getIntakeExtensionMeters();
+        double intakeExtensionAngleRad = Math.toRadians(TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES);
+        double intakeExtensionX = intakeExtensionMeters * Math.cos(intakeExtensionAngleRad);
+        double intakeExtensionZ = intakeExtensionMeters * Math.sin(intakeExtensionAngleRad);
 
-
-  public void calculateSubsytemPoses() {
-    double intakeExtensionMeters = intakeSubsystem.getIntakeExtensionMeters();
-    double intakeExtensionAngleRad = Math.toRadians(TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES);
-    double intakeExtensionX = intakeExtensionMeters * Math.cos(intakeExtensionAngleRad);
-    double intakeExtensionZ = intakeExtensionMeters * Math.sin(intakeExtensionAngleRad);
-
-    SmartDashboard.putNumber("IntakeExtensionMeters", intakeExtensionMeters);
+        SmartDashboard.putNumber("IntakeExtensionMeters", intakeExtensionMeters);
         SmartDashboard.putNumber("IntakeExtensionAngleDeg", TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES);
 
-    Pose3d intakePose = TheMachineConstants.INTAKE_RETRACTED_POSE
-                                                    .plus(new Transform3d(intakeExtensionX, 0, intakeExtensionZ, new Rotation3d(0, 0, 0)));
+        Pose3d intakePose = TheMachineConstants.INTAKE_RETRACTED_POSE
+            .plus(new Transform3d(intakeExtensionX, 0, intakeExtensionZ, new Rotation3d(0, 0, 0)));
 
+        // Turret yaw + hood pitch are reported as independent joints for visualization.
+        double turretYawRad = Math.toRadians(shooterSubsystem.getTurretAngleDegrees());
+        double hoodPitchRad = shooterSubsystem.getHoodPosition() * 2.0 * Math.PI;
+        Pose3d shooterZeroPose = TheMachineConstants.SHOOTER_ZERO_POSE;
+        Pose3d hoodZeroPose = TheMachineConstants.HOOD_RETRACTED_POSE;
 
-    double turretYawRad = Math.toRadians(shooterSubsystem.getTurretAngleDegrees());
-    double hoodPitchRad = shooterSubsystem.getHoodPosition() * 2.0 * Math.PI;
-    Pose3d shooterZeroPose = TheMachineConstants.SHOOTER_ZERO_POSE;
-    Pose3d hoodZeroPose = TheMachineConstants.HOOD_RETRACTED_POSE;
+        Pose3d shooterPose = new Pose3d(
+            shooterZeroPose.getTranslation(),
+            shooterZeroPose.getRotation().plus(new Rotation3d(0, 0, turretYawRad))
+        );
 
-    Pose3d shooterPose = new Pose3d(
-        shooterZeroPose.getTranslation(),
-        shooterZeroPose.getRotation().plus(new Rotation3d(0, 0, turretYawRad))
-    );
+        Transform3d shooterToHoodAtZero = new Transform3d(shooterZeroPose, hoodZeroPose);
+        Pose3d hoodYawPose = shooterPose.plus(shooterToHoodAtZero);
+        Pose3d hoodPose = hoodYawPose.rotateAround(
+            hoodYawPose.getTranslation(),
+            new Rotation3d(hoodPitchRad, 0, 0)
+        );
 
-    Transform3d shooterToHoodAtZero = new Transform3d(shooterZeroPose, hoodZeroPose);
-    Pose3d hoodYawPose = shooterPose.plus(shooterToHoodAtZero);
-    Pose3d hoodPose = hoodYawPose.rotateAround(
-        hoodYawPose.getTranslation(),
-        new Rotation3d(hoodPitchRad, 0, 0)
-    );
+        SmartDashboard.putNumber("Shooter/TurretPoseDeg", Math.toDegrees(turretYawRad));
+        SmartDashboard.putNumber("Shooter/HoodPoseDeg", Math.toDegrees(hoodPitchRad));
 
-    SmartDashboard.putNumber("Shooter/TurretPoseDeg", Math.toDegrees(turretYawRad));
-    SmartDashboard.putNumber("Shooter/HoodPoseDeg", Math.toDegrees(hoodPitchRad));
+        intakePosePublisher.set(intakePose);
+        shooterPosePublisher.set(shooterPose);
+        hoodPosePublisher.set(hoodPose);
 
-    intakePosePublisher.set(intakePose);
-    shooterPosePublisher.set(shooterPose);
-    hoodPosePublisher.set(hoodPose);
-
-  }
-
-  public void publishTelemetry() {
-    shooterSubsystem.publishTelemetry();
-    feederSubsystem.publishTelemetry();
-    hopperSubsystem.publishTelemetry();
-    intakeSubsystem.publishTelemetry();
-
-    SmartDashboard.putString("TheMachine/State", state.toString());
-        SmartDashboard.putBoolean("TheMachine/ManualOverrideEnabled", shooterSubsystem.isManualOverrideEnabled());
-  }
-
-  public SubsystemBase[] getSubsystems() {
-    return new SubsystemBase[] {shooterSubsystem, feederSubsystem, hopperSubsystem, intakeSubsystem};
-  }
-
-    public boolean isManualOverrideEnabled() {
-                return shooterSubsystem.isManualOverrideEnabled();
     }
 
-  public void machinePeriodic()
-  {
+    /** @deprecated Use {@link #calculateSubsystemPoses()}. */
+    @Deprecated
+    public void calculateSubsytemPoses() {
+        calculateSubsystemPoses();
+    }
+
+    public void publishTelemetry() {
+        shooterSubsystem.publishTelemetry();
+        feederSubsystem.publishTelemetry();
+        hopperSubsystem.publishTelemetry();
+        intakeSubsystem.publishTelemetry();
+
+        SmartDashboard.putString("TheMachine/State", state.toString());
+        SmartDashboard.putBoolean("TheMachine/ManualOverrideEnabled", shooterSubsystem.isManualOverrideEnabled());
+    }
+
+    public SubsystemBase[] getSubsystems() {
+        return new SubsystemBase[] {shooterSubsystem, feederSubsystem, hopperSubsystem, intakeSubsystem};
+    }
+
+    public boolean isManualOverrideEnabled() {
+        return shooterSubsystem.isManualOverrideEnabled();
+    }
+
+    public void machinePeriodic()
+    {
+        // Manual override disables automatic hub-facing behavior.
         if (!shooterSubsystem.isManualOverrideEnabled()) {
-    if(state == TheMachineState.INTAKE || state == TheMachineState.IDLE
-        || state == TheMachineState.IDLE_DEPLOYED || state == TheMachineState.IDLE_RETRACTED
-     )
-        {
-            setTurretAngleToHubWithoutShooting();
+
+            // In passive/intake states, keep turret automatically oriented toward hub.
+            if(state == TheMachineState.INTAKE || state == TheMachineState.IDLE
+                || state == TheMachineState.IDLE_DEPLOYED || state == TheMachineState.IDLE_RETRACTED
+            ) {
+                setTurretAngleToHubWithoutShooting();
+            }
+            return;
         }
-        return;
-     }
-  }
+    }
 }

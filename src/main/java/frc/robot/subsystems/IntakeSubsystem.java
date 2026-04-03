@@ -32,6 +32,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 import frc.robot.constants.IntakeConstants;
 
+/**
+ * Controls intake rollers and intake arm extension.
+ *
+ * <p>This subsystem owns both hardware and simulation models for the intake mechanism.
+ */
 public class IntakeSubsystem extends SubsystemBase {
 
   private TalonFX intakeMotor;
@@ -93,6 +98,7 @@ public class IntakeSubsystem extends SubsystemBase {
       System.out.println("Could not apply intake arm motor configs, error code: " + status.toString());
     }
 
+    // On real hardware, seed extension encoder to known retracted position at boot.
     if (Robot.isReal()) {
       intakeArmMotor.setPosition(IntakeConstants.extensionMetersToMotorRotations(
           IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters)));
@@ -122,6 +128,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void setIntakeSpeed(double velocity) {
+    // Convert mechanism rps to motor-side rps through gear reduction.
     intakeMotor.setControl(
       intakeVelocityControl.withVelocity(velocity * IntakeConstants.INTAKE_GEAR_REDUCTION)
     );
@@ -130,6 +137,7 @@ public class IntakeSubsystem extends SubsystemBase {
   // --- Linear extension control ---
 
   public void setIntakeExtensionMeters(double extensionMeters) {
+    // Clamp requested extension to physical limits before commanding closed-loop position.
     double clampedExtension = Math.max(
       IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
       Math.min(extensionMeters, IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters))
@@ -205,7 +213,7 @@ public class IntakeSubsystem extends SubsystemBase {
     if (!isSimulationInitialized) {
       isSimulationInitialized = true;
 
-      // Roller sim
+      // Initialize roller simulation.
       intakeDcMotor = DCMotor.getKrakenX60(1);
       intakeSystem = LinearSystemId.createDCMotorSystem(
           intakeDcMotor,
@@ -217,7 +225,7 @@ public class IntakeSubsystem extends SubsystemBase {
   intakeMotor2.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
   intakeMotor2.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
 
-  // Arm sim
+  // Initialize extension-arm simulation.
   intakeArmDcMotor = DCMotor.getKrakenX60(1);
   intakeArmSim = new ElevatorSim(
           intakeArmDcMotor,
@@ -241,7 +249,7 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeMotor2SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
       intakeArmMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
 
-      // Roller sim update
+  // Step roller simulation and write back rotor position/velocity.
       intakeSim.setInputVoltage(intakeMotorSimState.getMotorVoltage());
       intakeSim.update(0.002);
 
@@ -255,7 +263,7 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeMotor2SimState.setRotorVelocity(
       intakeSim.getAngularVelocity().times(IntakeConstants.INTAKE_GEAR_REDUCTION));
 
-      // Arm sim update
+  // Step extension simulation and write back arm rotor state.
       intakeArmSim.setInput(intakeArmMotorSimState.getMotorVoltage());
       intakeArmSim.update(0.002);
 
@@ -280,6 +288,7 @@ public class IntakeSubsystem extends SubsystemBase {
   // --- End of simulation ---
 
   public void close() {
+    // Fully retract and stop rollers.
     intakeGoalVelocity = 0;
     intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters);
     intakeStop();
@@ -287,6 +296,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void deploy() {
+    // Deploy arm without running rollers.
     intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
     intakeGoalVelocity = 0;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
@@ -294,6 +304,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void intake() {
+    // Deploy then run intake rollers at acquisition speed.
     intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
     intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY.in(RotationsPerSecond);
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
@@ -302,6 +313,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void intakeWithOffset() {
+    // Alternative intake mode currently mapped to deployed intake behavior.
     intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY.in(RotationsPerSecond);
     intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
@@ -309,6 +321,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void feed() {
+    // Move to feed position and run rollers toward feeder path.
     intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY.in(RotationsPerSecond);
     intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED.in(Meters);
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
@@ -316,6 +329,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void reverse() {
+    // Reverse rollers; only run once intake is deployed to avoid stalling retracted geometry.
     intakeGoalVelocity = IntakeConstants.INTAKE_REVERSE_VELOCITY.in(RotationsPerSecond);
     intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
@@ -325,6 +339,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void idleBetween() {
+    // Intermediate hold state used between intake and shooter handoff.
     intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY.in(RotationsPerSecond);
     intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED.in(Meters);
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
@@ -336,6 +351,13 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeGoalExtensionMeters = intakeTestExtensionMeters;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
+  }
+
+  /** Set intake test speed/extension, then apply immediately. */
+  public void test(double intakeRps, double intakeExtensionMeters) {
+    intakeTestRPM = intakeRps;
+    intakeTestExtensionMeters = intakeExtensionMeters;
+    test();
   }
 
   @Override

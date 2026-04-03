@@ -7,6 +7,7 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.TheMachine;
 
+/** Keeps the machine in intake mode while held/scheduled. */
 public class IntakeCommand extends Command {
 
   private TheMachine theMachine;
@@ -19,6 +20,7 @@ public class IntakeCommand extends Command {
 
   @Override
   public void initialize() {
+    // Enter intake state once; subsystem periodic handles continuous behavior.
     theMachine.intake();
   }
 
@@ -31,6 +33,7 @@ public class IntakeCommand extends Command {
 
   @Override
   public boolean isFinished() {
+    // Trigger/button release should cancel this command.
     return false;
   }
 }

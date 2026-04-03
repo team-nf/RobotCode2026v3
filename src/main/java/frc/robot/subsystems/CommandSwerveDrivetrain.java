@@ -68,11 +68,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveSteerGains m_steerCharacterization = new SwerveRequest.SysIdSwerveSteerGains();
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
 
+    // Limelight runtime toggles exposed via NetworkTables for quick driver-station control.
     private NetworkTable llTable = NetworkTableInstance.getDefault().getTable("LL");
     private BooleanEntry llTurretEnabledEntry = llTable.getBooleanTopic("LL-Turret_Enabled").getEntry(true);
     private BooleanEntry llFixedEnabledEntry = llTable.getBooleanTopic("LL-Fixed_Enabled").getEntry(true);
     private BooleanEntry disabledLocoEnabledEntry = llTable.getBooleanTopic("DisabledLocoEnabled").getEntry(true);
 
+    // Dashboard chooser used while disabled to select autonomous start pose.
     private final SendableChooser<String> startPoseChooser = new SendableChooser<>();
     private Pose2d initialStartPose2d = new Pose2d(0, 0, new Rotation2d());
 
@@ -359,6 +361,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private void configureAutoBuilder() {
         try {
             var config = RobotConfig.fromGUISettings();
+            // PathPlanner wiring: pose/speed suppliers + robot-relative output consumer.
             AutoBuilder.configure(
                 () -> getState().Pose,   // Supplier of current robot pose
                 this::resetPose,         // Consumer for seeding pose against auto
@@ -376,7 +379,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                     new PIDConstants(7, 0, 0)
                 ),
                 config,
-                // Assume the path needs to be flipped for Red vs Blue, this is normally the case
+                // Manual path flip is handled elsewhere in this codebase.
                 () -> {return false;},
                 this // Subsystem for requirements
             );
@@ -387,12 +390,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public void setStartPoseInitial()
     {
+        // Start-pose options shown on dashboard during disabled.
         startPoseChooser.addOption("RIGHT", "RIGHT");
         startPoseChooser.addOption("MIDDLE", "MIDDLE");
         startPoseChooser.setDefaultOption("LEFT", "LEFT");
     
         SmartDashboard.putData("Conf/StartPoseChooser", startPoseChooser); // SendableChooser requires SmartDashboard.putData
 
+        // Seed odometry to alliance-appropriate default start pose.
         if(!Container.isBlue){
             initialStartPose2d = PoseConstants.START_POSE_RED_LEFT;
             resetPose(initialStartPose2d);
@@ -402,6 +407,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             resetPose(initialStartPose2d);
         }
 
+        // Default all vision sources to enabled at startup.
         llTurretEnabledEntry.set(true);
         llFixedEnabledEntry.set(true);
         disabledLocoEnabledEntry.set(true);
@@ -432,6 +438,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public void updateStartConditions()
      {
+        // Pose selection is only allowed while disabled to avoid odometry jumps in-match.
         if(!DriverStation.isDisabled()) return;
 
         String selectedStartPose = startPoseChooser.getSelected();
@@ -490,14 +497,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     LimelightHelpers.IMUData imuData;
     public void addVisionMeasurementMT2() {
-        // First, tell Limelight your robot's current orientation
+        // Keep Limelight orientation aligned with drivetrain heading.
         double robotYaw = getHeading();
         LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
         LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         imuData = LimelightHelpers.getIMUData("limelight-turret");
 
-        // Get the pose estimate
+    // Gather both camera estimates (turret camera + fixed camera).
         LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-turret");
         LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-4-1");
         
@@ -538,7 +545,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         else doRejectFixed = true;
 
 
-        if(!doRejectUpdate)
+    // Apply accepted measurements with conservative heading trust.
+    if(!doRejectUpdate)
         {
             if(!doRejectTurret && llTurretEnabledEntry.get(true))
             {
@@ -561,12 +569,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
 
     public void addVisionMeasurementMT1() {
-        // First, tell Limelight your robot's current orientation
+        // Keep Limelight orientation aligned with drivetrain heading.
     double robotYaw = getHeading();
     LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
     LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
-    // Get the pose estimate
+    // Gather both camera estimates (legacy solve path).
     LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
     LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-4-1");
     
@@ -633,6 +641,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public void resetWithMT1()
     {
+        // Prefer fixed camera reset; fall back to turret camera if needed.
         double robotYaw = 0;
 
         LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-4-1");
@@ -670,6 +679,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public void disabledPeriodic()
     {
+        // In disabled, optionally relocalize continuously for cleaner autonomous starts.
         isMode1Set = true;
 
         if (disabledLocoEnabledEntry.get(true)) {
@@ -679,6 +689,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public void enabledPeriodic()
     {   
+        // On first enable after disabled, switch LL IMU mode for in-match tracking.
         if(!isLLReady && isMode1Set)
         {
             double robotYaw = getPose().getRotation().getDegrees();
@@ -693,6 +704,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             isLLReady = true;
         }
 
+        // Once ready, fuse MegaTag2 vision each periodic call.
         if(isLLReady) addVisionMeasurementMT2();
     }
 
@@ -720,7 +732,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 enabledPeriodic();
                 visionLoopCounter = 0;
             } else {
-                // Rate-limit vision-heavy work to once every VISION_LOOPS loops
+                // Rate-limit expensive vision processing to reduce loop jitter.
                 visionLoopCounter++;
                 if (visionLoopCounter >= VISION_LOOPS) {
                     visionLoopCounter = 0;
@@ -742,6 +754,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public boolean isRobotOnLeftSide()
     {
+        // Side logic is mirrored by alliance.
         if(Container.isBlue)
         {
             return (getPose().getY() > 4.0);
@@ -754,6 +767,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public boolean isRobotOnTheShootingZone()
     {
+        // Shooting-zone boundary is mirrored by alliance.
         if(Container.isBlue)
         {
             return (getPose().getX() < 4.45);

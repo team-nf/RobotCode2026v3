@@ -20,6 +20,12 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
 import frc.robot.utils.ShooterCalculator;
 
+/**
+ * Autonomous variant of pass aiming command.
+ *
+ * <p>Selects the nearest pass lane target and drives machine pass setpoints without writing manual
+ * drive controls.
+ */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class AimAndPassAutoCommand extends Command {
 
@@ -45,7 +51,7 @@ public class AimAndPassAutoCommand extends Command {
   private static final double TURRET_TOLERANCE_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
 
 
-  /** Creates a new AimAndPass. */
+  /** Creates a new AimAndPassAutoCommand. */
   public AimAndPassAutoCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
@@ -78,6 +84,7 @@ public class AimAndPassAutoCommand extends Command {
   double laneSplitY;
   boolean onLeftSide;
   private Pose2d selectPassAimPose(Pose2d currentPose) {
+    // Split field into left/right pass lanes using midpoint between lane targets.
     laneSplitY = (PoseConstants.BLUE_PASS_LEFT.getY() + PoseConstants.BLUE_PASS_RIGHT.getY()) * 0.5;
     onLeftSide = currentPose.getY() >= laneSplitY;
 
@@ -97,9 +104,9 @@ public class AimAndPassAutoCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-
+    // 1) Determine current pass target from robot lane side.
     robotPose = swerveDrivetrain.getPose();
-  shooterPose = ShooterCalculator.getShooterPoseFromRobotPose(robotPose);
+    shooterPose = ShooterCalculator.getShooterPoseFromRobotPose(robotPose);
     passAimPose = selectPassAimPose(robotPose);
 
     filteredAngleError = 0.0;
@@ -112,7 +119,7 @@ public class AimAndPassAutoCommand extends Command {
     aimY = passAimPose.getY();
 
     heading = robotPose.getRotation().getRadians();
-  robotAngleToPass = Math.atan2(aimY - shooterPose.getY(), aimX - shooterPose.getX());
+    robotAngleToPass = Math.atan2(aimY - shooterPose.getY(), aimX - shooterPose.getX());
     rawAngleError = robotAngleToPass - heading;
     rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
 
@@ -124,6 +131,7 @@ public class AimAndPassAutoCommand extends Command {
       Math.cos(robotAngleToPass - heading)
     ));
 
+    // 2) Solve pass setpoints and gate feed on shooter readiness.
     velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentPose(robotPose);
     hoodAngle = ShooterCalculator.calculatePassHoodAngle();
 

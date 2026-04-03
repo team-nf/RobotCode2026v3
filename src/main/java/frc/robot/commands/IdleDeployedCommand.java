@@ -7,6 +7,7 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.TheMachine;
 
+/** Holds the machine in idle with intake deployed (ready to acquire quickly). */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class IdleDeployedCommand extends Command {
 
@@ -22,6 +23,7 @@ public class IdleDeployedCommand extends Command {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
+    // Enter deployed idle immediately.
     theMachine.idleDeployed();
   }
 
@@ -37,6 +39,7 @@ public class IdleDeployedCommand extends Command {
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
+    // This state should persist until interrupted.
     return false;
   }
 }

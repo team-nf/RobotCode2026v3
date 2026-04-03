@@ -21,6 +21,9 @@ import frc.robot.constants.DriveConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
 
+/**
+ * Returns from left trench toward shooting area while shifting machine to neutral idle.
+ */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class ReturnFromLeftTrenchCommand extends ParallelCommandGroup {
 
@@ -30,6 +33,7 @@ public class ReturnFromLeftTrenchCommand extends ParallelCommandGroup {
     try {
       PathPlannerPath path = PathPlannerPath.fromPathFile("ReturnFromLeftTrench");
 
+      // Path files are authored in blue-frame coordinates; flip for red alliance.
       if (!Container.isBlue) path = path.flipPath();
 
       builtCommand = AutoBuilder.pathfindThenFollowPath(path, DriveConstants.PATH_CONSTRAINTS_FOLLOW_PATH);
@@ -40,6 +44,8 @@ public class ReturnFromLeftTrenchCommand extends ParallelCommandGroup {
 
     InstantCommand idleCommand = new InstantCommand(() -> theMachine.idle());
     addRequirements(theMachine.getSubsystems());
+
+    // Run drive path and machine-state transition together.
     addCommands(builtCommand, idleCommand);
   }
 }

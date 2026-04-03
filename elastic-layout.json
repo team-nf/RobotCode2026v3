@@ -73,19 +73,6 @@
             }
           },
           {
-            "title": "AutoAimEnabled",
-            "x": 1152.0,
-            "y": 128.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Toggle Button",
-            "properties": {
-              "topic": "/SmartDashboard/Conf/AutoAimEnabled",
-              "period": 0.06,
-              "data_type": "boolean"
-            }
-          },
-          {
             "title": "FlywheelState-L",
             "x": 128.0,
             "y": 832.0,
@@ -268,6 +255,19 @@
               "period": 0.06,
               "data_type": "string",
               "show_submit_button": false
+            }
+          },
+          {
+            "title": "ManualOverrideEnabled",
+            "x": 1152.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Toggle Button",
+            "properties": {
+              "topic": "Conf/TheMachine/ManualOverrideEnabled",
+              "period": 0.06,
+              "data_type": "boolean"
             }
           }
         ]

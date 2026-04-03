@@ -45,8 +45,15 @@ import frc.robot.constants.TheMachineConstants;
 import frc.robot.utils.LimelightHelpers;
 import frc.robot.utils.ShooterCalculator;
 
+/**
+ * Shooter mechanism subsystem.
+ *
+ * <p>Owns flywheel, hood, and turret motor control; exposes high-level actions used by
+ * {@code TheMachine}; publishes telemetry; and maintains simulation behavior.
+ */
 public class ShooterSubsystem extends SubsystemBase {
 
+    // Runtime dashboard override used for pit/debug operation.
     private final BooleanTopic manualOverrideTopic = NetworkTableInstance.getDefault()
         .getBooleanTopic("Conf/TheMachine/ManualOverrideEnabled");
     private final BooleanEntry manualOverrideEntry = manualOverrideTopic.getEntry(false);
@@ -96,6 +103,9 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public ShooterSubsystem(Supplier<Double> robotYawSupplier) {
 
+        // NOTE: robotYawSupplier is intentionally kept in constructor signature for compatibility
+        // with existing wiring, even though current shooter logic does not consume it directly.
+
         manualOverrideEntry.setDefault(false);
         manualOverrideEnabled = manualOverrideEntry.get(false);
         manualOverrideListenerHandle = NetworkTableInstance.getDefault().addListener(
@@ -141,10 +151,12 @@ public class ShooterSubsystem extends SubsystemBase {
 
         turretAbsolutePositionSignal = turretAbsoluteEncoder.getAbsolutePosition(false);
 
+        // On startup, align integrated turret motor position with absolute encoder reading.
         syncTurretMotorToAbsoluteEncoder();
     }
 
     private void applyConfig(TalonFX motor, com.ctre.phoenix6.configs.TalonFXConfiguration config, String name) {
+        // Retry configuration a few times to handle transient CAN startup timing.
         StatusCode status = StatusCode.StatusCodeNotInitialized;
         for (int i = 0; i < 5; ++i) {
             status = motor.getConfigurator().apply(config);
@@ -158,11 +170,13 @@ public class ShooterSubsystem extends SubsystemBase {
     // ===== Motor Control Helpers =====
 
     private void setFlywheelSpeed(double velocityRPS) {
+        // Convert mechanism-side RPS to motor-side RPS through gear ratio.
         double motorVelocity = velocityRPS * ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
         flywheelMotor1.setControl(flywheelVelocityControl.withVelocity(motorVelocity));
     }
 
     private void setHoodAngle(double positionRotations) {
+        // Clamp hood command to mechanical limits before closed-loop control.
         double clampedRotations = Math.max(
             MIN_HOOD_ROT,
             Math.min(positionRotations, MAX_HOOD_ROT)
@@ -172,10 +186,12 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public double setTurretAngleDegrees(double requestedAngleDegrees) {
+        // Resolve to nearest legal equivalent angle to avoid long wraps.
         double wrappedTargetDeg = wrapTurretTargetToCurrent(requestedAngleDegrees);
         double currentAngleDeg = getTurretAngleDegrees();
         double angleErrorDeg = Math.abs(normalizeToMinus180To180(wrappedTargetDeg - currentAngleDeg));
 
+        // Use more aggressive PID slot near target for tighter final convergence.
         int turretPidSlot = angleErrorDeg <= ShooterConstants.TURRET_SMALL_ERROR_THRESHOLD_DEG
             ? ShooterConstants.TURRET_AGGRESSIVE_SLOT
             : ShooterConstants.TURRET_GENTLE_SLOT;
@@ -207,9 +223,11 @@ public class ShooterSubsystem extends SubsystemBase {
         double requestedClamped = clampTurretRange(requestedAngleDegrees);
         double currentAngle = getTurretAngleDegrees();
 
+        // Select nearest angular equivalent relative to current angle.
         double delta = normalizeToMinus180To180(requestedClamped - currentAngle);
         double nearestEquivalent = currentAngle + delta;
 
+        // Re-wrap if nearest equivalent would violate soft limits.
         if (nearestEquivalent < MIN_TURRET_DEG) {
             nearestEquivalent += 360.0;
         } else if (nearestEquivalent > MAX_TURRET_DEG) {
@@ -243,6 +261,7 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void syncTurretMotorToAbsoluteEncoder() {
+        // Read absolute CANcoder and seed integrated motor position to match.
         turretAbsolutePositionSignal.refresh();
         double absoluteEncoderRot = turretAbsolutePositionSignal.getValueAsDouble();
         double absoluteTurretDeg = absoluteEncoderRot
@@ -280,6 +299,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
         if(!manualOverrideEnabled)
         {
+            // Normal auto-setpoint path from aiming commands.
             flywheelGoalVelocity = velocityRPS;
             hoodGoalPosition = hoodAngleRotations;
             turretGoalAngleDegrees = setTurretAngleDegrees(turretAngleDegrees);
@@ -289,6 +309,7 @@ public class ShooterSubsystem extends SubsystemBase {
         }
         else
         {
+            // Pit/debug fallback constants when manual override is enabled.
             flywheelGoalVelocity = 35;
             hoodGoalPosition = 0.0;
             turretGoalAngleDegrees = setTurretAngleDegrees(0);
@@ -368,6 +389,7 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public boolean isTurretAtAngle() {
+        // Require both position error and low angular velocity before declaring ready.
         return Math.abs(getTurretAngleDegrees() - turretGoalAngleDegrees) < TURRET_ERROR_DEG
             && Math.abs(turretVelocitySignal.getValueAsDouble()) < ShooterConstants.TURRET_ALLOWABLE_SPEED_TO_SHOOT.in(RotationsPerSecond);
     }
@@ -386,6 +408,7 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void publishTelemetry() {
+        // Keep dashboard-reported turret angle bounded to legal mechanism range.
         double turretAngleClamped = Math.max(MIN_TURRET_DEG, Math.min(getTurretAngleDegrees(), MAX_TURRET_DEG));
         double flywheelRps = getFlywheel1SpeedAbs();
         double flywheelRpmError = (Math.abs(flywheelGoalVelocity) - flywheelRps) * 60.0;
@@ -488,6 +511,7 @@ public class ShooterSubsystem extends SubsystemBase {
             turretMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
 
         } else {
+            // Step each plant model and mirror resulting rotor states into Phoenix sim objects.
             // --- Flywheel sim update ---
             final var fw1SimState = flywheelMotor1.getSimState();
             final var fw2SimState = flywheelMotor2.getSimState();
@@ -551,8 +575,10 @@ public class ShooterSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
+        // Refresh cached signals once per loop before any dependent reads.
         refreshStatusSignals();
 
+        // Recompute turret-mounted Limelight pose as turret rotates around shooter axis.
         turretLLHeading = getTurretAngleRadians();
         turretLLX = TheMachineConstants.TURRET_LL_POSE.getX() * Math.cos(turretLLHeading) - TheMachineConstants.TURRET_LL_POSE.getY() * Math.sin(turretLLHeading);
         turretLLY = TheMachineConstants.TURRET_LL_POSE.getY() * Math.cos(turretLLHeading) + TheMachineConstants.TURRET_LL_POSE.getX() * Math.sin(turretLLHeading);
@@ -560,6 +586,7 @@ public class ShooterSubsystem extends SubsystemBase {
         turretLLX = turretLLX + TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
         turretLLY = turretLLY + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
                                                                 
+        // Push updated camera pose to Limelight on real robot only.
         if(Robot.isReal()) 
             LimelightHelpers.setCameraPose_RobotSpace("limelight-turret", turretLLX, turretLLY, turretLLZ, 0, 
                                                                                                                 turretLLPitchDegrees, 

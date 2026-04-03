@@ -26,6 +26,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.FeederConstants;
 
+/**
+ * Controls belt + feed motors that transfer cargo from hopper path into shooter.
+ */
 public class FeederSubsystem extends SubsystemBase {
 
   private TalonFX feederBeltMotor;
@@ -86,12 +89,14 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void feederBeltSetSpeed(double velocity) {
+    // Convert mechanism rps to motor-side rps through gear reduction.
     feederBeltMotor.setControl(
       feederVelocityControl.withVelocity(velocity * FeederConstants.FEEDER_BELT_GEAR_REDUCTION)
     );
   }
 
   public void feederFeedSetSpeed(double velocity) {
+    // Convert mechanism rps to motor-side rps through gear reduction.
     feederFeedMotor.setControl(
       feederVelocityControl.withVelocity(velocity * FeederConstants.FEEDER_GEAR_REDUCTION)
     );
@@ -144,6 +149,7 @@ public class FeederSubsystem extends SubsystemBase {
   public void simUpdate() {
 
         if (!isSimulationInitialized) {
+      // Initialize feeder simulation model once.
             isSimulationInitialized = true;
             feederDcMotor = DCMotor.getKrakenX60(1);
             feederSystem = LinearSystemId.createDCMotorSystem(
@@ -158,6 +164,7 @@ public class FeederSubsystem extends SubsystemBase {
             feederFeedMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
         }
         else {
+      // Step feeder simulation and mirror state to both motors.
       final var feederBeltMotorSimState = feederBeltMotor.getSimState();
       final var feederFeedMotorSimState = feederFeedMotor.getSimState();
 
@@ -195,6 +202,7 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void feed() {
+    // Gate belt feed until feed wheel reaches speed to reduce jams.
     feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
     feederFeedGoalVelocity = FeederConstants.FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
     feederFeedSetSpeed(feederFeedGoalVelocity);
@@ -210,14 +218,22 @@ public class FeederSubsystem extends SubsystemBase {
     feederBeltSetSpeed(feederBeltGoalVelocity);
   }
 
-  public void feed_get_ready() {
+  public void feedGetReady() {
+    // Spin feed wheel up while holding belt still.
     feederBeltGoalVelocity = 0;
     feederFeedGoalVelocity = FeederConstants.FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
     feederBeltSetSpeed(feederBeltGoalVelocity);
     feederFeedSetSpeed(feederFeedGoalVelocity);
   }
 
+  /** @deprecated Use {@link #feedGetReady()}. */
+  @Deprecated
+  public void feed_get_ready() {
+    feedGetReady();
+  }
+
   public void reverse() {
+    // Reverse both motors to clear jams.
     feederBeltGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY.in(RotationsPerSecond);
     feederFeedGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY.in(RotationsPerSecond);
     feederBeltSetSpeed(feederBeltGoalVelocity);
@@ -229,6 +245,12 @@ public class FeederSubsystem extends SubsystemBase {
     feederFeedGoalVelocity = feederTestRPM;
     feederBeltSetSpeed(feederBeltGoalVelocity);
     feederFeedSetSpeed(feederFeedGoalVelocity);
+  }
+
+  /** Set test RPS for both feeder motors, then apply immediately. */
+  public void test(double feederRps) {
+    feederTestRPM = feederRps;
+    test();
   }
 
 

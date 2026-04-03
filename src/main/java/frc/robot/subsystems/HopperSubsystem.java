@@ -28,6 +28,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.HopperConstants;
 
+/**
+ * Controls hopper transport motors that stage cargo between intake and feeder.
+ */
 public class HopperSubsystem extends SubsystemBase {
 
   private TalonFX hopperMotor;
@@ -89,10 +92,17 @@ public class HopperSubsystem extends SubsystemBase {
     hopperMotor.set(0.0);
   }
 
-  public void sethopperSpeed(double velocity) {
+  public void setHopperSpeed(double velocity) {
+    // Convert mechanism rps to motor-side rps through gear reduction.
     hopperMotor.setControl(
       hopperVelocityControl.withVelocity(velocity * HopperConstants.HOPPER_GEAR_REDUCTION)
     );
+  }
+
+  /** @deprecated Use {@link #setHopperSpeed(double)}. */
+  @Deprecated
+  public void sethopperSpeed(double velocity) {
+    setHopperSpeed(velocity);
   }
 
   public void publishTelemetry() {
@@ -130,6 +140,7 @@ public class HopperSubsystem extends SubsystemBase {
   public void simUpdate() {
 
         if (!isSimulationInitialized) {
+      // Initialize hopper simulation model once.
             isSimulationInitialized = true;
             hopperDcMotor = DCMotor.getKrakenX60(1);
             hopperSystem = LinearSystemId.createDCMotorSystem(
@@ -144,6 +155,7 @@ public class HopperSubsystem extends SubsystemBase {
             hopperMotor2.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
         }
         else {
+      // Step simulation and mirror state into both hopper motors.
             final var hopperMotorSimState = hopperMotor.getSimState();
             final var hopperMotor2SimState = hopperMotor2.getSimState();
 
@@ -173,28 +185,38 @@ public class HopperSubsystem extends SubsystemBase {
   // End of simulation part
 
   public void zero() {
+    // Stop hopper flow.
     hopperGoalVelocity = 0;
     hopperStop();
   }
 
   public void feed() {
+    // Normal forward transport toward feeder.
     hopperGoalVelocity = HopperConstants.HOPPER_FEEDING_VELOCITY.in(RotationsPerSecond);
-    sethopperSpeed(hopperGoalVelocity);
+    setHopperSpeed(hopperGoalVelocity);
   }
 
   public void push() {
+    // Faster forward push mode for quick transfer.
     hopperGoalVelocity = HopperConstants.HOPPER_PUSHING_VELOCITY.in(RotationsPerSecond);
-    sethopperSpeed(hopperGoalVelocity);
+    setHopperSpeed(hopperGoalVelocity);
   }
 
   public void reverse() {
+    // Reverse direction to clear jams.
     hopperGoalVelocity = HopperConstants.HOPPER_REVERSE_VELOCITY.in(RotationsPerSecond);
-    sethopperSpeed(hopperGoalVelocity);
+    setHopperSpeed(hopperGoalVelocity);
   }
 
   public void test() {
     hopperGoalVelocity = hopperTestRPM;
-    sethopperSpeed(hopperGoalVelocity);
+    setHopperSpeed(hopperGoalVelocity);
+  }
+
+  /** Set hopper test RPS, then apply immediately. */
+  public void test(double hopperRps) {
+    hopperTestRPM = hopperRps;
+    test();
   }
 
 

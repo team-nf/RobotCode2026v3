@@ -37,6 +37,10 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
 import frc.robot.utils.ShooterCalculator;
 
+/**
+ * Driver-assist command for shooting: keeps manual translational control while auto-solving
+ * shooter setpoints (flywheel/hood/turret) toward the alliance hub.
+ */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class AimAndShootCommand extends Command {
   
@@ -88,7 +92,7 @@ public class AimAndShootCommand extends Command {
   private SlewRateLimiter joyYSlewLimiter = new SlewRateLimiter(2.5);
 
 
-  /** Creates a new AimAndPass. */
+  /** Creates a new AimAndShootCommand. */
   public AimAndShootCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
     // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
@@ -120,6 +124,7 @@ public class AimAndShootCommand extends Command {
     bufferIndex = 0;
     validSampleCount = 0;
 
+    // Re-resolve alliance hub target in case DS alliance changed while disabled.
     if(Container.isBlue)
     {
       hubAimPose = PoseConstants.BLUE_HUB_AIM_POSE;
@@ -162,7 +167,7 @@ public class AimAndShootCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
-    
+    // 1) Gather drivetrain state and derive shooter point kinematics.
     robotPose = swerveDrivetrain.getPose();
     shooterPose = robotPose.transformBy(SHOOTER_OFFSET_FROM_ROBOT);
     speeds = swerveDrivetrain.getFieldSpeeds();
@@ -197,7 +202,7 @@ public class AimAndShootCommand extends Command {
     filteredSpeedX /= validSampleCount;
     filteredSpeedY /= validSampleCount;
 
-    // Predict where the shooter and chassis heading will be when the turret reaches setpoint.
+    // 2) Predict where shooter/chassis will be when turret reaches setpoint.
     predictedShooterX = shooterPose.getX() + filteredSpeedX * TURRET_LOOKAHEAD_SEC;
     predictedShooterY = shooterPose.getY() + filteredSpeedY * TURRET_LOOKAHEAD_SEC;
     predictedHeading = heading + speeds.omegaRadiansPerSecond * TURRET_LOOKAHEAD_SEC;
@@ -223,27 +228,27 @@ public class AimAndShootCommand extends Command {
 
     bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
 
+    // 3) Run normal driver translation/rotation while assist computes shooter setpoints.
     swerveDrivetrain.setControl(
         drive.withVelocityX(-joyYSlewLimiter.calculate(driverController.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
             .withVelocityY(-joyXSlewLimiter.calculate(driverController.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
       .withRotationalRate(-driverController.getRightX() * MaxAngularRate)
     );
 
-    // Create filtered speeds for shooter calculation
+    // 4) Solve shooter parameters from filtered motion estimate and predicted aim point.
     shootParams = ShooterCalculator.calculateShootingParameters(filteredSpeedX, filteredSpeedY, robotPose, time);
     velocityRPS = shootParams[0];
     hoodAngle = shootParams[1];
     turretAngleDeg = Math.toDegrees(Math.atan2(Math.sin(robotAngleToHub - predictedHeading), Math.cos(robotAngleToHub - predictedHeading)));
 
-
+    // Feed only once shooter is ready; otherwise stay in spin-up state.
     if(theMachine.isShooterReady()) {
       theMachine.shoot(velocityRPS, hoodAngle, turretAngleDeg);
     } else {
       theMachine.getReady(velocityRPS, hoodAngle, turretAngleDeg);
-    }
+  }
 
-
-
+  // Publish simulated aiming telemetry for dashboards/3D overlays.
     if(Robot.isSimulation()) {
       aimPosePublisher.set(new Pose3d(aimX, aimY, Dimensions.HUB_HEIGHT.in(Meters), new Rotation3d(0, 0, 0)));
       aimOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
@@ -255,8 +260,6 @@ public class AimAndShootCommand extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {}
-
-
 
   // Returns true when the command should end.
   @Override

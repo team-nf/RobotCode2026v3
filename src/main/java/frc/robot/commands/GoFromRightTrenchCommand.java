@@ -21,6 +21,9 @@ import frc.robot.constants.DriveConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
 
+/**
+ * Leaves shooting zone via right trench path while enabling intake behavior.
+ */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class GoFromRightTrenchCommand extends ParallelCommandGroup {
 
@@ -30,6 +33,7 @@ public class GoFromRightTrenchCommand extends ParallelCommandGroup {
     try {
       PathPlannerPath path = PathPlannerPath.fromPathFile("GoFromRightTrench");
 
+      // Path files are authored in blue-frame coordinates; flip for red alliance.
       if(!Container.isBlue) path = path.flipPath();
 
       builtCommand = AutoBuilder.pathfindThenFollowPath(path, DriveConstants.PATH_CONSTRAINTS_FOLLOW_PATH);
@@ -41,6 +45,8 @@ public class GoFromRightTrenchCommand extends ParallelCommandGroup {
     InstantCommand theMachineCommand = new InstantCommand(() -> theMachine.intake());
 
     addRequirements(theMachine.getSubsystems());
+
+    // Run drive path and mechanism action together.
     addCommands(builtCommand, theMachineCommand);
   }
 }

@@ -7,6 +7,7 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.TheMachine;
 
+/** Holds the machine in a safe stowed-idle state (intake retracted). */
 public class IdleRetractedCommand extends Command {
 
   private TheMachine theMachine;
@@ -19,6 +20,7 @@ public class IdleRetractedCommand extends Command {
 
   @Override
   public void initialize() {
+    // Enter retracted idle immediately on schedule.
     theMachine.idleRetracted();
   }
 
@@ -31,6 +33,7 @@ public class IdleRetractedCommand extends Command {
 
   @Override
   public boolean isFinished() {
+    // Runs continuously until another command takes control.
     return false;
   }
 }
