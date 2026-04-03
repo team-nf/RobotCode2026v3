@@ -35,6 +35,7 @@ public class HopperSubsystem extends SubsystemBase {
 
   private TalonFX hopperMotor;
   private TalonFX hopperMotor2;
+  private TalonFX hopperSideMotor;
 
 
   private final VelocityVoltage hopperVelocityControl;
@@ -46,6 +47,10 @@ public class HopperSubsystem extends SubsystemBase {
   private final StatusSignal<?> hopper2VelocitySignal;
   private final StatusSignal<?> hopper2CurrentSignal;
   private final StatusSignal<?> hopper2VoltageSignal;
+  private final StatusSignal<?> hopper3PositionSignal;
+  private final StatusSignal<?> hopper3VelocitySignal;
+  private final StatusSignal<?> hopper3CurrentSignal;
+  private final StatusSignal<?> hopper3VoltageSignal;
 
   private double hopperGoalVelocity;
   private double hopperTestRPM;
@@ -54,6 +59,7 @@ public class HopperSubsystem extends SubsystemBase {
   public HopperSubsystem() {
     hopperMotor = new TalonFX(HopperConstants.HOPPER_MOTOR_ID);
     hopperMotor2 = new TalonFX(HopperConstants.HOPPER_MOTOR_2_ID);
+  hopperSideMotor = new TalonFX(HopperConstants.HOPPER_SIDE_MOTOR_ID);
 
     StatusCode status = StatusCode.StatusCodeNotInitialized;
     for (int i = 0; i < 5; ++i) {
@@ -73,7 +79,17 @@ public class HopperSubsystem extends SubsystemBase {
       System.out.println("Could not apply configs, error code: " + status.toString());
     }
 
+    status = StatusCode.StatusCodeNotInitialized;
+    for (int i = 0; i < 5; ++i) {
+  status = hopperSideMotor.getConfigurator().apply(HopperConstants.HOPPER_MOTOR_CONFIG);
+      if (status.isOK()) break;
+    }
+    if (!status.isOK()) {
+      System.out.println("Could not apply configs, error code: " + status.toString());
+    }
+
     hopperMotor2.setControl(new Follower(hopperMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+  hopperSideMotor.setControl(new Follower(hopperMotor.getDeviceID(), MotorAlignmentValue.Opposed));
 
     hopper1PositionSignal = hopperMotor.getPosition(false);
     hopper1VelocitySignal = hopperMotor.getVelocity(false);
@@ -84,6 +100,11 @@ public class HopperSubsystem extends SubsystemBase {
     hopper2VelocitySignal = hopperMotor2.getVelocity(false);
     hopper2CurrentSignal = hopperMotor2.getStatorCurrent(false);
     hopper2VoltageSignal = hopperMotor2.getMotorVoltage(false);
+
+  hopper3PositionSignal = hopperSideMotor.getPosition(false);
+  hopper3VelocitySignal = hopperSideMotor.getVelocity(false);
+  hopper3CurrentSignal = hopperSideMotor.getStatorCurrent(false);
+  hopper3VoltageSignal = hopperSideMotor.getMotorVoltage(false);
     
     hopperVelocityControl = HopperConstants.HOPPER_VELOCITY_CONTROL.clone();
   }
@@ -115,6 +136,11 @@ public class HopperSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Hopper/Motor2VelocityRps", hopper2VelocitySignal.getValueAsDouble());
     SmartDashboard.putNumber("Hopper/Motor2CurrentA", hopper2CurrentSignal.getValueAsDouble());
     SmartDashboard.putNumber("Hopper/Motor2VoltageV", hopper2VoltageSignal.getValueAsDouble());
+
+    SmartDashboard.putNumber("Hopper/Motor3PositionRot", hopper3PositionSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor3VelocityRps", hopper3VelocitySignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor3CurrentA", hopper3CurrentSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor3VoltageV", hopper3VoltageSignal.getValueAsDouble());
   }
 
   private void refreshStatusSignals() {
@@ -126,7 +152,11 @@ public class HopperSubsystem extends SubsystemBase {
         hopper2PositionSignal,
         hopper2VelocitySignal,
         hopper2CurrentSignal,
-        hopper2VoltageSignal);
+  hopper2VoltageSignal,
+  hopper3PositionSignal,
+  hopper3VelocitySignal,
+  hopper3CurrentSignal,
+  hopper3VoltageSignal);
   }
 
   // SIMULATION
@@ -153,14 +183,18 @@ public class HopperSubsystem extends SubsystemBase {
             hopperMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
             hopperMotor2.getSimState().Orientation = ChassisReference.Clockwise_Positive;
             hopperMotor2.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
+            hopperSideMotor.getSimState().Orientation = ChassisReference.Clockwise_Positive;
+            hopperSideMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
         }
         else {
       // Step simulation and mirror state into both hopper motors.
             final var hopperMotorSimState = hopperMotor.getSimState();
             final var hopperMotor2SimState = hopperMotor2.getSimState();
+            final var hopperMotor3SimState = hopperSideMotor.getSimState();
 
             hopperMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
             hopperMotor2SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
+            hopperMotor3SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
             
             hopperSim.setInputVoltage(hopperMotorSimState.getMotorVoltage());
             hopperSim.update(0.002);
@@ -174,6 +208,11 @@ public class HopperSubsystem extends SubsystemBase {
                 hopperSim.getAngularPosition().times(HopperConstants.HOPPER_GEAR_REDUCTION));
             hopperMotor2SimState.setRotorVelocity(
                 hopperSim.getAngularVelocity().times(HopperConstants.HOPPER_GEAR_REDUCTION));
+
+      hopperMotor3SimState.setRawRotorPosition(
+        hopperSim.getAngularPosition().times(HopperConstants.HOPPER_GEAR_REDUCTION));
+      hopperMotor3SimState.setRotorVelocity(
+        hopperSim.getAngularVelocity().times(HopperConstants.HOPPER_GEAR_REDUCTION));
         }   
     }
 

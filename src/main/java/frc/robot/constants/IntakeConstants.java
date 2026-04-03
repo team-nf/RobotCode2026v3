@@ -46,11 +46,12 @@ public class IntakeConstants {
                 .withSupplyCurrentLimit(39)
                 .withStatorCurrentLimit(39))
                 
-            .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive))    ;
+            .withMotorOutput(new MotorOutputConfigs()
+                .withInverted(InvertedValue.Clockwise_Positive));
 
     public static final VelocityVoltage INTAKE_VELOCITY_CONTROL = new VelocityVoltage(0)
-                        .withSlot(0)
-                        .withEnableFOC(false);
+            .withSlot(0)
+            .withEnableFOC(false);
 
     // Roller reduction
     public static final double INTAKE_GEAR_REDUCTION = 20.0 / 12.0;
@@ -117,7 +118,8 @@ public class IntakeConstants {
                 .withKD(INTAKE_ARM_KD)
                 .withKG(INTAKE_ARM_KG)
                 .withGravityType(GravityTypeValue.Arm_Cosine))
-                .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.CounterClockwise_Positive))
+                .withMotorOutput(new MotorOutputConfigs()
+                    .withInverted(InvertedValue.CounterClockwise_Positive))
                 .withVoltage(new VoltageConfigs()
                     .withPeakForwardVoltage(9)
                     .withPeakReverseVoltage(-9))
@@ -127,8 +129,8 @@ public class IntakeConstants {
                     .withStatorCurrentLimit(20));
 
     public static final PositionVoltage INTAKE_ARM_POSITION_CONTROL = new PositionVoltage(0)
-                        .withSlot(0)
-                        .withEnableFOC(false);
+            .withSlot(0)
+            .withEnableFOC(false);
 
     // Legacy compatibility for current subsystem (will be replaced by linear API next step)
     // With linear conversion represented directly in motor rotations, keep reduction at 1.0.

@@ -14,6 +14,7 @@ import static edu.wpi.first.units.Units.*;
 public class HopperConstants {
     public static final int HOPPER_MOTOR_ID = 32;
     public static final int HOPPER_MOTOR_2_ID = 33;
+    public static final int HOPPER_SIDE_MOTOR_ID = 34;
 
     public static final double HOPPER_KS = 0.5;
     public static final double HOPPER_KV = 0.0;
@@ -42,10 +43,11 @@ public class HopperConstants {
                 .withInverted(InvertedValue.Clockwise_Positive));
 
     public static final VelocityVoltage HOPPER_VELOCITY_CONTROL = new VelocityVoltage(0)
-                        .withSlot(0)
-                        .withEnableFOC(false);
+        .withSlot(0)
+        .withEnableFOC(false);
 
-    public static final double HOPPER_GEAR_REDUCTION = 34.0/12.0;
+    public static final double HOPPER_GEAR_REDUCTION = 3.2;
+    public static final double HOPPER_SIDE_GEAR_REDUCTION = 24.0/12.0;
 
     public static final AngularVelocity HOPPER_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
 

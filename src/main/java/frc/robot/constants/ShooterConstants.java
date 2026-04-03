@@ -51,32 +51,25 @@ public class ShooterConstants {
     public static final double SHOOTER_KD = 0.001;
     public static final double SHOOTER_KA = 0.005; 
 
-    public static final MotorOutputConfigs SHOOTER_MOTOR_OUTPUT_CONFIGS = new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive);
-    public static final Slot0Configs SHOOTER_PID_CONFIGS = new Slot0Configs()
-        .withKS(SHOOTER_KS)
-        .withKV(SHOOTER_KV)
-        .withKP(SHOOTER_KP)
-        .withKI(SHOOTER_KI)
-        .withKD(SHOOTER_KD)
-        .withKA(SHOOTER_KA);
-
-    public static final VoltageConfigs SHOOTER_VOLTAGE_CONFIGS = new VoltageConfigs()
-        .withPeakForwardVoltage(10)
-        .withPeakReverseVoltage(-10);
-
-    public static final CurrentLimitsConfigs SHOOTER_CURRENT_LIMITS = new CurrentLimitsConfigs()
-        .withSupplyCurrentLimitEnable(true)
-        .withSupplyCurrentLimit(38)
-        .withStatorCurrentLimit(38);
-
     public static final TalonFXConfiguration SHOOTER_CONFIG = new TalonFXConfiguration()
-            .withSlot0(SHOOTER_PID_CONFIGS)
-            .withVoltage(SHOOTER_VOLTAGE_CONFIGS)
-            .withCurrentLimits(SHOOTER_CURRENT_LIMITS);
+            .withSlot0(new Slot0Configs()
+                .withKS(SHOOTER_KS)
+                .withKV(SHOOTER_KV)
+                .withKP(SHOOTER_KP)
+                .withKI(SHOOTER_KI)
+                .withKD(SHOOTER_KD)
+                .withKA(SHOOTER_KA))
+            .withVoltage(new VoltageConfigs()
+                .withPeakForwardVoltage(10)
+                .withPeakReverseVoltage(-10))
+            .withCurrentLimits(new CurrentLimitsConfigs()
+                .withSupplyCurrentLimitEnable(true)
+                .withSupplyCurrentLimit(38)
+                .withStatorCurrentLimit(38));
 
     public static final VelocityVoltage SHOOTER_VELOCITY_CONTROL = new VelocityVoltage(0)
-                                                                        .withSlot(0)
-                                                                        .withEnableFOC(false);
+        .withSlot(0)
+        .withEnableFOC(false);
 
     public static final double HOOD_KS = 0.0;
     public static final double HOOD_KV = 0.0;
@@ -85,38 +78,29 @@ public class ShooterConstants {
     public static final double HOOD_KD = 0.2;
     public static final double HOOD_KG = 0.0;
 
-    public static final Slot0Configs HOOD_PID_CONFIGS = new Slot0Configs()
-        .withKS(HOOD_KS)
-        .withKV(HOOD_KV)
-        .withKP(HOOD_KP)
-        .withKI(HOOD_KI)
-        .withKD(HOOD_KD)
-        .withKG(HOOD_KG)
-        .withGravityType(GravityTypeValue.Arm_Cosine);
-
-    
-    public static final CurrentLimitsConfigs HOOD_CURRENT_LIMITS = new CurrentLimitsConfigs()
-        .withSupplyCurrentLimitEnable(true)
-        .withSupplyCurrentLimit(38)
-        .withStatorCurrentLimit(38);
-        
-    public static final VoltageConfigs HOOD_VOLTAGE_CONFIGS = new VoltageConfigs()
-        .withPeakForwardVoltage(10)
-        .withPeakReverseVoltage(-10);
-
-
-    public static final MotorOutputConfigs HOOD_MOTOR_OUTPUT_CONFIGS = new MotorOutputConfigs().withInverted(InvertedValue.CounterClockwise_Positive)
-        .withNeutralMode(NeutralModeValue.Coast);
-
     public static final TalonFXConfiguration HOOD_CONFIG = new TalonFXConfiguration()
-            .withSlot0(HOOD_PID_CONFIGS)
-            .withVoltage(HOOD_VOLTAGE_CONFIGS)
-            .withCurrentLimits(HOOD_CURRENT_LIMITS)
-            .withMotorOutput(HOOD_MOTOR_OUTPUT_CONFIGS);
+            .withSlot0(new Slot0Configs()
+                .withKS(HOOD_KS)
+                .withKV(HOOD_KV)
+                .withKP(HOOD_KP)
+                .withKI(HOOD_KI)
+                .withKD(HOOD_KD)
+                .withKG(HOOD_KG)
+                .withGravityType(GravityTypeValue.Arm_Cosine))
+            .withVoltage(new VoltageConfigs()
+                .withPeakForwardVoltage(10)
+                .withPeakReverseVoltage(-10))
+            .withCurrentLimits(new CurrentLimitsConfigs()
+                .withSupplyCurrentLimitEnable(true)
+                .withSupplyCurrentLimit(38)
+                .withStatorCurrentLimit(38))
+            .withMotorOutput(new MotorOutputConfigs()
+                .withInverted(InvertedValue.CounterClockwise_Positive)
+                .withNeutralMode(NeutralModeValue.Coast));
 
     public static final PositionVoltage HOOD_POSITION_CONTROL = new PositionVoltage(0)
-                                                                    .withSlot(0)
-                                                                    .withEnableFOC(false);
+        .withSlot(0)
+        .withEnableFOC(false);
 
     public static final double TURRET_AGGRESSIVE_KS = 1.0;
     public static final double TURRET_AGGRESSIVE_KV = 10.0;
@@ -137,40 +121,30 @@ public class ShooterConstants {
     public static final int TURRET_AGGRESSIVE_SLOT = 0;
     public static final int TURRET_GENTLE_SLOT = 1;
 
-    public static final Slot0Configs TURRET_PID_CONFIGS = new Slot0Configs()
-        .withKS(TURRET_AGGRESSIVE_KS)
-        .withKV(TURRET_AGGRESSIVE_KV)
-        .withKP(TURRET_AGGRESSIVE_KP)
-        .withKI(TURRET_AGGRESSIVE_KI)
-        .withKD(TURRET_AGGRESSIVE_KD)
-        .withKA(TURRET_AGGRESSIVE_KA);
-
-    public static final Slot1Configs TURRET_GENTLE_PID_CONFIGS = new Slot1Configs()
-        .withKS(TURRET_GENTLE_KS)
-        .withKV(TURRET_GENTLE_KV)
-        .withKP(TURRET_GENTLE_KP)
-        .withKI(TURRET_GENTLE_KI)
-        .withKD(TURRET_GENTLE_KD);
-
-    public static final CurrentLimitsConfigs TURRET_CURRENT_LIMITS = new CurrentLimitsConfigs()
-        .withSupplyCurrentLimitEnable(true)
-        .withSupplyCurrentLimit(39)
-        .withStatorCurrentLimit(39);
-
-    public static final VoltageConfigs TURRET_VOLTAGE_CONFIGS = new VoltageConfigs()
-        .withPeakForwardVoltage(12)
-        .withPeakReverseVoltage(-12);
-
-    public static final MotorOutputConfigs TURRET_MOTOR_OUTPUT_CONFIGS = new MotorOutputConfigs()
-        .withInverted(InvertedValue.Clockwise_Positive)
-        .withNeutralMode(NeutralModeValue.Brake);
-
     public static final TalonFXConfiguration TURRET_CONFIG = new TalonFXConfiguration()
-        .withSlot0(TURRET_PID_CONFIGS)
-        .withSlot1(TURRET_GENTLE_PID_CONFIGS)
-        .withVoltage(TURRET_VOLTAGE_CONFIGS)
-        .withCurrentLimits(TURRET_CURRENT_LIMITS)
-        .withMotorOutput(TURRET_MOTOR_OUTPUT_CONFIGS);
+        .withSlot0(new Slot0Configs()
+            .withKS(TURRET_AGGRESSIVE_KS)
+            .withKV(TURRET_AGGRESSIVE_KV)
+            .withKP(TURRET_AGGRESSIVE_KP)
+            .withKI(TURRET_AGGRESSIVE_KI)
+            .withKD(TURRET_AGGRESSIVE_KD)
+            .withKA(TURRET_AGGRESSIVE_KA))
+        .withSlot1(new Slot1Configs()
+            .withKS(TURRET_GENTLE_KS)
+            .withKV(TURRET_GENTLE_KV)
+            .withKP(TURRET_GENTLE_KP)
+            .withKI(TURRET_GENTLE_KI)
+            .withKD(TURRET_GENTLE_KD))
+        .withVoltage(new VoltageConfigs()
+            .withPeakForwardVoltage(12)
+            .withPeakReverseVoltage(-12))
+        .withCurrentLimits(new CurrentLimitsConfigs()
+            .withSupplyCurrentLimitEnable(true)
+            .withSupplyCurrentLimit(39)
+            .withStatorCurrentLimit(39))
+        .withMotorOutput(new MotorOutputConfigs()
+            .withInverted(InvertedValue.Clockwise_Positive)
+            .withNeutralMode(NeutralModeValue.Brake));
 
     public static final PositionVoltage TURRET_POSITION_CONTROL = new PositionVoltage(0)
         .withSlot(0)
@@ -181,7 +155,7 @@ public class ShooterConstants {
     public static final double FLYWHEEL_GEAR_REDUCTION = 1;
     public static final double HOOD_GEAR_REDUCTION = 324.0/20.0*26/18*56/8;
     
-    public static final double TURRET_GEAR_REDUCTION = (Robot.isReal()) ? 32.8 : 5;
+    public static final double TURRET_GEAR_REDUCTION = (Robot.isReal()) ? 36.44 : 5;
 
     public static final double TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION = 45.0;
     public static final double TURRET_ABSOLUTE_OFFSET_DEGREES = 0.0;
