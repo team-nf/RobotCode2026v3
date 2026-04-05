@@ -7,7 +7,7 @@ public class TheMachineConstants {
 
     // Addressable LED strip hardware configuration.
     public static int LED_PWM_PORT = 0;
-    public static int LED_STRIP_LENGTH = 60;
+    public static int LED_STRIP_LENGTH = 19;
 
     public static final double INTAKE_EXTENSION_ANGLE_DEGREES = -9.8;
 

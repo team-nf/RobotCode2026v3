@@ -106,6 +106,30 @@ public class ShooterSubsystem extends SubsystemBase {
     private double hoodTestAngle;
     private double turretTestAngleDegrees;
 
+    // Reused temp variables to avoid recreating locals in hot paths.
+    private double tempTurretDeg;
+    private double tempMotorVelocity;
+    private double tempRequestedTurretFrameDeg;
+    private double tempWrappedTargetDeg;
+    private double tempCurrentAngleDeg;
+    private double tempAngleErrorDeg;
+    private int tempTurretPidSlot;
+    private double tempMotorPosition;
+    private double tempWrappedNormDeg;
+    private double tempRequestedClampedDeg;
+    private double tempDeltaDeg;
+    private double tempNearestEquivalentDeg;
+    private double tempAbsoluteEncoderRot;
+    private double tempAbsoluteTurretDeg;
+    private double tempTurretMotorRot;
+    private double tempTurretAngleClamped;
+    private double tempFlywheelRps;
+    private double tempFlywheelRpmError;
+    private double tempHoodDegError;
+    private double tempTurretDegError;
+    private double tempHoodAngleDeg;
+    private double tempTurretAngleDeg;
+
     private final VoltageOut sysIdVoltageControl;
     private final SysIdRoutine flywheelSysIdRoutine;
     private final SysIdRoutine hoodSysIdRoutine;
@@ -192,9 +216,9 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     private boolean isTurretNearSysIdLimit() {
-        double turretDeg = getTurretAngleDegreesRaw();
-        return turretDeg <= (MIN_TURRET_DEG + TURRET_SYSID_LIMIT_MARGIN_DEG)
-            || turretDeg >= (MAX_TURRET_DEG - TURRET_SYSID_LIMIT_MARGIN_DEG);
+        tempTurretDeg = getTurretAngleDegreesRaw();
+        return tempTurretDeg <= (MIN_TURRET_DEG + TURRET_SYSID_LIMIT_MARGIN_DEG)
+            || tempTurretDeg >= (MAX_TURRET_DEG - TURRET_SYSID_LIMIT_MARGIN_DEG);
     }
 
     public Command flywheelSysIdQuasistatic(SysIdRoutine.Direction direction) {
@@ -243,8 +267,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
     private void setFlywheelSpeed(double velocityRPS) {
         // Convert mechanism-side RPS to motor-side RPS through gear ratio.
-        double motorVelocity = velocityRPS * ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
-        flywheelMotor1.setControl(flywheelVelocityControl.withVelocity(motorVelocity));
+        tempMotorVelocity = velocityRPS * ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
+        flywheelMotor1.setControl(flywheelVelocityControl.withVelocity(tempMotorVelocity));
     }
 
     private void setHoodAngle(double angleInputDegrees) {
@@ -255,35 +279,35 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public double setTurretAngleDegrees(double requestedAngleDegrees) {
         // Public turret API uses robot-frame degrees. Convert to turret-mechanism frame first.
-        double requestedTurretFrameDeg = robotFrameToTurretFrameDeg(requestedAngleDegrees);
+        tempRequestedTurretFrameDeg = robotFrameToTurretFrameDeg(requestedAngleDegrees);
 
         // Resolve to nearest legal equivalent angle to avoid long wraps.
-        double wrappedTargetDeg = wrapTurretTargetToCurrent(requestedTurretFrameDeg);
-        double currentAngleDeg = getTurretAngleDegreesRaw();
-        double angleErrorDeg = Math.abs(normalizeToMinus180To180(wrappedTargetDeg - currentAngleDeg));
+        tempWrappedTargetDeg = wrapTurretTargetToCurrent(tempRequestedTurretFrameDeg);
+        tempCurrentAngleDeg = getTurretAngleDegreesRaw();
+        tempAngleErrorDeg = Math.abs(normalizeToMinus180To180(tempWrappedTargetDeg - tempCurrentAngleDeg));
 
         // Use more aggressive PID slot near target for tighter final convergence.
-        int turretPidSlot = angleErrorDeg <= ShooterConstants.TURRET_SMALL_ERROR_THRESHOLD_DEG
+        tempTurretPidSlot = tempAngleErrorDeg <= ShooterConstants.TURRET_SMALL_ERROR_THRESHOLD_DEG
             ? ShooterConstants.TURRET_AGGRESSIVE_SLOT
             : ShooterConstants.TURRET_GENTLE_SLOT;
 
-        double motorPosition = wrappedTargetDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
+        tempMotorPosition = tempWrappedTargetDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
         turretMotor.setControl(
             turretPositionControl
-                .withSlot(turretPidSlot)
-                .withPosition(motorPosition)
+                .withSlot(tempTurretPidSlot)
+                .withPosition(tempMotorPosition)
         );
-    return turretFrameToRobotFrameDeg(wrappedTargetDeg);
+    return turretFrameToRobotFrameDeg(tempWrappedTargetDeg);
     }
 
     private double normalizeToMinus180To180(double angleDeg) {
-        double wrapped = angleDeg % 360.0;
-        if (wrapped > 180.0) {
-            wrapped -= 360.0;
-        } else if (wrapped < -180.0) {
-            wrapped += 360.0;
+        tempWrappedNormDeg = angleDeg % 360.0;
+        if (tempWrappedNormDeg > 180.0) {
+            tempWrappedNormDeg -= 360.0;
+        } else if (tempWrappedNormDeg < -180.0) {
+            tempWrappedNormDeg += 360.0;
         }
-        return wrapped;
+        return tempWrappedNormDeg;
     }
 
     private double clampTurretRange(double angleDeg) {
@@ -299,21 +323,21 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     private double wrapTurretTargetToCurrent(double requestedAngleDegrees) {
-        double requestedClamped = clampTurretRange(requestedAngleDegrees);
-        double currentAngle = getTurretAngleDegreesRaw();
+        tempRequestedClampedDeg = clampTurretRange(requestedAngleDegrees);
+        tempCurrentAngleDeg = getTurretAngleDegreesRaw();
 
         // Select nearest angular equivalent relative to current angle.
-        double delta = normalizeToMinus180To180(requestedClamped - currentAngle);
-        double nearestEquivalent = currentAngle + delta;
+        tempDeltaDeg = normalizeToMinus180To180(tempRequestedClampedDeg - tempCurrentAngleDeg);
+        tempNearestEquivalentDeg = tempCurrentAngleDeg + tempDeltaDeg;
 
         // Re-wrap if nearest equivalent would violate soft limits.
-        if (nearestEquivalent < MIN_TURRET_DEG) {
-            nearestEquivalent += 360.0;
-        } else if (nearestEquivalent > MAX_TURRET_DEG) {
-            nearestEquivalent -= 360.0;
+        if (tempNearestEquivalentDeg < MIN_TURRET_DEG) {
+            tempNearestEquivalentDeg += 360.0;
+        } else if (tempNearestEquivalentDeg > MAX_TURRET_DEG) {
+            tempNearestEquivalentDeg -= 360.0;
         }
 
-        return clampTurretRange(nearestEquivalent);
+        return clampTurretRange(tempNearestEquivalentDeg);
     }
 
     private void stopFlywheel() {
@@ -341,16 +365,16 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public void syncTurretMotorToAbsoluteEncoder() {
         // Read through-bore absolute encoder and seed integrated motor position to match.
-        double absoluteEncoderRot = turretAbsoluteEncoder.get();
+        tempAbsoluteEncoderRot = turretAbsoluteEncoder.get();
         // Absolute encoder is interpreted in turret frame (mechanism-local angle).
-        double absoluteTurretDeg = absoluteEncoderRot
+        tempAbsoluteTurretDeg = tempAbsoluteEncoderRot
                 * ShooterConstants.TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION
                 + ShooterConstants.TURRET_ABSOLUTE_OFFSET_DEGREES;
-        absoluteTurretDeg = clampTurretRange(absoluteTurretDeg);
+        tempAbsoluteTurretDeg = clampTurretRange(tempAbsoluteTurretDeg);
 
-        double turretMotorRot = absoluteTurretDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
-        turretMotor.setPosition(turretMotorRot);
-        turretGoalAngleDegrees = turretFrameToRobotFrameDeg(absoluteTurretDeg);
+        tempTurretMotorRot = tempAbsoluteTurretDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
+        turretMotor.setPosition(tempTurretMotorRot);
+        turretGoalAngleDegrees = turretFrameToRobotFrameDeg(tempAbsoluteTurretDeg);
     }
 
     // ===== Action Methods =====
@@ -497,11 +521,13 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public void publishTelemetry() {
         // Keep dashboard-reported turret angle bounded to legal mechanism range.
-        double turretAngleClamped = Math.max(MIN_TURRET_DEG, Math.min(getTurretAngleDegrees(), MAX_TURRET_DEG));
-        double flywheelRps = getFlywheel1SpeedAbs();
-        double flywheelRpmError = (Math.abs(flywheelGoalVelocity) - flywheelRps) * 60.0;
-        double hoodDegError = hoodGoalAngle - getHoodAngleDegrees();
-    double turretDegError = normalizeToMinus180To180(turretGoalAngleDegrees - getTurretAngleDegrees());
+        tempTurretAngleDeg = getTurretAngleDegrees();
+        tempHoodAngleDeg = getHoodAngleDegrees();
+        tempTurretAngleClamped = Math.max(MIN_TURRET_DEG, Math.min(tempTurretAngleDeg, MAX_TURRET_DEG));
+        tempFlywheelRps = getFlywheel1SpeedAbs();
+        tempFlywheelRpmError = (Math.abs(flywheelGoalVelocity) - tempFlywheelRps) * 60.0;
+        tempHoodDegError = hoodGoalAngle - tempHoodAngleDeg;
+        tempTurretDegError = normalizeToMinus180To180(turretGoalAngleDegrees - tempTurretAngleDeg);
 
         SmartDashboard.putNumber("Shooter/Flywheel1VelocityRps", flywheel1VelocitySignal.getValueAsDouble());
         SmartDashboard.putNumber("Shooter/Flywheel1CurrentA", flywheel1CurrentSignal.getValueAsDouble());
@@ -521,15 +547,15 @@ public class ShooterSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Shooter/TurretMotorCurrentA", turretCurrentSignal.getValueAsDouble());
         SmartDashboard.putNumber("Shooter/TurretMotorVoltageV", turretVoltageSignal.getValueAsDouble());
 
-        SmartDashboard.putNumber("Shooter/FlywheelRPS", flywheelRps);
+        SmartDashboard.putNumber("Shooter/FlywheelRPS", tempFlywheelRps);
         SmartDashboard.putNumber("Shooter/HoodAngleRot", getHoodPosition());
-    SmartDashboard.putNumber("Shooter/HoodAngleDeg", getHoodAngleDegrees());
-    SmartDashboard.putNumber("Shooter/HoodGoalDeg", hoodGoalAngle);
-        SmartDashboard.putNumber("Shooter/TurretAngleDeg", turretAngleClamped);
+        SmartDashboard.putNumber("Shooter/HoodAngleDeg", tempHoodAngleDeg);
+        SmartDashboard.putNumber("Shooter/HoodGoalDeg", hoodGoalAngle);
+        SmartDashboard.putNumber("Shooter/TurretAngleDeg", tempTurretAngleClamped);
         SmartDashboard.putNumber("Shooter/TurretGoalDeg", turretGoalAngleDegrees);
-        SmartDashboard.putNumber("Shooter/FlywheelRpmError", flywheelRpmError);
-        SmartDashboard.putNumber("Shooter/HoodDegError", hoodDegError);
-        SmartDashboard.putNumber("Shooter/TurretDegError", turretDegError);
+        SmartDashboard.putNumber("Shooter/FlywheelRpmError", tempFlywheelRpmError);
+        SmartDashboard.putNumber("Shooter/HoodDegError", tempHoodDegError);
+        SmartDashboard.putNumber("Shooter/TurretDegError", tempTurretDegError);
         SmartDashboard.putBoolean("Shooter/FlywheelReady", isFlywheelAtSpeed());
         SmartDashboard.putBoolean("Shooter/HoodReady", isHoodAtAngle());
         SmartDashboard.putBoolean("Shooter/TurretReady", isTurretAtAngle());
