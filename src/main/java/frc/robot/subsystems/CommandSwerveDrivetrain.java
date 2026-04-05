@@ -42,6 +42,7 @@ import frc.robot.constants.PoseConstants;
 import frc.robot.constants.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.utils.Container;
 import frc.robot.utils.LimelightHelpers;
+import frc.robot.utils.ShooterCalculator;
 import frc.robot.utils.SwerveFieldContactSim;
 
 /**
@@ -236,6 +237,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public Pose2d getPose() {
         return getState().Pose;
+    }
+
+    /**
+     * Returns shooter-reference distance (meters) from current robot pose to alliance hub target.
+     */
+    public double getDistanceToHub() {
+        return ShooterCalculator.getDistanceToHub(getPose());
     }
 
 

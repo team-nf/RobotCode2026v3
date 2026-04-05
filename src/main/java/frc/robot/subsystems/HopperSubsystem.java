@@ -32,6 +32,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.HopperConstants;
+import frc.robot.constants.TelemetryConstants;
 
 /**
  * Controls hopper transport motors that stage cargo between intake and feeder.
@@ -192,20 +193,20 @@ public class HopperSubsystem extends SubsystemBase {
   }
 
   public void publishTelemetry() {
-    SmartDashboard.putNumber("Hopper/Motor1PositionRot", hopper1PositionSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor1VelocityRps", hopper1VelocitySignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor1CurrentA", hopper1CurrentSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor1VoltageV", hopper1VoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor1PositionRot", TelemetryConstants.roundTelemetry(hopper1PositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor1VelocityRps", TelemetryConstants.roundTelemetry(hopper1VelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor1CurrentA", TelemetryConstants.roundTelemetry(hopper1CurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor1VoltageV", TelemetryConstants.roundTelemetry(hopper1VoltageSignal.getValueAsDouble()));
 
-    SmartDashboard.putNumber("Hopper/Motor2PositionRot", hopper2PositionSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor2VelocityRps", hopper2VelocitySignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor2CurrentA", hopper2CurrentSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor2VoltageV", hopper2VoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor2PositionRot", TelemetryConstants.roundTelemetry(hopper2PositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor2VelocityRps", TelemetryConstants.roundTelemetry(hopper2VelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor2CurrentA", TelemetryConstants.roundTelemetry(hopper2CurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor2VoltageV", TelemetryConstants.roundTelemetry(hopper2VoltageSignal.getValueAsDouble()));
 
-    SmartDashboard.putNumber("Hopper/Motor3PositionRot", hopper3PositionSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor3VelocityRps", hopper3VelocitySignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor3CurrentA", hopper3CurrentSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Hopper/Motor3VoltageV", hopper3VoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Hopper/Motor3PositionRot", TelemetryConstants.roundTelemetry(hopper3PositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor3VelocityRps", TelemetryConstants.roundTelemetry(hopper3VelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor3CurrentA", TelemetryConstants.roundTelemetry(hopper3CurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Hopper/Motor3VoltageV", TelemetryConstants.roundTelemetry(hopper3VoltageSignal.getValueAsDouble()));
   }
 
   private void refreshStatusSignals() {

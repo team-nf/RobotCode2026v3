@@ -37,6 +37,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.constants.IntakeConstants;
+import frc.robot.constants.TelemetryConstants;
 
 /**
  * Controls intake rollers and intake arm extension.
@@ -242,22 +243,22 @@ public class IntakeSubsystem extends SubsystemBase {
   public void publishTelemetry() {
     double extensionMeters = getIntakeExtensionMeters();
 
-    SmartDashboard.putNumber("Intake/RollerVelocityRps", intakeVelocitySignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/RollerCurrentA", intakeCurrentSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/RollerVoltageV", intakeVoltageSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/Roller2VelocityRps", intake2VelocitySignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/Roller2CurrentA", intake2CurrentSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/Roller2VoltageV", intake2VoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/RollerVelocityRps", TelemetryConstants.roundTelemetry(intakeVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/RollerCurrentA", TelemetryConstants.roundTelemetry(intakeCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/RollerVoltageV", TelemetryConstants.roundTelemetry(intakeVoltageSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/Roller2VelocityRps", TelemetryConstants.roundTelemetry(intake2VelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/Roller2CurrentA", TelemetryConstants.roundTelemetry(intake2CurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/Roller2VoltageV", TelemetryConstants.roundTelemetry(intake2VoltageSignal.getValueAsDouble()));
 
-    SmartDashboard.putNumber("Intake/ExtensionMotorPositionRot", intakeArmPositionSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/ExtensionMotorVelocityRps", intakeArmVelocitySignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/ExtensionMotorCurrentA", intakeArmCurrentSignal.getValueAsDouble());
-    SmartDashboard.putNumber("Intake/ExtensionMotorVoltageV", intakeArmVoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Intake/ExtensionMotorPositionRot", TelemetryConstants.roundTelemetry(intakeArmPositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/ExtensionMotorVelocityRps", TelemetryConstants.roundTelemetry(intakeArmVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/ExtensionMotorCurrentA", TelemetryConstants.roundTelemetry(intakeArmCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Intake/ExtensionMotorVoltageV", TelemetryConstants.roundTelemetry(intakeArmVoltageSignal.getValueAsDouble()));
 
-    SmartDashboard.putNumber("Intake/ExtensionAmountMeters", extensionMeters);
-    SmartDashboard.putNumber("Intake/ExtensionAmountMillimeters", extensionMeters * 1000.0);
+    SmartDashboard.putNumber("Intake/ExtensionAmountMeters", TelemetryConstants.roundTelemetry(extensionMeters));
+    SmartDashboard.putNumber("Intake/ExtensionAmountMillimeters", TelemetryConstants.roundTelemetry(extensionMeters * 1000.0));
     if (isSimulationInitialized && intakeArmSim != null) {
-      SmartDashboard.putNumber("Intake/SimExtensionMeters", intakeArmSim.getPositionMeters());
+      SmartDashboard.putNumber("Intake/SimExtensionMeters", TelemetryConstants.roundTelemetry(intakeArmSim.getPositionMeters()));
     }
   }
 

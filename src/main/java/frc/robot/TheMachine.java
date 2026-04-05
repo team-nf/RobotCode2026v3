@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.TheMachineConstants;
 import frc.robot.constants.PoseConstants;
+import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.States.TheMachineStates.TheMachineState;
 import frc.robot.subsystems.FeederSubsystem;
 import frc.robot.subsystems.HopperSubsystem;
@@ -95,6 +96,11 @@ public class TheMachine {
      * Aim turret toward the hub using current field pose, without enabling feed/shoot actions.
      */
     public void setTurretAngleToHubWithoutShooting() {
+        shooterSubsystem.setTurretAngleDegrees(getTurretAngleToHub());
+    }
+
+    public double getTurretAngleToHub()
+    {
         robotPose2d = robotPose2dSupplier.get();
         shooterPose2d = ShooterCalculator.getShooterPoseFromRobotPose(robotPose2d);
 
@@ -108,7 +114,7 @@ public class TheMachine {
                 Math.sin(shooterToHubAngleRad - robotHeadingRad),
                 Math.cos(shooterToHubAngleRad - robotHeadingRad)));
 
-        shooterSubsystem.setTurretAngleDegrees(goalTurretAngleForHub);
+        return goalTurretAngleForHub;
     }
 
     /** Reset mechanisms to a known zero-like safe state. */
@@ -236,12 +242,28 @@ public class TheMachine {
     public void test(double shooterFlywheelRps,
                      double shooterHoodRot,
                      double shooterTurretDeg,
-                     double feederRps,
+                     double feederBeltRps,
+                     double feederFeedRps,
                      double hopperRps,
                      double intakeRps,
                      double intakeExtensionMeters) {
         shooterSubsystem.test(shooterFlywheelRps, shooterHoodRot, shooterTurretDeg);
-        feederSubsystem.test(feederRps);
+        feederSubsystem.test(feederBeltRps, feederFeedRps);
+        hopperSubsystem.test(hopperRps);
+        intakeSubsystem.test(intakeRps, intakeExtensionMeters);
+        state = TheMachineState.TEST;
+    }
+
+    public void testWithTurretToHub(double shooterFlywheelRps,
+                                    double shooterHoodRot,
+                                    double feederBeltRps,
+                                    double feederFeedRps,
+                                    double hopperRps,
+                                    double intakeRps,
+                                    double intakeExtensionMeters)
+    {
+        shooterSubsystem.test(shooterFlywheelRps, shooterHoodRot, getTurretAngleToHub());
+        feederSubsystem.test(feederBeltRps, feederFeedRps);
         hopperSubsystem.test(hopperRps);
         intakeSubsystem.test(intakeRps, intakeExtensionMeters);
         state = TheMachineState.TEST;
@@ -286,8 +308,8 @@ public class TheMachine {
         double intakeExtensionX = intakeExtensionMeters * Math.cos(intakeExtensionAngleRad);
         double intakeExtensionZ = intakeExtensionMeters * Math.sin(intakeExtensionAngleRad);
 
-        SmartDashboard.putNumber("IntakeExtensionMeters", intakeExtensionMeters);
-        SmartDashboard.putNumber("IntakeExtensionAngleDeg", TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES);
+    SmartDashboard.putNumber("IntakeExtensionMeters", TelemetryConstants.roundTelemetry(intakeExtensionMeters));
+    SmartDashboard.putNumber("IntakeExtensionAngleDeg", TelemetryConstants.roundTelemetry(TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES));
 
         Pose3d intakePose = TheMachineConstants.INTAKE_RETRACTED_POSE
             .plus(new Transform3d(intakeExtensionX, 0, intakeExtensionZ, new Rotation3d(0, 0, 0)));
@@ -310,8 +332,8 @@ public class TheMachine {
             new Rotation3d(hoodPitchRad, 0, 0)
         );
 
-        SmartDashboard.putNumber("Shooter/TurretPoseDeg", Math.toDegrees(turretYawRad));
-        SmartDashboard.putNumber("Shooter/HoodPoseDeg", Math.toDegrees(hoodPitchRad));
+    SmartDashboard.putNumber("Shooter/TurretPoseDeg", TelemetryConstants.roundTelemetry(Math.toDegrees(turretYawRad)));
+    SmartDashboard.putNumber("Shooter/HoodPoseDeg", TelemetryConstants.roundTelemetry(Math.toDegrees(hoodPitchRad)));
 
         intakePosePublisher.set(intakePose);
         shooterPosePublisher.set(shooterPose);

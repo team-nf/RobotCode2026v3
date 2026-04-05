@@ -31,8 +31,8 @@ public class ShooterConstants {
     public static final int TURRET_THROUGHBORE_DIO_CHANNEL = 0;
 
     // Shooter Math Constants
-    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.775; // in meters (2 inches)
-    public static final double SHOOTER_VELOCITY_SIM_TRANSFER_COEFFICIENT = 0.775; // in meters (2 inches)
+    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.95; // in meters (2 inches)
+    public static final double SHOOTER_VELOCITY_SIM_TRANSFER_COEFFICIENT = 0.95; // in meters (2 inches)
 
     // Configs
     public static final int NUMBER_OF_FLYWHEEL_MOTORS = 2;

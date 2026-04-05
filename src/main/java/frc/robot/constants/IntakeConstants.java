@@ -42,8 +42,8 @@ public class IntakeConstants {
 
             .withCurrentLimits(new CurrentLimitsConfigs()
                 .withSupplyCurrentLimitEnable(true)
-                .withSupplyCurrentLimit(15)
-                .withStatorCurrentLimit(15))
+                .withSupplyCurrentLimit(30)
+                .withStatorCurrentLimit(30))
                 
             .withMotorOutput(new MotorOutputConfigs()
                 .withInverted(InvertedValue.Clockwise_Positive));
@@ -62,7 +62,7 @@ public class IntakeConstants {
     // Linear extension targets
     public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
     public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(285);
-    public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(140);
+    public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(130);
     public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
     public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);
 
@@ -77,7 +77,7 @@ public class IntakeConstants {
     public static final AngularVelocity INTAKE_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
 
     public static final AngularVelocity INTAKE_INTAKING_VELOCITY = RotationsPerSecond.of(35); // in RPS
-    public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(5); // in RPS
+    public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(10); // in RPS
     public static final AngularVelocity INTAKE_REVERSE_VELOCITY = RotationsPerSecond.of(-15.0); // in RPS
     public static final AngularVelocity INTAKE_REVERSE_FAILSAFE_VELOCITY = RotationsPerSecond.of(-5.0); // in RPS
     

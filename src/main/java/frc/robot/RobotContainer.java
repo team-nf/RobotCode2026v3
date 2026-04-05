@@ -21,6 +21,7 @@ import frc.robot.commands.AutoCommands.AimAndShootAutoCommand;
 import frc.robot.constants.Dimensions;
 import frc.robot.constants.TheMachineConstants;
 import frc.robot.constants.States.TheMachineStates.TheMachineState;
+import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.FeederSubsystem;
@@ -91,7 +92,7 @@ public class RobotContainer {
     m_drivetrainSubsystem = TunerConstants.createDrivetrain();
 
     m_shooterSubsystem = new ShooterSubsystem(m_drivetrainSubsystem::getHeading);
-    m_feederSubsystem = new FeederSubsystem();
+  m_feederSubsystem = new FeederSubsystem(m_shooterSubsystem::getFlywheelGoalVelocityRps);
     m_hopperSubsystem = new HopperSubsystem();
     m_intakeSubsystem = new IntakeSubsystem();
     m_theMachine = new TheMachine(m_shooterSubsystem, m_hopperSubsystem, m_intakeSubsystem, m_feederSubsystem, m_drivetrainSubsystem::getPose);
@@ -205,16 +206,28 @@ public class RobotContainer {
       if (nowSec >= nextSimTelemetryTimeSec) {
         nextSimTelemetryTimeSec = nowSec + SIM_TELEMETRY_PERIOD_SEC;
         m_theMachine.calculateSubsystemPoses();
-        m_theMachine.publishTelemetry();
+        //publishTelemetry();
       }
     }
 
-    m_theMachine.publishTelemetry();
-
+    publishTelemetry();
     // Always run machine periodic, both real robot and simulation.
     m_theMachine.machinePeriodic();
     //SmartDashboard.putData(CommandScheduler.getInstance());
     //m_theMachine.publishTelemetry();
+  }
+
+  public void publishTelemetry()
+  {
+    m_theMachine.publishTelemetry();
+
+  SmartDashboard.putNumber("DistanceToHub", TelemetryConstants.roundTelemetry(m_drivetrainSubsystem.getDistanceToHub()));
+
+  }
+
+  public Command getTestCommand()
+  {
+    return m_testMachineCommand;
   }
 
   private void configureSims() {

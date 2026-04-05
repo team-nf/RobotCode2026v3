@@ -21,9 +21,11 @@ public class TestMachineCommand extends Command {
   // Shooter mechanism test setpoints.
   private final DoubleEntry shooterFlywheelRpsEntry;
   private final DoubleEntry shooterHoodRotEntry;
-  private final DoubleEntry shooterTurretDegEntry;
 
   // Cargo-path mechanism test setpoints.
+  private final DoubleEntry feederBeltRpsEntry;
+  private final DoubleEntry feederFeedRpsEntry;
+  // Legacy single-feeder entry retained as fallback for older dashboards.
   private final DoubleEntry feederRpsEntry;
   private final DoubleEntry hopperRpsEntry;
   private final DoubleEntry intakeRpsEntry;
@@ -38,7 +40,8 @@ public class TestMachineCommand extends Command {
     // Topic names should match dashboard widgets exactly.
     shooterFlywheelRpsEntry = testTable.getDoubleTopic("ShooterFlywheelRps").getEntry(0.0);
     shooterHoodRotEntry = testTable.getDoubleTopic("ShooterHoodRot").getEntry(0.0);
-    shooterTurretDegEntry = testTable.getDoubleTopic("ShooterTurretDeg").getEntry(0.0);
+  feederBeltRpsEntry = testTable.getDoubleTopic("FeederBeltRps").getEntry(0.0);
+  feederFeedRpsEntry = testTable.getDoubleTopic("FeederFeedRps").getEntry(0.0);
     feederRpsEntry = testTable.getDoubleTopic("FeederRps").getEntry(0.0);
     hopperRpsEntry = testTable.getDoubleTopic("HopperRps").getEntry(0.0);
     intakeRpsEntry = testTable.getDoubleTopic("IntakeRps").getEntry(0.0);
@@ -47,7 +50,8 @@ public class TestMachineCommand extends Command {
     // Seed defaults so entries appear immediately on dashboards.
     shooterFlywheelRpsEntry.setDefault(0.0);
     shooterHoodRotEntry.setDefault(0.0);
-    shooterTurretDegEntry.setDefault(0.0);
+  feederBeltRpsEntry.setDefault(0.0);
+  feederFeedRpsEntry.setDefault(0.0);
     feederRpsEntry.setDefault(0.0);
     hopperRpsEntry.setDefault(0.0);
     intakeRpsEntry.setDefault(0.0);
@@ -60,11 +64,12 @@ public class TestMachineCommand extends Command {
   @Override
   public void execute() {
     // Read latest NT values every loop so tuning updates apply immediately.
-    theMachine.test(
+  double legacyFeederRps = feederRpsEntry.get(0.0);
+    theMachine.testWithTurretToHub(
         shooterFlywheelRpsEntry.get(0.0),
         shooterHoodRotEntry.get(0.0),
-        shooterTurretDegEntry.get(0.0),
-        feederRpsEntry.get(0.0),
+    feederBeltRpsEntry.get(legacyFeederRps),
+    feederFeedRpsEntry.get(legacyFeederRps),
         hopperRpsEntry.get(0.0),
         intakeRpsEntry.get(0.0),
         intakeExtensionMetersEntry.get(0.0));

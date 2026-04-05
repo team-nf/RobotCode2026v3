@@ -46,6 +46,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.constants.ShooterConstants;
+import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.TheMachineConstants;
 import frc.robot.utils.LimelightHelpers;
 import frc.robot.utils.ShooterCalculator;
@@ -383,7 +384,7 @@ public class ShooterSubsystem extends SubsystemBase {
     public void zero() {
         flywheelGoalVelocity = 0;
         hoodGoalAngle = ShooterCalculator.calculateRestHoodAngle();
-        turretGoalAngleDegrees = 0;
+        turretGoalAngleDegrees = 180;
         stopFlywheel();
         setHoodAngle(hoodGoalAngle);
         turretGoalAngleDegrees = setTurretAngleDegrees(turretGoalAngleDegrees);
@@ -458,6 +459,11 @@ public class ShooterSubsystem extends SubsystemBase {
         return flywheel1VelocitySignal.getValueAsDouble() / ShooterConstants.FLYWHEEL_GEAR_REDUCTION;
     }
 
+    /** Get the current flywheel goal velocity in RPS (mechanism side). */
+    public double getFlywheelGoalVelocityRps() {
+        return flywheelGoalVelocity;
+    }
+
     public double getFlywheel1SpeedAbs() {
         return Math.abs(getFlywheel1Velocity());
     }
@@ -478,7 +484,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public double getTurretAngleRadians()
     {
-        return turretPositionSignal.getValueAsDouble() / ShooterConstants.TURRET_GEAR_REDUCTION * 2 * Math.PI;
+        return Math.toRadians(getTurretAngleDegrees());
     }
 
     public double getHoodAngleDegrees() {
@@ -529,33 +535,33 @@ public class ShooterSubsystem extends SubsystemBase {
         tempHoodDegError = hoodGoalAngle - tempHoodAngleDeg;
         tempTurretDegError = normalizeToMinus180To180(turretGoalAngleDegrees - tempTurretAngleDeg);
 
-        SmartDashboard.putNumber("Shooter/Flywheel1VelocityRps", flywheel1VelocitySignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel1CurrentA", flywheel1CurrentSignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel1VoltageV", flywheel1VoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel1VelocityRps", TelemetryConstants.roundTelemetry(flywheel1VelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/Flywheel1CurrentA", TelemetryConstants.roundTelemetry(flywheel1CurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/Flywheel1VoltageV", TelemetryConstants.roundTelemetry(flywheel1VoltageSignal.getValueAsDouble()));
 
-        SmartDashboard.putNumber("Shooter/Flywheel2VelocityRps", flywheel2VelocitySignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel2CurrentA", flywheel2CurrentSignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/Flywheel2VoltageV", flywheel2VoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/Flywheel2VelocityRps", TelemetryConstants.roundTelemetry(flywheel2VelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/Flywheel2CurrentA", TelemetryConstants.roundTelemetry(flywheel2CurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/Flywheel2VoltageV", TelemetryConstants.roundTelemetry(flywheel2VoltageSignal.getValueAsDouble()));
 
-        SmartDashboard.putNumber("Shooter/HoodMotorPositionRot", hoodPositionSignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/HoodMotorVelocityRps", hoodVelocitySignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/HoodMotorCurrentA", hoodCurrentSignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/HoodMotorVoltageV", hoodVoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/HoodMotorPositionRot", TelemetryConstants.roundTelemetry(hoodPositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/HoodMotorVelocityRps", TelemetryConstants.roundTelemetry(hoodVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/HoodMotorCurrentA", TelemetryConstants.roundTelemetry(hoodCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/HoodMotorVoltageV", TelemetryConstants.roundTelemetry(hoodVoltageSignal.getValueAsDouble()));
 
-        SmartDashboard.putNumber("Shooter/TurretMotorPositionRot", turretPositionSignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/TurretMotorVelocityRps", turretVelocitySignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/TurretMotorCurrentA", turretCurrentSignal.getValueAsDouble());
-        SmartDashboard.putNumber("Shooter/TurretMotorVoltageV", turretVoltageSignal.getValueAsDouble());
+    SmartDashboard.putNumber("Shooter/TurretMotorPositionRot", TelemetryConstants.roundTelemetry(turretPositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/TurretMotorVelocityRps", TelemetryConstants.roundTelemetry(turretVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/TurretMotorCurrentA", TelemetryConstants.roundTelemetry(turretCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber("Shooter/TurretMotorVoltageV", TelemetryConstants.roundTelemetry(turretVoltageSignal.getValueAsDouble()));
 
-        SmartDashboard.putNumber("Shooter/FlywheelRPS", tempFlywheelRps);
-        SmartDashboard.putNumber("Shooter/HoodAngleRot", getHoodPosition());
-        SmartDashboard.putNumber("Shooter/HoodAngleDeg", tempHoodAngleDeg);
-        SmartDashboard.putNumber("Shooter/HoodGoalDeg", hoodGoalAngle);
-        SmartDashboard.putNumber("Shooter/TurretAngleDeg", tempTurretAngleClamped);
-        SmartDashboard.putNumber("Shooter/TurretGoalDeg", turretGoalAngleDegrees);
-        SmartDashboard.putNumber("Shooter/FlywheelRpmError", tempFlywheelRpmError);
-        SmartDashboard.putNumber("Shooter/HoodDegError", tempHoodDegError);
-        SmartDashboard.putNumber("Shooter/TurretDegError", tempTurretDegError);
+    SmartDashboard.putNumber("Shooter/FlywheelRPS", TelemetryConstants.roundTelemetry(tempFlywheelRps));
+    SmartDashboard.putNumber("Shooter/HoodAngleRot", TelemetryConstants.roundTelemetry(getHoodPosition()));
+    SmartDashboard.putNumber("Shooter/HoodAngleDeg", TelemetryConstants.roundTelemetry(tempHoodAngleDeg));
+    SmartDashboard.putNumber("Shooter/HoodGoalDeg", TelemetryConstants.roundTelemetry(hoodGoalAngle));
+    SmartDashboard.putNumber("Shooter/TurretAngleDeg", TelemetryConstants.roundTelemetry(tempTurretAngleClamped));
+    SmartDashboard.putNumber("Shooter/TurretGoalDeg", TelemetryConstants.roundTelemetry(turretGoalAngleDegrees));
+    SmartDashboard.putNumber("Shooter/FlywheelRpmError", TelemetryConstants.roundTelemetry(tempFlywheelRpmError));
+    SmartDashboard.putNumber("Shooter/HoodDegError", TelemetryConstants.roundTelemetry(tempHoodDegError));
+    SmartDashboard.putNumber("Shooter/TurretDegError", TelemetryConstants.roundTelemetry(tempTurretDegError));
         SmartDashboard.putBoolean("Shooter/FlywheelReady", isFlywheelAtSpeed());
         SmartDashboard.putBoolean("Shooter/HoodReady", isHoodAtAngle());
         SmartDashboard.putBoolean("Shooter/TurretReady", isTurretAtAngle());
@@ -698,20 +704,24 @@ public class ShooterSubsystem extends SubsystemBase {
         refreshStatusSignals();
 
         // Recompute turret-mounted Limelight pose as turret rotates around shooter axis.
-        turretLLHeading = getTurretAngleRadians();
+        // getTurretAngleRadians() is opposite of the robot-space convention expected by this
+        // transform, so negate it to keep camera pose movement aligned with turret direction.
+        turretLLHeading = -getTurretAngleRadians();
         turretLLX = TheMachineConstants.TURRET_LL_POSE.getX() * Math.cos(turretLLHeading) - TheMachineConstants.TURRET_LL_POSE.getY() * Math.sin(turretLLHeading);
         turretLLY = TheMachineConstants.TURRET_LL_POSE.getY() * Math.cos(turretLLHeading) + TheMachineConstants.TURRET_LL_POSE.getX() * Math.sin(turretLLHeading);
 
         turretLLX = turretLLX + TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
         turretLLY = turretLLY + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
 
-        SmartDashboard.putNumber("Throughbore", turretAbsoluteEncoder.get());
+    SmartDashboard.putNumber("Throughbore", TelemetryConstants.roundTelemetry(turretAbsoluteEncoder.get()));
+    SmartDashboard.putNumber("TurretLLHeading", TelemetryConstants.roundTelemetry(Math.toDegrees(turretLLHeading)));
+
                                                                 
         // Push updated camera pose to Limelight on real robot only.
         if(Robot.isReal()) 
             LimelightHelpers.setCameraPose_RobotSpace("limelight-turret", turretLLX, turretLLY, turretLLZ, 0, 
                                                                                                                 turretLLPitchDegrees, 
-                                                                                                                 Math.toDegrees(turretLLHeading));
+                                                                                                                 -Math.toDegrees(turretLLHeading));
     }
 }
  
