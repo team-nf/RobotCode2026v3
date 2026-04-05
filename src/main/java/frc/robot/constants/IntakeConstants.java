@@ -8,6 +8,7 @@ import com.ctre.phoenix6.configs.VoltageConfigs;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.controls.PositionVoltage;
 
 import edu.wpi.first.units.measure.*;
@@ -19,20 +20,18 @@ public class IntakeConstants {
     public static final int INTAKE_ROLLER_PRIMARY_MOTOR_ID = 61;
     public static final int INTAKE_ROLLER_SECONDARY_MOTOR_ID = 62;
 
-    // Backward-compatible aliases for existing subsystem code (will be removed in next step)
-    public static final int INTAKE_MOTOR_ID = INTAKE_ROLLER_PRIMARY_MOTOR_ID;
-    public static final int INTAKE_ARM_MOTOR_ID = INTAKE_LINEAR_MOTOR_ID;
-
-    public static final double INTAKE_KS = 0.5;
-    public static final double INTAKE_KV = 0.0;
-    public static final double INTAKE_KP = 5;
-    public static final double INTAKE_KI = 1;
-    public static final double INTAKE_KD = 0.005;
+    public static final double INTAKE_KS = 0.039572;
+    public static final double INTAKE_KV = 0.11629;
+    public static final double INTAKE_KA = 0.0042099;
+    public static final double INTAKE_KP = 0.021298;
+    public static final double INTAKE_KI = 0;
+    public static final double INTAKE_KD = 0.0;
 
     public static final TalonFXConfiguration INTAKE_MOTOR_CONFIG = new TalonFXConfiguration()
             .withSlot0(new Slot0Configs()
                 .withKS(INTAKE_KS)
                 .withKV(INTAKE_KV)
+                .withKA(INTAKE_KA)
                 .withKP(INTAKE_KP)
                 .withKI(INTAKE_KI)
                 .withKD(INTAKE_KD))
@@ -43,8 +42,8 @@ public class IntakeConstants {
 
             .withCurrentLimits(new CurrentLimitsConfigs()
                 .withSupplyCurrentLimitEnable(true)
-                .withSupplyCurrentLimit(39)
-                .withStatorCurrentLimit(39))
+                .withSupplyCurrentLimit(15)
+                .withStatorCurrentLimit(15))
                 
             .withMotorOutput(new MotorOutputConfigs()
                 .withInverted(InvertedValue.Clockwise_Positive));
@@ -62,8 +61,8 @@ public class IntakeConstants {
 
     // Linear extension targets
     public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
-    public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(300);
-    public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(300);
+    public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(285);
+    public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(140);
     public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
     public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);
 
@@ -77,7 +76,7 @@ public class IntakeConstants {
 
     public static final AngularVelocity INTAKE_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
 
-    public static final AngularVelocity INTAKE_INTAKING_VELOCITY = RotationsPerSecond.of(10); // in RPS
+    public static final AngularVelocity INTAKE_INTAKING_VELOCITY = RotationsPerSecond.of(35); // in RPS
     public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(5); // in RPS
     public static final AngularVelocity INTAKE_REVERSE_VELOCITY = RotationsPerSecond.of(-15.0); // in RPS
     public static final AngularVelocity INTAKE_REVERSE_FAILSAFE_VELOCITY = RotationsPerSecond.of(-5.0); // in RPS
@@ -100,40 +99,41 @@ public class IntakeConstants {
         extensionMetersToMotorRotations(INTAKE_EXTENSION_ALLOWABLE_ERROR.in(Meters))
     );
 
+    
     public static final Angle INTAKE_ARM_DEPLOYED_WITH_OFFSET_ANGLE = INTAKE_ARM_DEPLOYED_ANGLE.plus(INTAKE_ARM_ALLOWABLE_ERROR.div(8));
-
-    public static final double INTAKE_ARM_KS = 0.0;
-    public static final double INTAKE_ARM_KV = 0.5;
-    public static final double INTAKE_ARM_KP = 2;
+    
+    public static final double INTAKE_ARM_KS = 0.04;
+    public static final double INTAKE_ARM_KV = 0.13248;
+    public static final double INTAKE_ARM_KA = 0.002;
+    public static final double INTAKE_ARM_KP = 3.596;
     public static final double INTAKE_ARM_KI = 0;
-    public static final double INTAKE_ARM_KD = 0.3;
+    public static final double INTAKE_ARM_KD = 0.0;
     public static final double INTAKE_ARM_KG = 0;
 
     public static final TalonFXConfiguration INTAKE_ARM_MOTOR_CONFIG = INTAKE_MOTOR_CONFIG.clone()
                 .withSlot0(new Slot0Configs()
                 .withKS(INTAKE_ARM_KS)
                 .withKV(INTAKE_ARM_KV)
+                .withKA(INTAKE_ARM_KA)
                 .withKP(INTAKE_ARM_KP)
                 .withKI(INTAKE_ARM_KI)
                 .withKD(INTAKE_ARM_KD)
                 .withKG(INTAKE_ARM_KG)
                 .withGravityType(GravityTypeValue.Arm_Cosine))
                 .withMotorOutput(new MotorOutputConfigs()
-                    .withInverted(InvertedValue.CounterClockwise_Positive))
+                    .withInverted(InvertedValue.CounterClockwise_Positive)
+                    .withNeutralMode(NeutralModeValue.Coast))
                 .withVoltage(new VoltageConfigs()
                     .withPeakForwardVoltage(9)
                     .withPeakReverseVoltage(-9))
                 .withCurrentLimits(new CurrentLimitsConfigs()
                     .withSupplyCurrentLimitEnable(true)
-                    .withSupplyCurrentLimit(20)
-                    .withStatorCurrentLimit(20));
+                    .withSupplyCurrentLimit(30));
 
     public static final PositionVoltage INTAKE_ARM_POSITION_CONTROL = new PositionVoltage(0)
             .withSlot(0)
             .withEnableFOC(false);
 
-    // Legacy compatibility for current subsystem (will be replaced by linear API next step)
-    // With linear conversion represented directly in motor rotations, keep reduction at 1.0.
     public static final Mass INTAKE_ARM_MASS = Kilograms.of(1);
     public static final double INTAKE_ARM_GEAR_REDUCTION = 21.0;
     public static final double INTAKE_SIM_DRUM_RADIUS_METERS = 0.33;

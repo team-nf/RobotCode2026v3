@@ -39,6 +39,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -46,6 +47,7 @@ import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
 /**
  * Central wiring point for subsystems, commands, driver controls, and autonomous options.
@@ -73,6 +75,11 @@ public class RobotContainer {
   private final IdleDeployedCommand m_idleDeployedCommand;
   private final IntakeCommand m_intakeCommand;
   private final TestMachineCommand m_testMachineCommand;
+
+  // Sim telemetry is intentionally throttled to avoid NetworkTables bandwidth/GC spikes.
+  private static final double SIM_TELEMETRY_PERIOD_SEC = 0.05; // 20 Hz
+  private double nextSimTelemetryTimeSec = 0.0;
+  private boolean sysIdCommandsPublished = false;
 
   public RobotContainer() {
     // Resolve alliance once at startup for mirrored-field calculations.
@@ -109,10 +116,20 @@ public class RobotContainer {
     );
 
     SmartDashboard.putData("Conf/Auto Chooser", autoChooser);
+    // SysId commands are intentionally not published at startup to reduce dashboard load.
 
     if (Robot.isSimulation()) {
       configureSims();
     }
+  }
+
+  /** Publish SysId dashboard commands on demand (typically test mode only). */
+  public void publishSysIdCommands() {
+    if (sysIdCommandsPublished) {
+      return;
+    }
+    configureSysIdCommands();
+    sysIdCommandsPublished = true;
   }
 
   private void configureBindings() {
@@ -125,11 +142,11 @@ public class RobotContainer {
     // X -> begin intake state machine.
     m_driverController.x().onTrue(m_intakeCommand);
 
-    // Right trigger:
+  // Left trigger:
     // - In shooting zone: aim + shoot
     // - Elsewhere: aim + pass
     // On release: return to deployed idle (safe transition).
-    m_driverController.rightTrigger().whileTrue(
+    m_driverController.leftTrigger().whileTrue(
       new ConditionalCommand(
         m_aimAndShootCommand,
         m_aimAndPassCommand,
@@ -143,10 +160,10 @@ public class RobotContainer {
     // A -> run NetworkTables-driven machine test mode while held.
     m_driverController.a().whileTrue(m_testMachineCommand).onFalse(m_idleRetractedCommand);
 
-    // Left trigger behavior depends on current zone:
+  // Left bumper behavior depends on current zone:
     // - From shooting zone, go out to trench pickup path (left/right based on side)
     // - Outside shooting zone, return from trench back toward shooting area
-    m_driverController.leftTrigger().whileTrue(
+    m_driverController.leftBumper().whileTrue(
       new ConditionalCommand(
         new ConditionalCommand(new GoFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
                                new GoFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
@@ -183,11 +200,16 @@ public class RobotContainer {
 
   public void containerPeriodic() {
     // Sim-only pose publishing for AdvantageScope / field visualization.
-    if(Robot.isSimulation()) 
-      {
+    if (Robot.isSimulation()) {
+      double nowSec = Timer.getFPGATimestamp();
+      if (nowSec >= nextSimTelemetryTimeSec) {
+        nextSimTelemetryTimeSec = nowSec + SIM_TELEMETRY_PERIOD_SEC;
         m_theMachine.calculateSubsystemPoses();
         m_theMachine.publishTelemetry();
       }
+    }
+
+    m_theMachine.publishTelemetry();
 
     // Always run machine periodic, both real robot and simulation.
     m_theMachine.machinePeriodic();
@@ -235,5 +257,98 @@ public class RobotContainer {
     shooterSim.setRobotPoseSupplier(m_drivetrainSubsystem::getPose);
     shooterSim.setChassisSpeedsSupplier(m_drivetrainSubsystem::getFieldSpeeds);
     shooterSim.setShouldShootSupplier(() -> m_theMachine.isState(TheMachineState.SHOOT) || m_theMachine.isState(TheMachineState.PASS));
+  }
+
+  private void configureSysIdCommands() {
+  // Recommended run order per mechanism (hold each command while active):
+  // 1) QuasiForward   2) QuasiReverse   3) DynamicForward   4) DynamicReverse
+  // Notes:
+  // - Run one mechanism at a time with the robot safely supported/clear.
+  // - Reverse directly after forward helps return mechanisms toward start position.
+  // - Start with lower dynamic voltage if a mechanism is aggressive.
+  // Shooter
+  SmartDashboard.putData("SysId/Shooter/Flywheel/QuasiForward",
+    m_shooterSubsystem.flywheelSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Shooter/Flywheel/QuasiReverse",
+    m_shooterSubsystem.flywheelSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Shooter/Flywheel/DynamicForward",
+    m_shooterSubsystem.flywheelSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Shooter/Flywheel/DynamicReverse",
+    m_shooterSubsystem.flywheelSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  SmartDashboard.putData("SysId/Shooter/Hood/QuasiForward",
+    m_shooterSubsystem.hoodSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Shooter/Hood/QuasiReverse",
+    m_shooterSubsystem.hoodSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Shooter/Hood/DynamicForward",
+    m_shooterSubsystem.hoodSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Shooter/Hood/DynamicReverse",
+    m_shooterSubsystem.hoodSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  SmartDashboard.putData("SysId/Shooter/Turret/QuasiForward",
+    m_shooterSubsystem.turretSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Shooter/Turret/QuasiReverse",
+    m_shooterSubsystem.turretSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Shooter/Turret/DynamicForward",
+    m_shooterSubsystem.turretSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Shooter/Turret/DynamicReverse",
+    m_shooterSubsystem.turretSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  // Intake
+  SmartDashboard.putData("SysId/Intake/Roller/QuasiForward",
+    m_intakeSubsystem.intakeRollerSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Intake/Roller/QuasiReverse",
+    m_intakeSubsystem.intakeRollerSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Intake/Roller/DynamicForward",
+    m_intakeSubsystem.intakeRollerSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Intake/Roller/DynamicReverse",
+    m_intakeSubsystem.intakeRollerSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  SmartDashboard.putData("SysId/Intake/Arm/QuasiForward",
+    m_intakeSubsystem.intakeArmSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Intake/Arm/QuasiReverse",
+    m_intakeSubsystem.intakeArmSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Intake/Arm/DynamicForward",
+    m_intakeSubsystem.intakeArmSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Intake/Arm/DynamicReverse",
+    m_intakeSubsystem.intakeArmSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  // Hopper
+  SmartDashboard.putData("SysId/Hopper/Main/QuasiForward",
+    m_hopperSubsystem.hopperMainSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Hopper/Main/QuasiReverse",
+    m_hopperSubsystem.hopperMainSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Hopper/Main/DynamicForward",
+    m_hopperSubsystem.hopperMainSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Hopper/Main/DynamicReverse",
+    m_hopperSubsystem.hopperMainSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  SmartDashboard.putData("SysId/Hopper/Side/QuasiForward",
+    m_hopperSubsystem.hopperSideSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Hopper/Side/QuasiReverse",
+    m_hopperSubsystem.hopperSideSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Hopper/Side/DynamicForward",
+    m_hopperSubsystem.hopperSideSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Hopper/Side/DynamicReverse",
+    m_hopperSubsystem.hopperSideSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  // Feeder
+  SmartDashboard.putData("SysId/Feeder/Belt/QuasiForward",
+    m_feederSubsystem.feederBeltSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Feeder/Belt/QuasiReverse",
+    m_feederSubsystem.feederBeltSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Feeder/Belt/DynamicForward",
+    m_feederSubsystem.feederBeltSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Feeder/Belt/DynamicReverse",
+    m_feederSubsystem.feederBeltSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+  SmartDashboard.putData("SysId/Feeder/Feed/QuasiForward",
+    m_feederSubsystem.feederFeedSysIdQuasistatic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Feeder/Feed/QuasiReverse",
+    m_feederSubsystem.feederFeedSysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+  SmartDashboard.putData("SysId/Feeder/Feed/DynamicForward",
+    m_feederSubsystem.feederFeedSysIdDynamic(SysIdRoutine.Direction.kForward));
+  SmartDashboard.putData("SysId/Feeder/Feed/DynamicReverse",
+    m_feederSubsystem.feederFeedSysIdDynamic(SysIdRoutine.Direction.kReverse));
   }
 }

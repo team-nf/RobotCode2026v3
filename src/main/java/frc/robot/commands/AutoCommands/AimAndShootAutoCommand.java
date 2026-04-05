@@ -7,15 +7,12 @@ package frc.robot.commands.AutoCommands;
 import static edu.wpi.first.units.Units.Meters;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -41,9 +38,12 @@ public class AimAndShootAutoCommand extends Command {
   private final DoubleEntry aimAngleErrorEntry = NetworkTableInstance.getDefault()
       .getDoubleTopic("/AIM/AimAngleError").getEntry(0.0);
 
-  private final StructPublisher<Pose3d> aimPosePublisher = NetworkTableInstance.getDefault()
-    .getStructTopic("/AIM/AimPose3d", Pose3d.struct)
-    .publish();
+  private final DoubleEntry aimPoseXEntry = NetworkTableInstance.getDefault()
+      .getDoubleTopic("/AIM/AimPoseX").getEntry(0.0);
+  private final DoubleEntry aimPoseYEntry = NetworkTableInstance.getDefault()
+      .getDoubleTopic("/AIM/AimPoseY").getEntry(0.0);
+  private final DoubleEntry aimPoseZEntry = NetworkTableInstance.getDefault()
+      .getDoubleTopic("/AIM/AimPoseZ").getEntry(Dimensions.HUB_HEIGHT.in(Meters));
   private final BooleanEntry aimOnTargetEntry = NetworkTableInstance.getDefault()
     .getBooleanTopic("/AIM/AimOnTarget").getEntry(false);
 
@@ -141,6 +141,8 @@ public class AimAndShootAutoCommand extends Command {
   double predictedHeading = 0.0;
   double predictedShooterX = 0.0;
   double predictedShooterY = 0.0;
+  double sumSin = 0.0;
+  double sumCos = 0.0;
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
@@ -195,8 +197,8 @@ public class AimAndShootAutoCommand extends Command {
     // Update angle buffer and compute wrap-safe filtered angle.
     angleErrorBuffer[bufferIndex] = rawAngleError;
 
-    double sumSin = 0.0;
-    double sumCos = 0.0;
+    sumSin = 0.0;
+    sumCos = 0.0;
     for (int i = 0; i < validSampleCount; i++) {
       sumSin += Math.sin(angleErrorBuffer[i]);
       sumCos += Math.cos(angleErrorBuffer[i]);
@@ -223,7 +225,9 @@ public class AimAndShootAutoCommand extends Command {
 
     if(Robot.isSimulation()) {
       // Publish simulated aiming telemetry for dashboards/3D overlays.
-      aimPosePublisher.set(new Pose3d(aimX, aimY, Dimensions.HUB_HEIGHT.in(Meters), new Rotation3d(0, 0, 0)));
+      aimPoseXEntry.set(aimX);
+      aimPoseYEntry.set(aimY);
+      aimPoseZEntry.set(Dimensions.HUB_HEIGHT.in(Meters));
     }
 
   }

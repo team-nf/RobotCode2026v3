@@ -6,14 +6,18 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.sim.ChassisReference;
@@ -28,7 +32,9 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.constants.IntakeConstants;
 
@@ -38,6 +44,9 @@ import frc.robot.constants.IntakeConstants;
  * <p>This subsystem owns both hardware and simulation models for the intake mechanism.
  */
 public class IntakeSubsystem extends SubsystemBase {
+
+  // Stop intake-arm SysId slightly before hard end offsets.
+  private static final double INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS = 0.010; // 10 mm
 
   private TalonFX intakeMotor;
   private TalonFX intakeMotor2;
@@ -62,12 +71,17 @@ public class IntakeSubsystem extends SubsystemBase {
   private double intakeTestRPM;
   private double intakeTestExtensionMeters;
 
+  private final VoltageOut intakeRollerSysIdControl;
+  private final VoltageOut intakeArmSysIdControl;
+  private final SysIdRoutine intakeRollerSysIdRoutine;
+  private final SysIdRoutine intakeArmSysIdRoutine;
+
 
   /** Creates a new IntakeSubsystem. */
   public IntakeSubsystem() {
-    intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID);
+    intakeMotor = new TalonFX(IntakeConstants.INTAKE_ROLLER_PRIMARY_MOTOR_ID);
     intakeMotor2 = new TalonFX(IntakeConstants.INTAKE_ROLLER_SECONDARY_MOTOR_ID);
-    intakeArmMotor = new TalonFX(IntakeConstants.INTAKE_ARM_MOTOR_ID);
+    intakeArmMotor = new TalonFX(IntakeConstants.INTAKE_LINEAR_MOTOR_ID);
 
     StatusCode status = StatusCode.StatusCodeNotInitialized;
     for (int i = 0; i < 5; ++i) {
@@ -119,6 +133,69 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeArmVelocitySignal = intakeArmMotor.getVelocity(false);
     intakeArmCurrentSignal = intakeArmMotor.getStatorCurrent(false);
     intakeArmVoltageSignal = intakeArmMotor.getMotorVoltage(false);
+
+    intakeRollerSysIdControl = new VoltageOut(0).withEnableFOC(false);
+    intakeArmSysIdControl = new VoltageOut(0).withEnableFOC(false);
+    intakeRollerSysIdRoutine = createSysIdRoutine("intake/Roller", intakeMotor, intakeRollerSysIdControl);
+    intakeArmSysIdRoutine = createSysIdRoutine("intake/Arm", intakeArmMotor, intakeArmSysIdControl);
+  }
+
+  private SysIdRoutine createSysIdRoutine(String logPrefix, TalonFX motor, VoltageOut voltageControl) {
+    return new SysIdRoutine(
+        new SysIdRoutine.Config(
+            null,
+            Volts.of(4),
+            null,
+            state -> SignalLogger.writeString(logPrefix + "_State", state.toString())
+        ),
+        new SysIdRoutine.Mechanism(
+            output -> {
+              motor.setControl(voltageControl.withOutput(output.in(Volts)));
+              SignalLogger.writeDouble(logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
+              SignalLogger.writeDouble(logPrefix + "_Position", motor.getPosition().getValueAsDouble());
+              SignalLogger.writeDouble(logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
+            },
+            log -> log.motor(logPrefix)
+              .voltage(Volts.of(motor.getMotorVoltage().getValueAsDouble()))
+              .angularPosition(Rotations.of(motor.getPosition().getValueAsDouble()))
+              .angularVelocity(RotationsPerSecond.of(motor.getVelocity().getValueAsDouble())),
+            this
+        )
+    );
+  }
+
+  public Command intakeRollerSysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return intakeRollerSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> intakeStop());
+  }
+
+  public Command intakeRollerSysIdDynamic(SysIdRoutine.Direction direction) {
+    return intakeRollerSysIdRoutine.dynamic(direction).finallyDo(interrupted -> intakeStop());
+  }
+
+  public Command intakeArmSysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return intakeArmSysIdRoutine
+        .quasistatic(direction)
+        .until(() -> isIntakeArmNearSysIdLimit(direction))
+        .finallyDo(interrupted -> intakeArmMotor.set(0.0));
+  }
+
+  public Command intakeArmSysIdDynamic(SysIdRoutine.Direction direction) {
+    return intakeArmSysIdRoutine
+        .dynamic(direction)
+        .until(() -> isIntakeArmNearSysIdLimit(direction))
+        .finallyDo(interrupted -> intakeArmMotor.set(0.0));
+  }
+
+  private boolean isIntakeArmNearSysIdLimit(SysIdRoutine.Direction direction) {
+    double extensionMeters = getIntakeExtensionMeters();
+    double minSafeExtension =
+        IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters) + INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
+    double maxSafeExtension =
+        IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters) - INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
+
+    return direction == SysIdRoutine.Direction.kForward
+        ? extensionMeters >= maxSafeExtension
+        : extensionMeters <= minSafeExtension;
   }
 
   // --- Roller control ---
@@ -187,15 +264,17 @@ public class IntakeSubsystem extends SubsystemBase {
   private void refreshStatusSignals() {
     BaseStatusSignal.refreshAll(
         intakeVelocitySignal,
-        intakeCurrentSignal,
-        intakeVoltageSignal,
+        //intakeCurrentSignal,
+        //intakeVoltageSignal,
         intake2VelocitySignal,
-        intake2CurrentSignal,
-        intake2VoltageSignal,
-        intakeArmPositionSignal,
-        intakeArmVelocitySignal,
-        intakeArmCurrentSignal,
-        intakeArmVoltageSignal);
+        //intake2CurrentSignal,
+        //intake2VoltageSignal,
+        intakeArmPositionSignal
+        //,
+        //intakeArmVelocitySignal,
+        //intakeArmCurrentSignal,
+        //intakeArmVoltageSignal
+      );
   }
 
   // --- SIMULATION ---
@@ -206,6 +285,13 @@ public class IntakeSubsystem extends SubsystemBase {
 
   private DCMotor intakeArmDcMotor;
   private ElevatorSim intakeArmSim;
+  private TalonFXSimState intakeMotorSimState;
+  private TalonFXSimState intakeMotor2SimState;
+  private TalonFXSimState intakeArmMotorSimState;
+  private double extensionMeters;
+  private double extensionMetersPerSecond;
+  private double armMotorRotations;
+  private double armMotorRps;
 
   private boolean isSimulationInitialized = false;
 
@@ -241,9 +327,9 @@ public class IntakeSubsystem extends SubsystemBase {
   intakeArmMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
       intakeArmMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
     } else {
-      final var intakeMotorSimState = intakeMotor.getSimState();
-      final var intakeMotor2SimState = intakeMotor2.getSimState();
-      final var intakeArmMotorSimState = intakeArmMotor.getSimState();
+      intakeMotorSimState = intakeMotor.getSimState();
+      intakeMotor2SimState = intakeMotor2.getSimState();
+      intakeArmMotorSimState = intakeArmMotor.getSimState();
 
       intakeMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
       intakeMotor2SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
@@ -267,11 +353,11 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeArmSim.setInput(intakeArmMotorSimState.getMotorVoltage());
       intakeArmSim.update(0.002);
 
-      double extensionMeters = intakeArmSim.getPositionMeters();
-      double extensionMetersPerSecond = intakeArmSim.getVelocityMetersPerSecond();
+  extensionMeters = intakeArmSim.getPositionMeters();
+  extensionMetersPerSecond = intakeArmSim.getVelocityMetersPerSecond();
 
-      double armMotorRotations = IntakeConstants.extensionMetersToMotorRotations(extensionMeters);
-      double armMotorRps = IntakeConstants.extensionMetersToMotorRotations(extensionMetersPerSecond);
+  armMotorRotations = IntakeConstants.extensionMetersToMotorRotations(extensionMeters);
+  armMotorRps = IntakeConstants.extensionMetersToMotorRotations(extensionMetersPerSecond);
 
       intakeArmMotorSimState.setRawRotorPosition(
       edu.wpi.first.units.Units.Rotations.of(armMotorRotations));

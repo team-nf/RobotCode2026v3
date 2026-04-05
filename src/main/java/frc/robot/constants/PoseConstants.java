@@ -5,12 +5,12 @@ import edu.wpi.first.math.geometry.Rotation2d;
 
 public class PoseConstants {
     public static final Pose2d START_POSE_RED_RIGHT = new Pose2d(12.14, 7.63, new Rotation2d(Math.toRadians(180)));
-    public static final Pose2d START_POSE_RED_MIDDLE = new Pose2d(12.94, 4.025, new Rotation2d(Math.toRadians(180)));
+    public static final Pose2d START_POSE_RED_MIDDLE = new Pose2d(13.1, 4.025, new Rotation2d(Math.toRadians(0)));
     public static final Pose2d START_POSE_RED_LEFT = new Pose2d(12.14, 0.425, new Rotation2d(Math.toRadians(180)));
 
 
     public static final Pose2d START_POSE_BLUE_RIGHT = new Pose2d(4.405, 0.425, new Rotation2d(Math.toRadians(0)));
-    public static final Pose2d START_POSE_BLUE_MIDDLE = new Pose2d(3.6, 4.025, new Rotation2d(Math.toRadians(0)));
+    public static final Pose2d START_POSE_BLUE_MIDDLE = new Pose2d(3.5, 4.025, new Rotation2d(Math.toRadians(180)));
     public static final Pose2d START_POSE_BLUE_LEFT = new Pose2d(4.405, 7.625, new Rotation2d(Math.toRadians(0)));
 
 

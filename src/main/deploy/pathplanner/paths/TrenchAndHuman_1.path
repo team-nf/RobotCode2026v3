@@ -21,11 +21,11 @@
       },
       "prevControl": {
         "x": 7.936043046357616,
-        "y": 0.39777317880794616
+        "y": 0.3977731788079466
       },
       "nextControl": {
         "x": 8.284519867549667,
-        "y": 3.2727069536423827
+        "y": 3.2727069536423823
       },
       "isLocked": false,
       "linkedName": null
@@ -80,11 +80,11 @@
     },
     {
       "anchor": {
-        "x": 0.4220115894039733,
+        "x": 0.6847686832740218,
         "y": 0.6881705298013252
       },
       "prevControl": {
-        "x": 1.162524834437086,
+        "x": 1.4252819283071343,
         "y": 0.6591307947019869
       },
       "nextControl": null,
@@ -107,11 +107,11 @@
     },
     {
       "waypointRelativePos": 3.25,
-      "rotationDegrees": 0.0
+      "rotationDegrees": 179.06760530368828
     },
     {
       "waypointRelativePos": 3.7,
-      "rotationDegrees": 0.0
+      "rotationDegrees": -179.6114663885981
     }
   ],
   "constraintZones": [
@@ -177,7 +177,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": 179.71505598391352
   },
   "reversed": false,
   "folder": "TrenchAndHuman",

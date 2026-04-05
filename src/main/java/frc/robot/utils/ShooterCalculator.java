@@ -13,6 +13,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.Robot;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
+import frc.robot.constants.SimConstants;
 import frc.robot.constants.TheMachineConstants;
 
 public final class ShooterCalculator {
@@ -23,10 +24,9 @@ public final class ShooterCalculator {
     private static final double MIN_FLYWHEEL_RPS = ShooterConstants.MIN_FLYWHEEL_SPEED.in(RotationsPerSecond);
     private static final double MAX_FLYWHEEL_RPS = ShooterConstants.MAX_FLYWHEEL_SPEED.in(RotationsPerSecond);
     private static final double REST_FLYWHEEL_RPS = ShooterConstants.FLYWHEEL_REST_SPEED.in(RotationsPerSecond);
-    private static final double MIN_HOOD_ROT = ShooterConstants.MIN_HOOD_ANGLE.in(Rotations);
+    private static final double MIN_HOOD_DEG = ShooterConstants.MIN_HOOD_ANGLE.in(Degrees);
     private static final double MAX_HOOD_DEG = ShooterConstants.MAX_HOOD_ANGLE.in(Degrees);
-    private static final double PASS_HOOD_ROT = ShooterConstants.PASS_HOOD_ANGLE.in(Rotations);
-    private static final double HOOD_OFFSET_DEG = ShooterConstants.HOOD_ANGLE_OFFSET.in(Degrees);
+    private static final double PASS_HOOD_DEG = ShooterConstants.PASS_HOOD_ANGLE.in(Degrees);
 
     public static Translation2d getHubTranslation() {
         return Boolean.TRUE.equals(Container.isBlue)
@@ -76,7 +76,7 @@ public final class ShooterCalculator {
             wheelSpeed = flywheelRPSFormula(distance) / ShooterConstants.SHOOTER_VELOCITY_TRANSFER_COEFFICIENT;
         }
         else {
-            wheelSpeed = flywheelRPSFormulaSIM(distance) / ShooterConstants.SHOOTER_VELOCITY_SIM_TRANSFER_COEFFICIENT;
+            wheelSpeed = flywheelRPSFormulaSIM(distance) / SimConstants.SIMULATION_VELOCITY_TRANSFER_COEFFICIENT;
         }
 
         wheelSpeed = Math.max(
@@ -84,13 +84,10 @@ public final class ShooterCalculator {
             Math.min(wheelSpeed, MAX_FLYWHEEL_RPS)
         );
 
-        double hoodAngle = hoodAngleFormula(distance);
-        double maxDeg = HOOD_OFFSET_DEG + MAX_HOOD_DEG;
-        hoodAngle = Math.max(HOOD_OFFSET_DEG, Math.min(hoodAngle, maxDeg));
-        hoodAngle = (hoodAngle - HOOD_OFFSET_DEG) / 360;
-
+        double hoodAngleDeg = hoodAngleFormula(distance);
+        hoodAngleDeg = Math.max(MIN_HOOD_DEG, Math.min(hoodAngleDeg, MAX_HOOD_DEG));
         shootingParams[0] = wheelSpeed;
-        shootingParams[1] = hoodAngle;
+        shootingParams[1] = hoodAngleDeg;
         return shootingParams;
     }
 
@@ -108,11 +105,11 @@ public final class ShooterCalculator {
     }
 
     public static double calculateRestHoodAngle() {
-        return MIN_HOOD_ROT;
+        return MIN_HOOD_DEG;
     }
 
     public static double calculatePassHoodAngle() {
-        return PASS_HOOD_ROT;
+        return PASS_HOOD_DEG;
     }
 
     public static double hoodAngleFormula(double x) {
@@ -120,9 +117,9 @@ public final class ShooterCalculator {
         double b = 14.43;
 
         if (x < 2.05) {
-            return 18;
+            return 3.5;
         } else {
-            return a * x + b;
+            return a * x + b - 14.312;
         }
     }
 
@@ -135,7 +132,7 @@ public final class ShooterCalculator {
         double g = 7475.15141;
 
         if (x < 1.7) {
-            return 1500;
+            return 1500 / 60;
         }
 
         double y = (((((a * x + b) * x + c) * x + d) * x + f) * x + g);

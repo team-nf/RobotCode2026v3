@@ -5,12 +5,9 @@
 package frc.robot.commands.AutoCommands;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.TheMachine;
@@ -32,9 +29,12 @@ public class AimAndPassAutoCommand extends Command {
   private final DoubleEntry passAngleErrorEntry = NetworkTableInstance.getDefault()
       .getDoubleTopic("/PASS/AimAngleError").getEntry(0.0);
 
-  private final StructPublisher<Pose3d> passAimPosePublisher = NetworkTableInstance.getDefault()
-      .getStructTopic("/PASS/AimPose3d", Pose3d.struct)
-      .publish();
+  private final DoubleEntry passAimPoseXEntry = NetworkTableInstance.getDefault()
+    .getDoubleTopic("/PASS/AimPoseX").getEntry(0.0);
+  private final DoubleEntry passAimPoseYEntry = NetworkTableInstance.getDefault()
+    .getDoubleTopic("/PASS/AimPoseY").getEntry(0.0);
+  private final DoubleEntry passAimPoseZEntry = NetworkTableInstance.getDefault()
+    .getDoubleTopic("/PASS/AimPoseZ").getEntry(0.0);
 
   private final BooleanEntry passOnTargetEntry = NetworkTableInstance.getDefault()
       .getBooleanTopic("/PASS/AimOnTarget").getEntry(false);
@@ -143,7 +143,9 @@ public class AimAndPassAutoCommand extends Command {
 
     passOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
     passAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
-    passAimPosePublisher.set(new Pose3d(aimX, aimY, 0.0, new Rotation3d(0, 0, 0)));
+    passAimPoseXEntry.set(aimX);
+    passAimPoseYEntry.set(aimY);
+    passAimPoseZEntry.set(0.0);
  
   }
 

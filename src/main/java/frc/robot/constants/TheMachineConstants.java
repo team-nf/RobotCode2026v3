@@ -5,6 +5,10 @@ import edu.wpi.first.math.geometry.Rotation3d;
 
 public class TheMachineConstants {
 
+    // Addressable LED strip hardware configuration.
+    public static int LED_PWM_PORT = 0;
+    public static int LED_STRIP_LENGTH = 60;
+
     public static final double INTAKE_EXTENSION_ANGLE_DEGREES = -9.8;
 
     public static Pose3d SHOOTER_ZERO_POSE = new Pose3d(-0.1475, 0.1475, 0.3865, new Rotation3d(0, 0, 0));

@@ -9,17 +9,19 @@ import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
 import java.util.EnumSet;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.sim.ChassisReference;
@@ -35,10 +37,13 @@ import edu.wpi.first.networktables.BooleanTopic;
 import edu.wpi.first.networktables.NetworkTableEvent;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TheMachineConstants;
@@ -67,7 +72,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     private TalonFX hoodMotor;
     private TalonFX turretMotor;
-    private CANcoder turretAbsoluteEncoder;
+    private DutyCycleEncoder turretAbsoluteEncoder;
 
     private final VelocityVoltage flywheelVelocityControl;
     private final PositionVoltage hoodPositionControl;
@@ -87,19 +92,24 @@ public class ShooterSubsystem extends SubsystemBase {
     private final StatusSignal<?> turretVelocitySignal;
     private final StatusSignal<?> turretCurrentSignal;
     private final StatusSignal<?> turretVoltageSignal;
-    private final StatusSignal<?> turretAbsolutePositionSignal;
 
-    private static final double MIN_HOOD_ROT = ShooterConstants.MIN_HOOD_ANGLE.in(Rotations);
-    private static final double MAX_HOOD_ROT = ShooterConstants.MAX_HOOD_ANGLE.in(Rotations);
+    private static final double MIN_HOOD_DEG = ShooterConstants.MIN_HOOD_ANGLE.in(edu.wpi.first.units.Units.Degrees);
+    private static final double MAX_HOOD_DEG = ShooterConstants.MAX_HOOD_ANGLE.in(edu.wpi.first.units.Units.Degrees);
     private static final double MIN_TURRET_DEG = ShooterConstants.MIN_TURRET_ANGLE.in(edu.wpi.first.units.Units.Degrees);
     private static final double MAX_TURRET_DEG = ShooterConstants.MAX_TURRET_ANGLE.in(edu.wpi.first.units.Units.Degrees);
+    private static final double TURRET_SYSID_LIMIT_MARGIN_DEG = 8.0;
 
     private double flywheelGoalVelocity;
-    private double hoodGoalPosition;
+    private double hoodGoalAngle;
     private double turretGoalAngleDegrees;
     private double flywheelTestRPM;
     private double hoodTestAngle;
     private double turretTestAngleDegrees;
+
+    private final VoltageOut sysIdVoltageControl;
+    private final SysIdRoutine flywheelSysIdRoutine;
+    private final SysIdRoutine hoodSysIdRoutine;
+    private final SysIdRoutine turretSysIdRoutine;
 
     public ShooterSubsystem(Supplier<Double> robotYawSupplier) {
 
@@ -118,7 +128,7 @@ public class ShooterSubsystem extends SubsystemBase {
         flywheelMotor2 = new TalonFX(ShooterConstants.SECOND_SHOOTER_MOTOR_ID);
         hoodMotor = new TalonFX(ShooterConstants.HOOD_MOTOR_ID);
         turretMotor = new TalonFX(ShooterConstants.TURRET_MOTOR_ID);
-        turretAbsoluteEncoder = new CANcoder(ShooterConstants.TURRET_CANCODER_ID);
+        turretAbsoluteEncoder = new DutyCycleEncoder(ShooterConstants.TURRET_THROUGHBORE_DIO_CHANNEL);
 
         applyConfig(flywheelMotor1, ShooterConstants.SHOOTER_CONFIG, "Flywheel Motor 1 (Leader)");
         applyConfig(flywheelMotor2, ShooterConstants.SHOOTER_CONFIG, "Flywheel Motor 2 (Follower)");
@@ -130,6 +140,7 @@ public class ShooterSubsystem extends SubsystemBase {
         flywheelVelocityControl = ShooterConstants.SHOOTER_VELOCITY_CONTROL.clone();
         hoodPositionControl = ShooterConstants.HOOD_POSITION_CONTROL.clone();
         turretPositionControl = ShooterConstants.TURRET_POSITION_CONTROL.clone();
+        sysIdVoltageControl = new VoltageOut(0).withEnableFOC(false);
 
         flywheel1VelocitySignal = flywheelMotor1.getVelocity(false);
         flywheel1CurrentSignal = flywheelMotor1.getStatorCurrent(false);
@@ -149,10 +160,71 @@ public class ShooterSubsystem extends SubsystemBase {
         turretCurrentSignal = turretMotor.getStatorCurrent(false);
         turretVoltageSignal = turretMotor.getMotorVoltage(false);
 
-        turretAbsolutePositionSignal = turretAbsoluteEncoder.getAbsolutePosition(false);
+        flywheelSysIdRoutine = createSysIdRoutine("shooter/Flywheel", flywheelMotor1, 4.0);
+        hoodSysIdRoutine = createSysIdRoutine("shooter/Hood", hoodMotor, 3.0);
+        turretSysIdRoutine = createSysIdRoutine("shooter/Turret", turretMotor, 2.0);
 
         // On startup, align integrated turret motor position with absolute encoder reading.
         syncTurretMotorToAbsoluteEncoder();
+
+        hoodMotor.setPosition(0);
+    }
+
+    private SysIdRoutine createSysIdRoutine(String logPrefix, TalonFX motor, double dynamicStepVolts) {
+        return new SysIdRoutine(
+            new SysIdRoutine.Config(
+                null,
+                Volts.of(dynamicStepVolts),
+                null,
+                state -> SignalLogger.writeString(logPrefix + "_State", state.toString())
+            ),
+            new SysIdRoutine.Mechanism(
+                output -> {
+                    motor.setControl(sysIdVoltageControl.withOutput(output.in(Volts)));
+                    SignalLogger.writeDouble(logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
+                    SignalLogger.writeDouble(logPrefix + "_Position", motor.getPosition().getValueAsDouble());
+                    SignalLogger.writeDouble(logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
+                },
+                null,
+                this
+            )
+        );
+    }
+
+    private boolean isTurretNearSysIdLimit() {
+        double turretDeg = getTurretAngleDegreesRaw();
+        return turretDeg <= (MIN_TURRET_DEG + TURRET_SYSID_LIMIT_MARGIN_DEG)
+            || turretDeg >= (MAX_TURRET_DEG - TURRET_SYSID_LIMIT_MARGIN_DEG);
+    }
+
+    public Command flywheelSysIdQuasistatic(SysIdRoutine.Direction direction) {
+        return flywheelSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> stopFlywheel());
+    }
+
+    public Command flywheelSysIdDynamic(SysIdRoutine.Direction direction) {
+        return flywheelSysIdRoutine.dynamic(direction).finallyDo(interrupted -> stopFlywheel());
+    }
+
+    public Command hoodSysIdQuasistatic(SysIdRoutine.Direction direction) {
+        return hoodSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> hoodMotor.set(0.0));
+    }
+
+    public Command hoodSysIdDynamic(SysIdRoutine.Direction direction) {
+        return hoodSysIdRoutine.dynamic(direction).finallyDo(interrupted -> hoodMotor.set(0.0));
+    }
+
+    public Command turretSysIdQuasistatic(SysIdRoutine.Direction direction) {
+        return turretSysIdRoutine
+            .quasistatic(direction)
+            .until(this::isTurretNearSysIdLimit)
+            .finallyDo(interrupted -> turretMotor.set(0.0));
+    }
+
+    public Command turretSysIdDynamic(SysIdRoutine.Direction direction) {
+        return turretSysIdRoutine
+            .dynamic(direction)
+            .until(this::isTurretNearSysIdLimit)
+            .finallyDo(interrupted -> turretMotor.set(0.0));
     }
 
     private void applyConfig(TalonFX motor, com.ctre.phoenix6.configs.TalonFXConfiguration config, String name) {
@@ -175,20 +247,19 @@ public class ShooterSubsystem extends SubsystemBase {
         flywheelMotor1.setControl(flywheelVelocityControl.withVelocity(motorVelocity));
     }
 
-    private void setHoodAngle(double positionRotations) {
-        // Clamp hood command to mechanical limits before closed-loop control.
-        double clampedRotations = Math.max(
-            MIN_HOOD_ROT,
-            Math.min(positionRotations, MAX_HOOD_ROT)
-        );
-        double motorPosition = clampedRotations * ShooterConstants.HOOD_GEAR_REDUCTION;
-        hoodMotor.setControl(hoodPositionControl.withPosition(motorPosition));
+    private void setHoodAngle(double angleInputDegrees) {
+        // All callers provide desired hood angle in DEGREES.
+        hoodGoalAngle = Math.max(MIN_HOOD_DEG, Math.min(angleInputDegrees, MAX_HOOD_DEG));
+        hoodMotor.setControl(hoodPositionControl.withPosition(hoodGoalAngle / 360.0 * ShooterConstants.HOOD_GEAR_REDUCTION));
     }
 
     public double setTurretAngleDegrees(double requestedAngleDegrees) {
+        // Public turret API uses robot-frame degrees. Convert to turret-mechanism frame first.
+        double requestedTurretFrameDeg = robotFrameToTurretFrameDeg(requestedAngleDegrees);
+
         // Resolve to nearest legal equivalent angle to avoid long wraps.
-        double wrappedTargetDeg = wrapTurretTargetToCurrent(requestedAngleDegrees);
-        double currentAngleDeg = getTurretAngleDegrees();
+        double wrappedTargetDeg = wrapTurretTargetToCurrent(requestedTurretFrameDeg);
+        double currentAngleDeg = getTurretAngleDegreesRaw();
         double angleErrorDeg = Math.abs(normalizeToMinus180To180(wrappedTargetDeg - currentAngleDeg));
 
         // Use more aggressive PID slot near target for tighter final convergence.
@@ -202,7 +273,7 @@ public class ShooterSubsystem extends SubsystemBase {
                 .withSlot(turretPidSlot)
                 .withPosition(motorPosition)
         );
-        return wrappedTargetDeg;
+    return turretFrameToRobotFrameDeg(wrappedTargetDeg);
     }
 
     private double normalizeToMinus180To180(double angleDeg) {
@@ -219,9 +290,17 @@ public class ShooterSubsystem extends SubsystemBase {
         return Math.max(MIN_TURRET_DEG, Math.min(angleDeg, MAX_TURRET_DEG));
     }
 
+    private double turretFrameToRobotFrameDeg(double turretFrameDeg) {
+        return normalizeToMinus180To180(turretFrameDeg + ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG);
+    }
+
+    private double robotFrameToTurretFrameDeg(double robotFrameDeg) {
+        return normalizeToMinus180To180(robotFrameDeg - ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG);
+    }
+
     private double wrapTurretTargetToCurrent(double requestedAngleDegrees) {
         double requestedClamped = clampTurretRange(requestedAngleDegrees);
-        double currentAngle = getTurretAngleDegrees();
+        double currentAngle = getTurretAngleDegreesRaw();
 
         // Select nearest angular equivalent relative to current angle.
         double delta = normalizeToMinus180To180(requestedClamped - currentAngle);
@@ -244,26 +323,26 @@ public class ShooterSubsystem extends SubsystemBase {
     private void refreshStatusSignals() {
         BaseStatusSignal.refreshAll(
             flywheel1VelocitySignal,
-            flywheel1CurrentSignal,
-            flywheel1VoltageSignal,
+            //flywheel1CurrentSignal,
+            //flywheel1VoltageSignal,
             flywheel2VelocitySignal,
-            flywheel2CurrentSignal,
-            flywheel2VoltageSignal,
+            //flywheel2CurrentSignal,
+            //flywheel2VoltageSignal,
             hoodPositionSignal,
-            hoodVelocitySignal,
-            hoodCurrentSignal,
-            hoodVoltageSignal,
-            turretPositionSignal,
-            turretVelocitySignal,
-            turretCurrentSignal,
-            turretVoltageSignal,
-            turretAbsolutePositionSignal);
+            //hoodVelocitySignal,
+            //hoodCurrentSignal,
+            //hoodVoltageSignal,
+            turretPositionSignal
+            //turretVelocitySignal,
+            //turretCurrentSignal,
+            //turretVoltageSignal
+            );
     }
 
     public void syncTurretMotorToAbsoluteEncoder() {
-        // Read absolute CANcoder and seed integrated motor position to match.
-        turretAbsolutePositionSignal.refresh();
-        double absoluteEncoderRot = turretAbsolutePositionSignal.getValueAsDouble();
+        // Read through-bore absolute encoder and seed integrated motor position to match.
+        double absoluteEncoderRot = turretAbsoluteEncoder.get();
+        // Absolute encoder is interpreted in turret frame (mechanism-local angle).
         double absoluteTurretDeg = absoluteEncoderRot
                 * ShooterConstants.TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION
                 + ShooterConstants.TURRET_ABSOLUTE_OFFSET_DEGREES;
@@ -271,7 +350,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
         double turretMotorRot = absoluteTurretDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
         turretMotor.setPosition(turretMotorRot);
-        turretGoalAngleDegrees = absoluteTurretDeg;
+        turretGoalAngleDegrees = turretFrameToRobotFrameDeg(absoluteTurretDeg);
     }
 
     // ===== Action Methods =====
@@ -279,70 +358,70 @@ public class ShooterSubsystem extends SubsystemBase {
     /** Stop all motors. */
     public void zero() {
         flywheelGoalVelocity = 0;
-        hoodGoalPosition = ShooterCalculator.calculateRestHoodAngle();
+        hoodGoalAngle = ShooterCalculator.calculateRestHoodAngle();
         turretGoalAngleDegrees = 0;
         stopFlywheel();
-        setHoodAngle(hoodGoalPosition);
+        setHoodAngle(hoodGoalAngle);
         turretGoalAngleDegrees = setTurretAngleDegrees(turretGoalAngleDegrees);
     }
 
     /** Hold flywheel at idle speed, park hood at min angle. */
     public void rest() {
         flywheelGoalVelocity = ShooterCalculator.calculateRestFlywheelSpeed();
-        hoodGoalPosition = ShooterCalculator.calculateRestHoodAngle();
+        hoodGoalAngle = ShooterCalculator.calculateRestHoodAngle();
         setFlywheelSpeed(flywheelGoalVelocity);
-        setHoodAngle(hoodGoalPosition);
+        setHoodAngle(hoodGoalAngle);
     }
 
     /** Set flywheel speed + hood angle + turret angle (degrees). */
-    public void shoot(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
+    public void shoot(double velocityRPS, double hoodAngle, double turretAngleDegrees) {
 
         if(!manualOverrideEnabled)
         {
             // Normal auto-setpoint path from aiming commands.
             flywheelGoalVelocity = velocityRPS;
-            hoodGoalPosition = hoodAngleRotations;
+            hoodGoalAngle = hoodAngle;
             turretGoalAngleDegrees = setTurretAngleDegrees(turretAngleDegrees);
             setFlywheelSpeed(flywheelGoalVelocity);
-            setHoodAngle(hoodGoalPosition);
+            setHoodAngle(hoodGoalAngle);
             return;
         }
         else
         {
             // Pit/debug fallback constants when manual override is enabled.
-            flywheelGoalVelocity = 35;
-            hoodGoalPosition = 0.0;
-            turretGoalAngleDegrees = setTurretAngleDegrees(0);
+            flywheelGoalVelocity = 25;
+            hoodGoalAngle = 0.0;
+            turretGoalAngleDegrees = setTurretAngleDegrees(180);
             setFlywheelSpeed(flywheelGoalVelocity);
-            setHoodAngle(hoodGoalPosition);
+            setHoodAngle(hoodGoalAngle);
             return;
         }
         
     }
 
     /** Backward-compatible overload that keeps turret at 0 deg. */
-    public void shoot(double velocityRPS, double hoodAngleRotations) {
-        shoot(velocityRPS, hoodAngleRotations, 0.0);
+    public void shoot(double velocityRPS, double hoodAngle) {
+        shoot(velocityRPS, hoodAngle, 0.0);
     }
 
     /** Set flywheel speed + hood angle + turret angle (degrees) for pass. */
-    public void pass(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
-        shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
+    public void pass(double velocityRPS, double hoodAngle, double turretAngleDegrees) {
+        shoot(velocityRPS, hoodAngle, turretAngleDegrees);
     }
 
     /** Backward-compatible overload that keeps turret at 0 deg. */
-    public void pass(double velocityRPS, double hoodAngleRotations) {
-        pass(velocityRPS, hoodAngleRotations, 0.0);
+    public void pass(double velocityRPS, double hoodAngle) {
+        pass(velocityRPS, hoodAngle, 0.0);
     }
 
     /** Direct manual control for testing. */
-    public void test(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
-        shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
+    public void test(double velocityRPS, double hoodAngle, double turretAngleDegrees) {
+        shoot(velocityRPS, hoodAngle, turretAngleDegrees);
     }
 
     /** Backward-compatible overload that keeps turret at 0 deg. */
-    public void test(double velocityRPS, double hoodAngleRotations) {
-        test(velocityRPS, hoodAngleRotations, 0.0);
+    public void test(double velocityRPS, double hoodAngle) {
+        test(velocityRPS, hoodAngle, 0.0);
     }
 
     /** Direct manual control using stored test values. */
@@ -363,8 +442,13 @@ public class ShooterSubsystem extends SubsystemBase {
     public double getHoodPosition() {
         return hoodPositionSignal.getValueAsDouble() / ShooterConstants.HOOD_GEAR_REDUCTION;
     }
+    
 
     public double getTurretAngleDegrees() {
+        return turretFrameToRobotFrameDeg(getTurretAngleDegreesRaw());
+    }
+
+    private double getTurretAngleDegreesRaw() {
         return turretPositionSignal.getValueAsDouble() / ShooterConstants.TURRET_GEAR_REDUCTION * 360.0;
     }
 
@@ -373,9 +457,13 @@ public class ShooterSubsystem extends SubsystemBase {
         return turretPositionSignal.getValueAsDouble() / ShooterConstants.TURRET_GEAR_REDUCTION * 2 * Math.PI;
     }
 
+    public double getHoodAngleDegrees() {
+        return getHoodPosition() * 360.0;
+    }
+
     // Pre-cached allowable error thresholds
     private static final double FLYWHEEL_ERROR_RPS = ShooterConstants.FLYWHEEL_ALLOWABLE_ERROR.in(RotationsPerSecond);
-    private static final double HOOD_ERROR_ROT = ShooterConstants.HOOD_ALLOWABLE_ERROR.in(Rotations);
+    private static final double HOOD_ERROR_DEG = ShooterConstants.HOOD_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
     private static final double TURRET_ERROR_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
 
     /** Check if the flywheel is at the target speed within allowable error. */
@@ -385,12 +473,12 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Check if the hood is at the target angle within allowable error. */
     public boolean isHoodAtAngle() {
-        return Math.abs(getHoodPosition() - hoodGoalPosition) < HOOD_ERROR_ROT;
+        return Math.abs(getHoodAngleDegrees() - hoodGoalAngle) < HOOD_ERROR_DEG;
     }
 
     public boolean isTurretAtAngle() {
         // Require both position error and low angular velocity before declaring ready.
-        return Math.abs(getTurretAngleDegrees() - turretGoalAngleDegrees) < TURRET_ERROR_DEG
+        return Math.abs(normalizeToMinus180To180(getTurretAngleDegrees() - turretGoalAngleDegrees)) < TURRET_ERROR_DEG
             && Math.abs(turretVelocitySignal.getValueAsDouble()) < ShooterConstants.TURRET_ALLOWABLE_SPEED_TO_SHOOT.in(RotationsPerSecond);
     }
 
@@ -412,8 +500,8 @@ public class ShooterSubsystem extends SubsystemBase {
         double turretAngleClamped = Math.max(MIN_TURRET_DEG, Math.min(getTurretAngleDegrees(), MAX_TURRET_DEG));
         double flywheelRps = getFlywheel1SpeedAbs();
         double flywheelRpmError = (Math.abs(flywheelGoalVelocity) - flywheelRps) * 60.0;
-        double hoodDegError = (hoodGoalPosition - getHoodPosition()) * 360.0;
-        double turretDegError = turretGoalAngleDegrees - getTurretAngleDegrees();
+        double hoodDegError = hoodGoalAngle - getHoodAngleDegrees();
+    double turretDegError = normalizeToMinus180To180(turretGoalAngleDegrees - getTurretAngleDegrees());
 
         SmartDashboard.putNumber("Shooter/Flywheel1VelocityRps", flywheel1VelocitySignal.getValueAsDouble());
         SmartDashboard.putNumber("Shooter/Flywheel1CurrentA", flywheel1CurrentSignal.getValueAsDouble());
@@ -435,7 +523,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
         SmartDashboard.putNumber("Shooter/FlywheelRPS", flywheelRps);
         SmartDashboard.putNumber("Shooter/HoodAngleRot", getHoodPosition());
-        SmartDashboard.putNumber("Shooter/HoodAngleDeg", getHoodPosition() * 360.0);
+    SmartDashboard.putNumber("Shooter/HoodAngleDeg", getHoodAngleDegrees());
+    SmartDashboard.putNumber("Shooter/HoodGoalDeg", hoodGoalAngle);
         SmartDashboard.putNumber("Shooter/TurretAngleDeg", turretAngleClamped);
         SmartDashboard.putNumber("Shooter/TurretGoalDeg", turretGoalAngleDegrees);
         SmartDashboard.putNumber("Shooter/FlywheelRpmError", flywheelRpmError);
@@ -460,6 +549,10 @@ public class ShooterSubsystem extends SubsystemBase {
     private DCMotor turretDcMotor;
     private LinearSystem<N2, N1, N2> turretSystem;
     private DCMotorSim turretSim;
+    private TalonFXSimState fw1SimState;
+    private TalonFXSimState fw2SimState;
+    private TalonFXSimState hoodSimState;
+    private TalonFXSimState turretSimState;
 
     private boolean isSimulationInitialized = false;
 
@@ -513,8 +606,8 @@ public class ShooterSubsystem extends SubsystemBase {
         } else {
             // Step each plant model and mirror resulting rotor states into Phoenix sim objects.
             // --- Flywheel sim update ---
-            final var fw1SimState = flywheelMotor1.getSimState();
-            final var fw2SimState = flywheelMotor2.getSimState();
+            fw1SimState = flywheelMotor1.getSimState();
+            fw2SimState = flywheelMotor2.getSimState();
 
             fw1SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
             fw2SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
@@ -533,7 +626,7 @@ public class ShooterSubsystem extends SubsystemBase {
                 flywheelSim.getAngularVelocity().times(-ShooterConstants.FLYWHEEL_GEAR_REDUCTION));
 
             // --- Hood sim update ---
-            final var hoodSimState = hoodMotor.getSimState();
+            hoodSimState = hoodMotor.getSimState();
 
             hoodSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
 
@@ -546,7 +639,7 @@ public class ShooterSubsystem extends SubsystemBase {
                 RadiansPerSecond.of(hoodSim.getVelocityRadPerSec()).times(ShooterConstants.HOOD_GEAR_REDUCTION));
 
             // --- Turret sim update ---
-            final var turretSimState = turretMotor.getSimState();
+            turretSimState = turretMotor.getSimState();
 
             turretSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
 
@@ -585,6 +678,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
         turretLLX = turretLLX + TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
         turretLLY = turretLLY + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
+
+        SmartDashboard.putNumber("Throughbore", turretAbsoluteEncoder.get());
                                                                 
         // Push updated camera pose to Limelight on real robot only.
         if(Robot.isReal()) 

@@ -6,11 +6,14 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.sim.ChassisReference;
 import com.ctre.phoenix6.sim.TalonFXSimState;
@@ -23,7 +26,9 @@ import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.FeederConstants;
 
 /**
@@ -47,6 +52,18 @@ public class FeederSubsystem extends SubsystemBase {
   private double feederBeltGoalVelocity;
   private double feederFeedGoalVelocity;
   private double feederTestRPM;
+
+  private static final int FEEDER_FEED_VELOCITY_AVG_SAMPLES = 3;
+  private final double[] feederFeedVelocityWindow = new double[FEEDER_FEED_VELOCITY_AVG_SAMPLES];
+  private int feederFeedVelocityWindowIndex = 0;
+  private int feederFeedVelocityWindowCount = 0;
+  private double feederFeedVelocityWindowSum = 0.0;
+  private double feederFeedVelocityAverageRps = 0.0;
+
+  private final VoltageOut feederBeltSysIdControl;
+  private final VoltageOut feederFeedSysIdControl;
+  private final SysIdRoutine feederBeltSysIdRoutine;
+  private final SysIdRoutine feederFeedSysIdRoutine;
 
   /** Creates a new FeederSubsystem. */
   public FeederSubsystem() {
@@ -79,8 +96,50 @@ public class FeederSubsystem extends SubsystemBase {
     feederFeedVelocitySignal = feederFeedMotor.getVelocity(false);
     feederFeedCurrentSignal = feederFeedMotor.getStatorCurrent(false);
     feederFeedVoltageSignal = feederFeedMotor.getMotorVoltage(false);
+
+    feederBeltSysIdControl = new VoltageOut(0).withEnableFOC(false);
+    feederFeedSysIdControl = new VoltageOut(0).withEnableFOC(false);
+  feederBeltSysIdRoutine = createSysIdRoutine("feeder/Belt", feederBeltMotor, feederBeltSysIdControl);
+  feederFeedSysIdRoutine = createSysIdRoutine("feeder/Feed", feederFeedMotor, feederFeedSysIdControl);
     
     feederVelocityControl = FeederConstants.FEEDER_VELOCITY_CONTROL.clone();
+  }
+
+  private SysIdRoutine createSysIdRoutine(String logPrefix, TalonFX motor, VoltageOut voltageControl) {
+    return new SysIdRoutine(
+        new SysIdRoutine.Config(
+            null,
+            Volts.of(4),
+            null,
+            state -> SignalLogger.writeString(logPrefix + "_State", state.toString())
+        ),
+        new SysIdRoutine.Mechanism(
+            output -> {
+              motor.setControl(voltageControl.withOutput(output.in(Volts)));
+              SignalLogger.writeDouble(logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
+              SignalLogger.writeDouble(logPrefix + "_Position", motor.getPosition().getValueAsDouble());
+              SignalLogger.writeDouble(logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
+            },
+            null,
+            this
+        )
+    );
+  }
+
+  public Command feederBeltSysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return feederBeltSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> feederBeltMotor.set(0.0));
+  }
+
+  public Command feederBeltSysIdDynamic(SysIdRoutine.Direction direction) {
+    return feederBeltSysIdRoutine.dynamic(direction).finallyDo(interrupted -> feederBeltMotor.set(0.0));
+  }
+
+  public Command feederFeedSysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return feederFeedSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> feederFeedMotor.set(0.0));
+  }
+
+  public Command feederFeedSysIdDynamic(SysIdRoutine.Direction direction) {
+    return feederFeedSysIdRoutine.dynamic(direction).finallyDo(interrupted -> feederFeedMotor.set(0.0));
   }
 
   public void feederStop() {
@@ -103,7 +162,23 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public double getFeederFeedVelocity() {
-    return feederFeedVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_GEAR_REDUCTION;
+    return feederFeedVelocityAverageRps;
+  }
+
+  private void updateFeederFeedVelocityAverage() {
+    double newSample = feederFeedVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_GEAR_REDUCTION;
+
+    if (feederFeedVelocityWindowCount < FEEDER_FEED_VELOCITY_AVG_SAMPLES) {
+      feederFeedVelocityWindowCount++;
+    } else {
+      feederFeedVelocityWindowSum -= feederFeedVelocityWindow[feederFeedVelocityWindowIndex];
+    }
+
+    feederFeedVelocityWindow[feederFeedVelocityWindowIndex] = newSample;
+    feederFeedVelocityWindowSum += newSample;
+    feederFeedVelocityWindowIndex = (feederFeedVelocityWindowIndex + 1) % FEEDER_FEED_VELOCITY_AVG_SAMPLES;
+
+    feederFeedVelocityAverageRps = feederFeedVelocityWindowSum / feederFeedVelocityWindowCount;
   }
 
   public boolean isFeederFeedAtGoalSpeed() {
@@ -128,14 +203,15 @@ public class FeederSubsystem extends SubsystemBase {
 
   private void refreshStatusSignals() {
     BaseStatusSignal.refreshAll(
-    feederBeltPositionSignal,
+    //feederBeltPositionSignal,
     feederBeltVelocitySignal,
-    feederBeltCurrentSignal,
-    feederBeltVoltageSignal,
-    feederFeedPositionSignal,
-    feederFeedVelocitySignal,
-    feederFeedCurrentSignal,
-    feederFeedVoltageSignal);
+    //feederBeltCurrentSignal,
+    //feederBeltVoltageSignal,
+    //feederFeedPositionSignal,
+    feederFeedVelocitySignal
+    //feederFeedCurrentSignal,
+    //feederFeedVoltageSignal
+    );
   }
 
   // SIMULATION
@@ -143,6 +219,8 @@ public class FeederSubsystem extends SubsystemBase {
   private DCMotor feederDcMotor;
   private LinearSystem<N2, N1, N2> feederSystem;
   private DCMotorSim feederSim;
+  private TalonFXSimState feederBeltMotorSimState;
+  private TalonFXSimState feederFeedMotorSimState;
 
   private boolean isSimulationInitialized = false;
 
@@ -165,8 +243,8 @@ public class FeederSubsystem extends SubsystemBase {
         }
         else {
       // Step feeder simulation and mirror state to both motors.
-      final var feederBeltMotorSimState = feederBeltMotor.getSimState();
-      final var feederFeedMotorSimState = feederFeedMotor.getSimState();
+      feederBeltMotorSimState = feederBeltMotor.getSimState();
+      feederFeedMotorSimState = feederFeedMotor.getSimState();
 
       feederBeltMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
       feederFeedMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
@@ -203,12 +281,12 @@ public class FeederSubsystem extends SubsystemBase {
 
   public void feed() {
     // Gate belt feed until feed wheel reaches speed to reduce jams.
-    feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
+    feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_BELT_VELOCITY.in(RotationsPerSecond);
     feederFeedGoalVelocity = FeederConstants.FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
     feederFeedSetSpeed(feederFeedGoalVelocity);
     if(isFeederFeedAtGoalSpeed())
     {
-      feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
+      feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_BELT_VELOCITY.in(RotationsPerSecond);
     }
     else
     {
@@ -257,5 +335,6 @@ public class FeederSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     refreshStatusSignals();
+    updateFeederFeedVelocityAverage();
   }
 }

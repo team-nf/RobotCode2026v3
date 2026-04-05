@@ -7,6 +7,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.wpilibj.Timer;
 
 import java.util.ArrayList;
 import java.util.function.BooleanSupplier;
@@ -349,10 +350,19 @@ public class FuelSim {
             .getStructArrayTopic("Sim/Fuels", Translation3d.struct)
             .publish();
 
+    // Publishing every loop can overwhelm NT/GUI with large arrays over time.
+    private static final double FUEL_PUBLISH_PERIOD_SEC = 0.05; // 20 Hz
+    private double nextFuelPublishTimeSec = 0.0;
+
     /**
      * Adds array of `Translation3d`'s to NetworkTables at "AdvantageKit/RealOutputs/Fuel Simulation/Fuels"
      */
     public void logFuels() {
+        double nowSec = Timer.getFPGATimestamp();
+        if (nowSec < nextFuelPublishTimeSec) {
+            return;
+        }
+        nextFuelPublishTimeSec = nowSec + FUEL_PUBLISH_PERIOD_SEC;
         fuelPublisher.set(fuels.stream().map((fuel) -> fuel.pos).toArray(Translation3d[]::new));
     }
 

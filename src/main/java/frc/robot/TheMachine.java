@@ -18,6 +18,7 @@ import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.utils.Container;
+import frc.robot.utils.LEDController;
 import frc.robot.utils.ShooterCalculator;
 
 /**
@@ -41,6 +42,25 @@ public class TheMachine {
 
     private Supplier<Pose2d> robotPose2dSupplier;
     private Pose2d goalHubPose;
+    private final LEDController ledController;
+
+    private enum LedState {
+        OFF,
+        ZERO,
+        IDLE_RETRACTED,
+        IDLE_DEPLOYED,
+        INTAKE,
+        GET_READY,
+        READY_TO_SHOOT,
+        GET_READY_PASS,
+        READY_TO_PASS,
+        REVERSE,
+        TEST,
+        MANUAL_OVERRIDE,
+        UNKNOWN
+    }
+
+    private LedState currentLedState = LedState.UNKNOWN;
 
     public TheMachine(ShooterSubsystem shooterSubsystem, HopperSubsystem hopperSubsystem, IntakeSubsystem intakeSubsystem, FeederSubsystem feederSubsystem, 
                                             Supplier<Pose2d> robotPose2dSupplier) {
@@ -50,6 +70,7 @@ public class TheMachine {
         this.feederSubsystem = feederSubsystem;
 
         this.robotPose2dSupplier = robotPose2dSupplier;
+    this.ledController = new LEDController(TheMachineConstants.LED_PWM_PORT, TheMachineConstants.LED_STRIP_LENGTH);
 
         // Choose the alliance-correct hub pose for aiming calculations.
         if(Container.isBlue)
@@ -102,7 +123,7 @@ public class TheMachine {
     /** Intake stowed, shooter resting, feeder reversed to prevent accidental feed. */
     public void idleRetracted() {
         shooterSubsystem.rest();
-        feederSubsystem.reverse();
+        feederSubsystem.zero();
         hopperSubsystem.zero();
         intakeSubsystem.close();
         state = TheMachineState.IDLE_RETRACTED;
@@ -111,16 +132,16 @@ public class TheMachine {
     /** Intake deployed but otherwise idle. */
     public void idleDeployed() {
         shooterSubsystem.rest();
-        feederSubsystem.reverse();
-        hopperSubsystem.zero();
-        intakeSubsystem.deploy();
+        feederSubsystem.zero();
+        hopperSubsystem.push();
+        intakeSubsystem.feed();
         state = TheMachineState.IDLE_DEPLOYED;
     }
 
     /** Neutral between-state used by command transitions. */
     public void idle() {
         shooterSubsystem.rest();
-        feederSubsystem.reverse();
+        feederSubsystem.zero();
         hopperSubsystem.zero();
         intakeSubsystem.idleBetween();
         state = TheMachineState.IDLE;
@@ -129,7 +150,7 @@ public class TheMachine {
     /** Run intake pipeline (intake + hopper path) while shooter stays at rest. */
     public void intake() {
         shooterSubsystem.rest();
-        feederSubsystem.reverse();
+        feederSubsystem.zero();
         hopperSubsystem.zero();
         if (intakeWithOffset) {
             intakeSubsystem.intakeWithOffset();
@@ -143,7 +164,7 @@ public class TheMachine {
     public void getReady(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feedGetReady();
-        hopperSubsystem.reverse();
+        hopperSubsystem.idle();
         intakeSubsystem.intake();
         state = TheMachineState.GET_READY;
     }
@@ -311,7 +332,101 @@ public class TheMachine {
         intakeSubsystem.publishTelemetry();
 
         SmartDashboard.putString("TheMachine/State", state.toString());
+        SmartDashboard.putString("TheMachine/LedState", currentLedState.toString());
         SmartDashboard.putBoolean("TheMachine/ManualOverrideEnabled", shooterSubsystem.isManualOverrideEnabled());
+    }
+
+    private void setLedState(LedState desiredLedState) {
+        if (desiredLedState == currentLedState) {
+            return;
+        }
+
+        currentLedState = desiredLedState;
+        switch (desiredLedState) {
+            case OFF:
+                ledController.zeroAll();
+                break;
+            case ZERO:
+                ledController.setAll(255, 255, 255); // White
+                break;
+            case IDLE_RETRACTED:
+                ledController.setAll(0, 0, 255); // Blue
+                break;
+            case IDLE_DEPLOYED:
+                ledController.setAll(0, 180, 255); // Cyan
+                break;
+            case INTAKE:
+                ledController.setAll(255, 120, 0); // Orange
+                break;
+            case GET_READY:
+                ledController.setAll(160, 0, 255); // Purple
+                break;
+            case READY_TO_SHOOT:
+                ledController.setAll(0, 255, 0); // Green
+                break;
+            case GET_READY_PASS:
+                ledController.setAll(255, 0, 255); // Magenta
+                break;
+            case READY_TO_PASS:
+                ledController.setAll(0, 255, 120); // Mint
+                break;
+            case REVERSE:
+                ledController.setAll(255, 0, 0); // Red
+                break;
+            case TEST:
+                ledController.setAll(255, 255, 0); // Yellow
+                break;
+            case MANUAL_OVERRIDE:
+                ledController.setAll(255, 0, 80); // Pink
+                break;
+            case UNKNOWN:
+            default:
+                ledController.setAll(40, 40, 40); // Dim white fallback
+                break;
+        }
+    }
+
+    private void updateLedsForCurrentState() {
+        if (shooterSubsystem.isManualOverrideEnabled()) {
+            setLedState(LedState.MANUAL_OVERRIDE);
+            return;
+        }
+
+        switch (state) {
+            case ZERO:
+                setLedState(LedState.ZERO);
+                break;
+            case IDLE_RETRACTED:
+                setLedState(LedState.IDLE_RETRACTED);
+                break;
+            case IDLE_DEPLOYED:
+                setLedState(LedState.IDLE_DEPLOYED);
+                break;
+            case IDLE:
+                setLedState(LedState.OFF);
+                break;
+            case INTAKE:
+                setLedState(LedState.INTAKE);
+                break;
+            case GET_READY:
+            case SHOOT:
+                setLedState(isShooterReady() ? LedState.READY_TO_SHOOT : LedState.GET_READY);
+                break;
+            case GET_READY_PASS:
+            case PASS:
+                setLedState(isShooterReady() ? LedState.READY_TO_PASS : LedState.GET_READY_PASS);
+                break;
+            case REVERSE:
+                setLedState(LedState.REVERSE);
+                break;
+            case TEST:
+                setLedState(LedState.TEST);
+                break;
+            case NONE:
+            default:
+                setLedState(LedState.UNKNOWN);
+                break;
+        }
     }
 
     public SubsystemBase[] getSubsystems() {
@@ -324,6 +439,8 @@ public class TheMachine {
 
     public void machinePeriodic()
     {
+        updateLedsForCurrentState();
+
         // Manual override disables automatic hub-facing behavior.
         if (!shooterSubsystem.isManualOverrideEnabled()) {
 

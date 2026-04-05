@@ -6,12 +6,15 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.sim.ChassisReference;
@@ -25,7 +28,9 @@ import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.HopperConstants;
 
 /**
@@ -55,6 +60,11 @@ public class HopperSubsystem extends SubsystemBase {
   private double hopperGoalVelocity;
   private double hopperTestRPM;
 
+  private final VoltageOut hopperMainSysIdControl;
+  private final VoltageOut hopperSideSysIdControl;
+  private final SysIdRoutine hopperMainSysIdRoutine;
+  private final SysIdRoutine hopperSideSysIdRoutine;
+
   /** Creates a new hopperSubsystem. */
   public HopperSubsystem() {
     hopperMotor = new TalonFX(HopperConstants.HOPPER_MOTOR_ID);
@@ -81,7 +91,7 @@ public class HopperSubsystem extends SubsystemBase {
 
     status = StatusCode.StatusCodeNotInitialized;
     for (int i = 0; i < 5; ++i) {
-  status = hopperSideMotor.getConfigurator().apply(HopperConstants.HOPPER_MOTOR_CONFIG);
+  status = hopperSideMotor.getConfigurator().apply(HopperConstants.HOPPER_SIDE_MOTOR_CONFIG);
       if (status.isOK()) break;
     }
     if (!status.isOK()) {
@@ -89,7 +99,6 @@ public class HopperSubsystem extends SubsystemBase {
     }
 
     hopperMotor2.setControl(new Follower(hopperMotor.getDeviceID(), MotorAlignmentValue.Opposed));
-  hopperSideMotor.setControl(new Follower(hopperMotor.getDeviceID(), MotorAlignmentValue.Opposed));
 
     hopper1PositionSignal = hopperMotor.getPosition(false);
     hopper1VelocitySignal = hopperMotor.getVelocity(false);
@@ -105,18 +114,74 @@ public class HopperSubsystem extends SubsystemBase {
   hopper3VelocitySignal = hopperSideMotor.getVelocity(false);
   hopper3CurrentSignal = hopperSideMotor.getStatorCurrent(false);
   hopper3VoltageSignal = hopperSideMotor.getMotorVoltage(false);
+
+    hopperMainSysIdControl = new VoltageOut(0).withEnableFOC(false);
+    hopperSideSysIdControl = new VoltageOut(0).withEnableFOC(false);
+  hopperMainSysIdRoutine = createSysIdRoutine("hopper/Main", hopperMotor, hopperMainSysIdControl);
+  hopperSideSysIdRoutine = createSysIdRoutine("hopper/Side", hopperSideMotor, hopperSideSysIdControl);
     
     hopperVelocityControl = HopperConstants.HOPPER_VELOCITY_CONTROL.clone();
   }
 
+  private SysIdRoutine createSysIdRoutine(String logPrefix, TalonFX motor, VoltageOut voltageControl) {
+    return new SysIdRoutine(
+        new SysIdRoutine.Config(
+            null,
+            Volts.of(4),
+            null,
+            state -> SignalLogger.writeString(logPrefix + "_State", state.toString())
+        ),
+        new SysIdRoutine.Mechanism(
+            output -> {
+              motor.setControl(voltageControl.withOutput(output.in(Volts)));
+              SignalLogger.writeDouble(logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
+              SignalLogger.writeDouble(logPrefix + "_Position", motor.getPosition().getValueAsDouble());
+              SignalLogger.writeDouble(logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
+            },
+            null,
+            this
+        )
+    );
+  }
+
+  public Command hopperMainSysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return hopperMainSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> hopperStop());
+  }
+
+  public Command hopperMainSysIdDynamic(SysIdRoutine.Direction direction) {
+    return hopperMainSysIdRoutine.dynamic(direction).finallyDo(interrupted -> hopperStop());
+  }
+
+  public Command hopperSideSysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return hopperSideSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> {
+      hopperSideMotor.set(0.0);
+    });
+  }
+
+  public Command hopperSideSysIdDynamic(SysIdRoutine.Direction direction) {
+    return hopperSideSysIdRoutine.dynamic(direction).finallyDo(interrupted -> {
+      hopperSideMotor.set(0.0);
+    });
+  }
+
   public void hopperStop() {
     hopperMotor.set(0.0);
+    hopperSideMotor.set(0.0);
   }
 
   public void setHopperSpeed(double velocity) {
     // Convert mechanism rps to motor-side rps through gear reduction.
+    setHopperSpeeds(velocity, velocity);
+  }
+
+  public void setHopperSpeeds(double vel1, double vel2)
+  {
+        // Convert mechanism rps to motor-side rps through gear reduction.
     hopperMotor.setControl(
-      hopperVelocityControl.withVelocity(velocity * HopperConstants.HOPPER_GEAR_REDUCTION)
+      hopperVelocityControl.withVelocity(vel1 * HopperConstants.HOPPER_GEAR_REDUCTION)
+    );
+    hopperSideMotor.setControl(
+      hopperVelocityControl.withVelocity(vel2 * HopperConstants.HOPPER_SIDE_GEAR_REDUCTION)
     );
   }
 
@@ -145,18 +210,19 @@ public class HopperSubsystem extends SubsystemBase {
 
   private void refreshStatusSignals() {
     BaseStatusSignal.refreshAll(
-        hopper1PositionSignal,
+        //hopper1PositionSignal,
         hopper1VelocitySignal,
-        hopper1CurrentSignal,
-        hopper1VoltageSignal,
-        hopper2PositionSignal,
+        //hopper1CurrentSignal,
+        //hopper1VoltageSignal,
+        //hopper2PositionSignal,
         hopper2VelocitySignal,
-        hopper2CurrentSignal,
-  hopper2VoltageSignal,
-  hopper3PositionSignal,
-  hopper3VelocitySignal,
-  hopper3CurrentSignal,
-  hopper3VoltageSignal);
+        //hopper2CurrentSignal,
+        //hopper2VoltageSignal,
+        //hopper3PositionSignal,
+        hopper3VelocitySignal
+        //hopper3CurrentSignal,
+        //hopper3VoltageSignal
+        );
   }
 
   // SIMULATION
@@ -164,6 +230,9 @@ public class HopperSubsystem extends SubsystemBase {
   private DCMotor hopperDcMotor;
   private LinearSystem<N2, N1, N2> hopperSystem;
   private DCMotorSim hopperSim;
+  private TalonFXSimState hopperMotorSimState;
+  private TalonFXSimState hopperMotor2SimState;
+  private TalonFXSimState hopperMotor3SimState;
 
   private boolean isSimulationInitialized = false;
 
@@ -188,9 +257,9 @@ public class HopperSubsystem extends SubsystemBase {
         }
         else {
       // Step simulation and mirror state into both hopper motors.
-            final var hopperMotorSimState = hopperMotor.getSimState();
-            final var hopperMotor2SimState = hopperMotor2.getSimState();
-            final var hopperMotor3SimState = hopperSideMotor.getSimState();
+            hopperMotorSimState = hopperMotor.getSimState();
+            hopperMotor2SimState = hopperMotor2.getSimState();
+            hopperMotor3SimState = hopperSideMotor.getSimState();
 
             hopperMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
             hopperMotor2SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
@@ -237,8 +306,8 @@ public class HopperSubsystem extends SubsystemBase {
 
   public void push() {
     // Faster forward push mode for quick transfer.
-    hopperGoalVelocity = HopperConstants.HOPPER_PUSHING_VELOCITY.in(RotationsPerSecond);
-    setHopperSpeed(hopperGoalVelocity);
+    hopperGoalVelocity = 0;
+    setHopperSpeeds(hopperGoalVelocity, HopperConstants.HOPPER_SIDE_PUSHING_VELOCITY.in(RotationsPerSecond));
   }
 
   public void reverse() {

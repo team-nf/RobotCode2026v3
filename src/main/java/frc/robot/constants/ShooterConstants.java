@@ -27,17 +27,17 @@ public class ShooterConstants {
     public static final int SECOND_SHOOTER_MOTOR_ID = 52;
     public static final int HOOD_MOTOR_ID = 55;
     public static final int TURRET_MOTOR_ID = 56;
-    // Assumption: next free CAN ID is 57 for turret absolute encoder.
-    public static final int TURRET_CANCODER_ID = 57;
+    // Through-bore absolute encoder digital input (DIO) channel for turret angle.
+    public static final int TURRET_THROUGHBORE_DIO_CHANNEL = 0;
 
     // Shooter Math Constants
-    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.81; // in meters (2 inches)
-    public static final double SHOOTER_VELOCITY_SIM_TRANSFER_COEFFICIENT = 0.675; // in meters (2 inches)
+    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.775; // in meters (2 inches)
+    public static final double SHOOTER_VELOCITY_SIM_TRANSFER_COEFFICIENT = 0.775; // in meters (2 inches)
 
     // Configs
     public static final int NUMBER_OF_FLYWHEEL_MOTORS = 2;
 
-    public static final AngularVelocity FLYWHEEL_ALLOWABLE_ERROR = RotationsPerSecond.of(1.5); // Allowable error in radians per second
+    public static final AngularVelocity FLYWHEEL_ALLOWABLE_ERROR = RotationsPerSecond.of(2.5); // Allowable error in radians per second
     public static final Angle HOOD_ALLOWABLE_ERROR = Degrees.of(1.5); // Allowable error in radians
     public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(4);
     public static final AngularVelocity TURRET_ALLOWABLE_SPEED_TO_SHOOT = RotationsPerSecond.of(15);
@@ -65,7 +65,10 @@ public class ShooterConstants {
             .withCurrentLimits(new CurrentLimitsConfigs()
                 .withSupplyCurrentLimitEnable(true)
                 .withSupplyCurrentLimit(38)
-                .withStatorCurrentLimit(38));
+                .withStatorCurrentLimit(38))
+            .withMotorOutput(new MotorOutputConfigs()
+                .withInverted(InvertedValue.Clockwise_Positive)
+                .withNeutralMode(NeutralModeValue.Coast));
 
     public static final VelocityVoltage SHOOTER_VELOCITY_CONTROL = new VelocityVoltage(0)
         .withSlot(0)
@@ -92,10 +95,10 @@ public class ShooterConstants {
                 .withPeakReverseVoltage(-10))
             .withCurrentLimits(new CurrentLimitsConfigs()
                 .withSupplyCurrentLimitEnable(true)
-                .withSupplyCurrentLimit(38)
-                .withStatorCurrentLimit(38))
+                .withSupplyCurrentLimit(25)
+                .withStatorCurrentLimit(25))
             .withMotorOutput(new MotorOutputConfigs()
-                .withInverted(InvertedValue.CounterClockwise_Positive)
+                .withInverted(InvertedValue.Clockwise_Positive)
                 .withNeutralMode(NeutralModeValue.Coast));
 
     public static final PositionVoltage HOOD_POSITION_CONTROL = new PositionVoltage(0)
@@ -103,20 +106,20 @@ public class ShooterConstants {
         .withEnableFOC(false);
 
     public static final double TURRET_AGGRESSIVE_KS = 1.0;
-    public static final double TURRET_AGGRESSIVE_KV = 10.0;
-    public static final double TURRET_AGGRESSIVE_KP = 60.0;
-    public static final double TURRET_AGGRESSIVE_KI = 0.0;
+    public static final double TURRET_AGGRESSIVE_KV = 0.0;
+    public static final double TURRET_AGGRESSIVE_KP = 3;
+    public static final double TURRET_AGGRESSIVE_KI = 0.1;
     public static final double TURRET_AGGRESSIVE_KD = 0.0;
-    public static final double TURRET_AGGRESSIVE_KA = 30.0;
+    public static final double TURRET_AGGRESSIVE_KA = 0.4;
 
 
     public static final double TURRET_GENTLE_KS = 1;
     public static final double TURRET_GENTLE_KV = 0.0;
-    public static final double TURRET_GENTLE_KP = 8.0;
-    public static final double TURRET_GENTLE_KI = 1;
+    public static final double TURRET_GENTLE_KP = 1.0;
+    public static final double TURRET_GENTLE_KI = 0;
     public static final double TURRET_GENTLE_KD = 0.01;
 
-    public static final double TURRET_SMALL_ERROR_THRESHOLD_DEG = 16.0;
+    public static final double TURRET_SMALL_ERROR_THRESHOLD_DEG = 12.0;
 
     public static final int TURRET_AGGRESSIVE_SLOT = 0;
     public static final int TURRET_GENTLE_SLOT = 1;
@@ -136,15 +139,15 @@ public class ShooterConstants {
             .withKI(TURRET_GENTLE_KI)
             .withKD(TURRET_GENTLE_KD))
         .withVoltage(new VoltageConfigs()
-            .withPeakForwardVoltage(12)
-            .withPeakReverseVoltage(-12))
+            .withPeakForwardVoltage(10)
+            .withPeakReverseVoltage(-10))
         .withCurrentLimits(new CurrentLimitsConfigs()
             .withSupplyCurrentLimitEnable(true)
-            .withSupplyCurrentLimit(39)
-            .withStatorCurrentLimit(39))
+            .withSupplyCurrentLimit(25)
+            .withStatorCurrentLimit(25))
         .withMotorOutput(new MotorOutputConfigs()
             .withInverted(InvertedValue.Clockwise_Positive)
-            .withNeutralMode(NeutralModeValue.Brake));
+            .withNeutralMode(NeutralModeValue.Coast));
 
     public static final PositionVoltage TURRET_POSITION_CONTROL = new PositionVoltage(0)
         .withSlot(0)
@@ -156,11 +159,19 @@ public class ShooterConstants {
     public static final double HOOD_GEAR_REDUCTION = 324.0/20.0*26/18*56/8;
     
     public static final double TURRET_GEAR_REDUCTION = (Robot.isReal()) ? 36.44 : 5;
+    // Turret mechanism frame zero corresponds to robot-frame 180 degrees.
+    public static final double TURRET_ZERO_IN_ROBOT_FRAME_DEG = 180.0;
 
-    public static final double TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION = 45.0;
-    public static final double TURRET_ABSOLUTE_OFFSET_DEGREES = 0.0;
-    public static final Angle MIN_TURRET_ANGLE = Degrees.of(-350);
-    public static final Angle MAX_TURRET_ANGLE = Degrees.of(350);
+    // Negative scale to match mechanical direction: CCW turret motion should increase turret angle.
+    public static final double TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION = -45.0;
+    // Throughbore absolute reading at turret-frame zero (which is robot-frame 180 deg).
+    public static final double TURRET_ABSOLUTE_ZERO_ROTATION = 0.327;
+    // Offset used in: turretDeg = throughboreRot * scale + offset.
+    public static final double TURRET_ABSOLUTE_OFFSET_DEGREES =
+        -TURRET_ABSOLUTE_ZERO_ROTATION * TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION;
+    // Full turret working range in turret frame.
+    public static final Angle MIN_TURRET_ANGLE = Degrees.of(-190);
+    public static final Angle MAX_TURRET_ANGLE = Degrees.of(190);
 
     private static final Mass FLYWHEEL_MASS = Kilogram.of(0.1); 
     public static final Distance FLYWHEEL_RADIUS = Meters.of(0.05); // Radius of the flywheel in meters
