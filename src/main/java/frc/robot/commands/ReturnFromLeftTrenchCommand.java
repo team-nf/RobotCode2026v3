@@ -34,7 +34,7 @@ public class ReturnFromLeftTrenchCommand extends ParallelCommandGroup {
       PathPlannerPath path = PathPlannerPath.fromPathFile("ReturnFromLeftTrench");
 
       // Path files are authored in blue-frame coordinates; flip for red alliance.
-      if (!Container.isBlue) path = path.flipPath();
+      //if (!Container.isBlue) path = path.flipPath();
 
       builtCommand = AutoBuilder.pathfindThenFollowPath(path, DriveConstants.PATH_CONSTRAINTS_FOLLOW_PATH);
     } catch (IOException | ParseException | FileVersionException ex) {

@@ -16,6 +16,7 @@ import frc.robot.commands.ReturnFromLeftTrenchCommand;
 import frc.robot.commands.ReturnFromRightTrenchCommand;
 import frc.robot.commands.SwerveTeleopCommand;
 import frc.robot.commands.TestMachineCommand;
+import frc.robot.commands.TestShootCommand;
 import frc.robot.commands.AutoCommands.AimAndPassAutoCommand;
 import frc.robot.commands.AutoCommands.AimAndShootAutoCommand;
 import frc.robot.constants.Dimensions;
@@ -29,6 +30,7 @@ import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.utils.AllianceUtil;
+import frc.robot.utils.Container;
 import frc.robot.utils.FuelSim;
 import frc.robot.utils.HopperSim;
 import frc.robot.utils.ShooterSim;
@@ -39,6 +41,8 @@ import static edu.wpi.first.units.Units.Meters;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
+import edu.wpi.first.networktables.BooleanEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -75,10 +79,16 @@ public class RobotContainer {
   private final IdleDeployedCommand m_idleDeployedCommand;
   private final IntakeCommand m_intakeCommand;
   private final TestMachineCommand m_testMachineCommand;
+  private final TestShootCommand m_testShootCommand;
+  private final Command m_leftBumperTrenchCommand;
+  private final BooleanEntry telemetryEnabledEntry = NetworkTableInstance.getDefault()
+      .getBooleanTopic("Conf/EnableTelemetry")
+    .getEntry(false);
 
   // Sim telemetry is intentionally throttled to avoid NetworkTables bandwidth/GC spikes.
   private static final double SIM_TELEMETRY_PERIOD_SEC = 0.05; // 20 Hz
   private double nextSimTelemetryTimeSec = 0.0;
+  private double lastContainerPeriodicTimeSec = Timer.getFPGATimestamp();
   private boolean sysIdCommandsPublished = false;
 
   public RobotContainer() {
@@ -104,6 +114,19 @@ public class RobotContainer {
     m_idleDeployedCommand = new IdleDeployedCommand(m_theMachine);
     m_intakeCommand = new IntakeCommand(m_theMachine);
     m_testMachineCommand = new TestMachineCommand(m_theMachine);
+    m_testShootCommand = new TestShootCommand(m_theMachine);
+
+    m_leftBumperTrenchCommand = new ConditionalCommand(
+      new ConditionalCommand(new GoFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
+                             new GoFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
+                             m_drivetrainSubsystem::isRobotOnLeftSide),
+
+      new ConditionalCommand(new ReturnFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
+                             new ReturnFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
+                             m_drivetrainSubsystem::isRobotOnLeftSide),
+
+      m_drivetrainSubsystem::isRobotOnTheShootingZone
+    );
 
     configureBindings();
 
@@ -116,6 +139,8 @@ public class RobotContainer {
     );
 
     SmartDashboard.putData("Conf/Auto Chooser", autoChooser);
+    SmartDashboard.putBoolean("Conf/IsBlue", Container.isBlue);
+  telemetryEnabledEntry.setDefault(false);
     // SysId commands are intentionally not published at startup to reduce dashboard load.
 
     if (Robot.isSimulation()) {
@@ -163,18 +188,7 @@ public class RobotContainer {
   // Left bumper behavior depends on current zone:
     // - From shooting zone, go out to trench pickup path (left/right based on side)
     // - Outside shooting zone, return from trench back toward shooting area
-    m_driverController.leftBumper().whileTrue(
-      new ConditionalCommand(
-        new ConditionalCommand(new GoFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                               new GoFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                               m_drivetrainSubsystem::isRobotOnLeftSide),
-
-        new ConditionalCommand(new ReturnFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                               new ReturnFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
-                               m_drivetrainSubsystem::isRobotOnLeftSide),
-
-        m_drivetrainSubsystem::isRobotOnTheShootingZone
-      ));
+    m_driverController.leftBumper().whileTrue(m_leftBumperTrenchCommand);
 
     // Named commands are used by PathPlanner autos.
     // Keep names stable once autos are authored to avoid broken references.
@@ -199,9 +213,18 @@ public class RobotContainer {
   }
 
   public void containerPeriodic() {
+  boolean telemetryEnabled = telemetryEnabledEntry.get(false);
+
+    double nowSec = Timer.getFPGATimestamp();
+    double loopTimeMs = (nowSec - lastContainerPeriodicTimeSec) * 1000.0;
+    lastContainerPeriodicTimeSec = nowSec;
+
+
+    SmartDashboard.putNumber("Conf/RobotContainerLoopMs", TelemetryConstants.roundTelemetry(loopTimeMs));
+    
+
     // Sim-only pose publishing for AdvantageScope / field visualization.
     if (Robot.isSimulation()) {
-      double nowSec = Timer.getFPGATimestamp();
       if (nowSec >= nextSimTelemetryTimeSec) {
         nextSimTelemetryTimeSec = nowSec + SIM_TELEMETRY_PERIOD_SEC;
         m_theMachine.calculateSubsystemPoses();
@@ -209,7 +232,11 @@ public class RobotContainer {
       }
     }
     else {
-      //publishTelemetry();
+      if(telemetryEnabled)
+      {
+        SmartDashboard.putNumber("Conf/RobotContainerLoopMs", TelemetryConstants.roundTelemetry(loopTimeMs));
+        publishTelemetry();
+      }
 
     }
 
@@ -221,15 +248,19 @@ public class RobotContainer {
 
   public void publishTelemetry()
   {
+    if (!telemetryEnabledEntry.get(false)) {
+      return;
+    }
+
     m_theMachine.publishTelemetry();
 
-  SmartDashboard.putNumber("DistanceToHub", TelemetryConstants.roundTelemetry(m_drivetrainSubsystem.getDistanceToHub()));
+    SmartDashboard.putNumber("DistanceToHub", TelemetryConstants.roundTelemetry(m_drivetrainSubsystem.getDistanceToHub()));
 
   }
 
   public Command getTestCommand()
   {
-    return m_testMachineCommand;
+    return m_testShootCommand;
   }
 
   private void configureSims() {

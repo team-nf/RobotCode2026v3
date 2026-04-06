@@ -720,6 +720,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Vision sampling: run vision-heavy work once every VISION_LOOPS scheduler loops
     private int visionLoopCounter = 0;
     private static final int VISION_LOOPS = 4; // ~10Hz at 20ms loop; tune as needed
+    // Disabled relocalization can be expensive over NT; run at a lower cadence.
+    private int disabledVisionLoopCounter = 0;
+    private static final int DISABLED_VISION_LOOPS = 10; // ~5Hz at 20ms loop
 
     public void visionPeriodic()
     {
@@ -732,6 +735,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             // falling edge: clear flags
             isEnabled = false;
             isLLReady = false;
+            disabledVisionLoopCounter = DISABLED_VISION_LOOPS;
         }
 
         if (isEnabled) {
@@ -748,7 +752,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 }
             }
         } else {
-            disabledPeriodic();
+            // Disabled loop can be expensive due to relocalization + LL config writes.
+            // Keep periodic lightweight by throttling to a slower cadence.
+            disabledVisionLoopCounter++;
+            if (disabledVisionLoopCounter >= DISABLED_VISION_LOOPS) {
+                disabledVisionLoopCounter = 0;
+                disabledPeriodic();
+            }
         }
     }
 

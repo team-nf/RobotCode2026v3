@@ -113,6 +113,14 @@ public class TheMachine {
         return goalTurretAngleForHub;
     }
 
+
+    private double distanceToHub;
+    public double getHoodAngleForHub()
+    {
+        distanceToHub = Math.hypot(goalHubPose.getX() - shooterPoseX, goalHubPose.getY() - shooterPoseY);
+        return ShooterCalculator.hoodAngleFormula(distanceToHub);
+    }
+
     /** Reset mechanisms to a known zero-like safe state. */
     public void zero() {
         shooterSubsystem.zero();
@@ -262,6 +270,28 @@ public class TheMachine {
         feederSubsystem.test(feederBeltRps, feederFeedRps);
         hopperSubsystem.test(hopperRps);
         intakeSubsystem.test(intakeRps, intakeExtensionMeters);
+        state = TheMachineState.TEST;
+    }
+
+    public void testWithTurretToHubAndHoodCalculated(double shooterFlywheelRps,
+                                    double feederBeltRps,
+                                    double feederFeedRps,
+                                    double hopperRps,
+                                    double intakeRps,
+                                    double intakeExtensionMeters)
+    {
+        shooterSubsystem.test(shooterFlywheelRps, getTurretAngleToHub());
+        feederSubsystem.test(feederBeltRps, feederFeedRps);
+        hopperSubsystem.test(hopperRps);
+        intakeSubsystem.test(intakeRps, intakeExtensionMeters);
+        state = TheMachineState.TEST;
+    }
+
+    public void shootTest(double shooterFlywheelRps, double shooterHoodRot, double shooterTurretDeg) {
+        shooterSubsystem.shoot(shooterFlywheelRps, shooterHoodRot, shooterTurretDeg);
+        feederSubsystem.feed();
+        hopperSubsystem.feed();
+        intakeSubsystem.feed();
         state = TheMachineState.TEST;
     }
 

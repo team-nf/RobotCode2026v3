@@ -31,7 +31,7 @@ public class ShooterConstants {
     public static final int TURRET_THROUGHBORE_DIO_CHANNEL = 0;
 
     // Shooter Math Constants
-    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.95; // in meters (2 inches)
+    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.91; // in meters (2 inches)
 
     // Configs
     public static final int NUMBER_OF_FLYWHEEL_MOTORS = 2;
@@ -41,7 +41,7 @@ public class ShooterConstants {
     public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(4);
     public static final AngularVelocity TURRET_ALLOWABLE_SPEED_TO_SHOOT = RotationsPerSecond.of(15);
 
-    public static final double TURRET_LOOKAHEAD_SEC = 0.1;
+    public static final double TURRET_LOOKAHEAD_SEC = 0.02;
 
     public static final double SHOOTER_KS = 0.05;
     public static final double SHOOTER_KV = 0.115;
@@ -204,6 +204,6 @@ public class ShooterConstants {
 
     public static final AngularVelocity MIN_FLYWHEEL_SPEED = RotationsPerSecond.of(500/60); // in RPS
     public static final AngularVelocity MAX_FLYWHEEL_SPEED = RotationsPerSecond.of(3750/60); // in RPS
-    public static final AngularVelocity FLYWHEEL_REST_SPEED = RotationsPerSecond.of(750/60); // in RPS
+    public static final AngularVelocity FLYWHEEL_REST_SPEED = RotationsPerSecond.of(0/60); // in RPS
 
 }
