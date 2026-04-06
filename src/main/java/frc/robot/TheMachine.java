@@ -10,15 +10,14 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.constants.TheMachineConstants;
-import frc.robot.constants.PoseConstants;
 import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.States.TheMachineStates.TheMachineState;
+import frc.robot.constants.TheMachineConstants;
 import frc.robot.subsystems.FeederSubsystem;
 import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
-import frc.robot.utils.Container;
+import frc.robot.utils.AllianceUtil;
 import frc.robot.utils.LEDController;
 import frc.robot.utils.ShooterCalculator;
 
@@ -34,6 +33,7 @@ public class TheMachine {
     private final HopperSubsystem hopperSubsystem;
     private final IntakeSubsystem intakeSubsystem;
     private final FeederSubsystem feederSubsystem;
+    private final SubsystemBase[] subsystems;
 
     // Current orchestrated machine mode.
     private TheMachineState state = TheMachineState.IDLE_RETRACTED;
@@ -69,26 +69,20 @@ public class TheMachine {
         this.hopperSubsystem = hopperSubsystem;
         this.intakeSubsystem = intakeSubsystem;
         this.feederSubsystem = feederSubsystem;
+        this.subsystems = new SubsystemBase[] {this.shooterSubsystem, this.feederSubsystem, this.hopperSubsystem, this.intakeSubsystem};
 
         this.robotPose2dSupplier = robotPose2dSupplier;
     this.ledController = new LEDController(TheMachineConstants.LED_PWM_PORT, TheMachineConstants.LED_STRIP_LENGTH);
 
         // Choose the alliance-correct hub pose for aiming calculations.
-        if(Container.isBlue)
-        {
-            goalHubPose = PoseConstants.BLUE_HUB_AIM_POSE;
-        }
-        else
-        {
-            goalHubPose = PoseConstants.RED_HUB_AIM_POSE;
-        }
-    
+        goalHubPose = AllianceUtil.getHubAimPose();
     }
 
     private double goalTurretAngleForHub;
     private Pose2d robotPose2d;
 
-    Pose2d shooterPose2d;
+    double shooterPoseX;
+    double shooterPoseY;
     double robotHeadingRad;
     double shooterToHubAngleRad;
 
@@ -101,13 +95,15 @@ public class TheMachine {
 
     public double getTurretAngleToHub()
     {
+        goalHubPose = AllianceUtil.getHubAimPose();
         robotPose2d = robotPose2dSupplier.get();
-        shooterPose2d = ShooterCalculator.getShooterPoseFromRobotPose(robotPose2d);
-
         robotHeadingRad = robotPose2d.getRotation().getRadians();
+        shooterPoseX = ShooterCalculator.getShooterXFromRobotState(robotPose2d.getX(), robotHeadingRad);
+        shooterPoseY = ShooterCalculator.getShooterYFromRobotState(robotPose2d.getY(), robotHeadingRad);
+
         shooterToHubAngleRad = Math.atan2(
-            goalHubPose.getY() - shooterPose2d.getY(),
-            goalHubPose.getX() - shooterPose2d.getX());
+            goalHubPose.getY() - shooterPoseY,
+            goalHubPose.getX() - shooterPoseX);
 
         goalTurretAngleForHub = Math.toDegrees(
             Math.atan2(
@@ -196,7 +192,7 @@ public class TheMachine {
     public void getReadyPass(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
         shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
         feederSubsystem.feedGetReady();
-        hopperSubsystem.reverse();
+        hopperSubsystem.idle();
         intakeSubsystem.intake();
         state = TheMachineState.GET_READY_PASS;
     }
@@ -284,6 +280,11 @@ public class TheMachine {
     public boolean isShooterReady()
     {
         return shooterSubsystem.isReadyToShoot();
+    }
+
+    public boolean isPassReady()
+    {
+        return shooterSubsystem.isReadyToPass();
     }
 
     public boolean isAbleToIntake() {
@@ -452,7 +453,7 @@ public class TheMachine {
     }
 
     public SubsystemBase[] getSubsystems() {
-        return new SubsystemBase[] {shooterSubsystem, feederSubsystem, hopperSubsystem, intakeSubsystem};
+        return subsystems;
     }
 
     public boolean isManualOverrideEnabled() {

@@ -5,7 +5,6 @@
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.BaseStatusSignal;
@@ -301,19 +300,19 @@ public class HopperSubsystem extends SubsystemBase {
 
   public void feed() {
     // Normal forward transport toward feeder.
-    hopperGoalVelocity = HopperConstants.HOPPER_FEEDING_VELOCITY.in(RotationsPerSecond);
+    hopperGoalVelocity = HopperConstants.HOPPER_FEEDING_VELOCITY_RPS;
     setHopperSpeed(hopperGoalVelocity);
   }
 
   public void push() {
     // Faster forward push mode for quick transfer.
     hopperGoalVelocity = 0;
-    setHopperSpeeds(hopperGoalVelocity, HopperConstants.HOPPER_SIDE_PUSHING_VELOCITY.in(RotationsPerSecond));
+    setHopperSpeeds(hopperGoalVelocity, HopperConstants.HOPPER_SIDE_PUSHING_VELOCITY_RPS);
   }
 
   public void reverse() {
     // Reverse direction to clear jams.
-    hopperGoalVelocity = HopperConstants.HOPPER_REVERSE_VELOCITY.in(RotationsPerSecond);
+    hopperGoalVelocity = HopperConstants.HOPPER_REVERSE_VELOCITY_RPS;
     setHopperSpeed(hopperGoalVelocity);
   }
 

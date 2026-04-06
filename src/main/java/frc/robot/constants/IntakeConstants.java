@@ -61,10 +61,17 @@ public class IntakeConstants {
 
     // Linear extension targets
     public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
-    public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(285);
-    public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(130);
+    public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(263);
+    public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(120);
     public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
     public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);
+
+    // Cached primitive conversion values (avoid repeated .in(...) in runtime paths)
+    public static final double INTAKE_EXTENSION_RETRACTED_METERS = INTAKE_EXTENSION_RETRACTED.in(Meters);
+    public static final double INTAKE_EXTENSION_DEPLOYED_METERS = INTAKE_EXTENSION_DEPLOYED.in(Meters);
+    public static final double INTAKE_EXTENSION_FEED_METERS = INTAKE_EXTENSION_FEED.in(Meters);
+    public static final double INTAKE_EXTENSION_MAX_METERS = INTAKE_EXTENSION_MAX.in(Meters);
+    public static final double INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS = INTAKE_EXTENSION_ALLOWABLE_ERROR.in(Meters);
 
     public static double extensionMetersToMotorRotations(double meters) {
         return meters / INTAKE_LINEAR_METERS_PER_MOTOR_ROTATION;
@@ -75,28 +82,33 @@ public class IntakeConstants {
     }
 
     public static final AngularVelocity INTAKE_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
+    public static final double INTAKE_ALLOWABLE_ERROR_RPS = INTAKE_ALLOWABLE_ERROR.in(RotationsPerSecond);
 
-    public static final AngularVelocity INTAKE_INTAKING_VELOCITY = RotationsPerSecond.of(35); // in RPS
+    public static final AngularVelocity INTAKE_INTAKING_VELOCITY = RotationsPerSecond.of(55); // in RPS
     public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(10); // in RPS
     public static final AngularVelocity INTAKE_REVERSE_VELOCITY = RotationsPerSecond.of(-15.0); // in RPS
     public static final AngularVelocity INTAKE_REVERSE_FAILSAFE_VELOCITY = RotationsPerSecond.of(-5.0); // in RPS
+    public static final double INTAKE_INTAKING_VELOCITY_RPS = INTAKE_INTAKING_VELOCITY.in(RotationsPerSecond);
+    public static final double INTAKE_FEEDING_VELOCITY_RPS = INTAKE_FEEDING_VELOCITY.in(RotationsPerSecond);
+    public static final double INTAKE_REVERSE_VELOCITY_RPS = INTAKE_REVERSE_VELOCITY.in(RotationsPerSecond);
+    public static final double INTAKE_REVERSE_FAILSAFE_VELOCITY_RPS = INTAKE_REVERSE_FAILSAFE_VELOCITY.in(RotationsPerSecond);
     
     // Compatibility fields: "ARM_*" names now represent linear position mapped as motor rotations.
     public static final Angle INTAKE_ARM_DEPLOYED_ANGLE = Rotations.of(
-        extensionMetersToMotorRotations(INTAKE_EXTENSION_DEPLOYED.in(Meters))
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_DEPLOYED_METERS)
     );
     public static final Angle INTAKE_ARM_RETRACTED_ANGLE = Rotations.of(
-        extensionMetersToMotorRotations(INTAKE_EXTENSION_RETRACTED.in(Meters))
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_RETRACTED_METERS)
     );
     public static final Angle INTAKE_ARM_START_ANGLE = INTAKE_ARM_RETRACTED_ANGLE;
 
     public static final Angle INTAKE_FEED_ANGLE = Rotations.of(
-        extensionMetersToMotorRotations(INTAKE_EXTENSION_FEED.in(Meters))
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_FEED_METERS)
     );
     public static final Angle INTAKE_ARM_BETWEEN_ANGLE = INTAKE_FEED_ANGLE;
 
     public static final Angle INTAKE_ARM_ALLOWABLE_ERROR = Rotations.of(
-        extensionMetersToMotorRotations(INTAKE_EXTENSION_ALLOWABLE_ERROR.in(Meters))
+        extensionMetersToMotorRotations(INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS)
     );
 
     

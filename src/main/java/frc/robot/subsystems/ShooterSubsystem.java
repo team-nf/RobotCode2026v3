@@ -130,6 +130,16 @@ public class ShooterSubsystem extends SubsystemBase {
     private double tempTurretDegError;
     private double tempHoodAngleDeg;
     private double tempTurretAngleDeg;
+    private double tempFlywheelGoalAbsRps;
+    private double tempFlywheelSpeedAbsRps;
+    private double tempTurretSpeedAbsRps;
+    private double tempFlywheelSetpointDeltaRps;
+    private double tempTurretSetpointDeltaDeg;
+
+    private boolean flywheelReadyLatchEnabled = false;
+    private boolean turretReadyLatchEnabled = false;
+    private double flywheelLatchGoalVelocityAbsRps = 0.0;
+    private double turretLatchGoalAngleDegrees = 0.0;
 
     private final VoltageOut sysIdVoltageControl;
     private final SysIdRoutine flywheelSysIdRoutine;
@@ -382,6 +392,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Stop all motors. */
     public void zero() {
+        resetReadyLatches();
         flywheelGoalVelocity = 0;
         hoodGoalAngle = ShooterCalculator.calculateRestHoodAngle();
         turretGoalAngleDegrees = 180;
@@ -392,6 +403,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     /** Hold flywheel at idle speed, park hood at min angle. */
     public void rest() {
+        resetReadyLatches();
         flywheelGoalVelocity = ShooterCalculator.calculateRestFlywheelSpeed();
         hoodGoalAngle = ShooterCalculator.calculateRestHoodAngle();
         setFlywheelSpeed(flywheelGoalVelocity);
@@ -407,6 +419,7 @@ public class ShooterSubsystem extends SubsystemBase {
             flywheelGoalVelocity = velocityRPS;
             hoodGoalAngle = hoodAngle;
             turretGoalAngleDegrees = setTurretAngleDegrees(turretAngleDegrees);
+            resetReadyLatchesIfGoalChanged();
             setFlywheelSpeed(flywheelGoalVelocity);
             setHoodAngle(hoodGoalAngle);
             return;
@@ -417,6 +430,7 @@ public class ShooterSubsystem extends SubsystemBase {
             flywheelGoalVelocity = 25;
             hoodGoalAngle = 0.0;
             turretGoalAngleDegrees = setTurretAngleDegrees(180);
+            resetReadyLatchesIfGoalChanged();
             setFlywheelSpeed(flywheelGoalVelocity);
             setHoodAngle(hoodGoalAngle);
             return;
@@ -495,10 +509,54 @@ public class ShooterSubsystem extends SubsystemBase {
     private static final double FLYWHEEL_ERROR_RPS = ShooterConstants.FLYWHEEL_ALLOWABLE_ERROR.in(RotationsPerSecond);
     private static final double HOOD_ERROR_DEG = ShooterConstants.HOOD_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
     private static final double TURRET_ERROR_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
+    private static final double FLYWHEEL_LATCH_ENGAGE_ERROR_RPS = FLYWHEEL_ERROR_RPS;
+    private static final double FLYWHEEL_LATCH_DISENGAGE_ERROR_RPS = FLYWHEEL_ERROR_RPS * 2.5;
+    private static final double TURRET_LATCH_ENGAGE_ERROR_DEG = TURRET_ERROR_DEG;
+    private static final double TURRET_LATCH_DISENGAGE_ERROR_DEG = TURRET_ERROR_DEG * 2.0;
+    private static final double TURRET_LATCH_ENGAGE_SPEED_RPS = ShooterConstants.TURRET_ALLOWABLE_SPEED_TO_SHOOT.in(RotationsPerSecond);
+    private static final double TURRET_LATCH_DISENGAGE_SPEED_RPS = TURRET_LATCH_ENGAGE_SPEED_RPS * 1.5;
+    private static final double PASS_HOOD_ERROR_DEG = HOOD_ERROR_DEG * 1.5;
+    private static final double PASS_TURRET_ERROR_DEG = TURRET_LATCH_DISENGAGE_ERROR_DEG;
+    private static final double PASS_TURRET_SPEED_RPS = TURRET_LATCH_DISENGAGE_SPEED_RPS;
+    private static final double PASS_FLYWHEEL_ERROR_RPS = FLYWHEEL_LATCH_DISENGAGE_ERROR_RPS;
+    private static final double PASS_MIN_FLYWHEEL_RPS = 10.0;
+
+    private void resetReadyLatches() {
+        flywheelReadyLatchEnabled = false;
+        turretReadyLatchEnabled = false;
+    }
+
+    private void resetReadyLatchesIfGoalChanged() {
+        tempFlywheelGoalAbsRps = Math.abs(flywheelGoalVelocity);
+        tempFlywheelSetpointDeltaRps = Math.abs(tempFlywheelGoalAbsRps - flywheelLatchGoalVelocityAbsRps);
+        // Use wider thresholds so normal moving-pass updates do not continuously clear latches.
+        if (tempFlywheelSetpointDeltaRps > FLYWHEEL_LATCH_DISENGAGE_ERROR_RPS) {
+            flywheelReadyLatchEnabled = false;
+        }
+        flywheelLatchGoalVelocityAbsRps = tempFlywheelGoalAbsRps;
+
+        tempTurretSetpointDeltaDeg = Math.abs(normalizeToMinus180To180(turretGoalAngleDegrees - turretLatchGoalAngleDegrees));
+        if (tempTurretSetpointDeltaDeg > TURRET_LATCH_DISENGAGE_ERROR_DEG) {
+            turretReadyLatchEnabled = false;
+        }
+        turretLatchGoalAngleDegrees = turretGoalAngleDegrees;
+    }
 
     /** Check if the flywheel is at the target speed within allowable error. */
     public boolean isFlywheelAtSpeed() {
-        return Math.abs(getFlywheel1SpeedAbs() - Math.abs(flywheelGoalVelocity)) < FLYWHEEL_ERROR_RPS;
+        tempFlywheelGoalAbsRps = Math.abs(flywheelGoalVelocity);
+        tempFlywheelSpeedAbsRps = getFlywheel1SpeedAbs();
+        tempFlywheelRps = Math.abs(tempFlywheelSpeedAbsRps - tempFlywheelGoalAbsRps);
+
+        if (!flywheelReadyLatchEnabled) {
+            if (tempFlywheelRps <= FLYWHEEL_LATCH_ENGAGE_ERROR_RPS) {
+                flywheelReadyLatchEnabled = true;
+            }
+        } else if (tempFlywheelRps >= FLYWHEEL_LATCH_DISENGAGE_ERROR_RPS) {
+            flywheelReadyLatchEnabled = false;
+        }
+
+        return flywheelReadyLatchEnabled;
     }
 
     /** Check if the hood is at the target angle within allowable error. */
@@ -508,13 +566,44 @@ public class ShooterSubsystem extends SubsystemBase {
 
     public boolean isTurretAtAngle() {
         // Require both position error and low angular velocity before declaring ready.
-        return Math.abs(normalizeToMinus180To180(getTurretAngleDegrees() - turretGoalAngleDegrees)) < TURRET_ERROR_DEG
-            && Math.abs(turretVelocitySignal.getValueAsDouble()) < ShooterConstants.TURRET_ALLOWABLE_SPEED_TO_SHOOT.in(RotationsPerSecond);
+        tempTurretDegError = Math.abs(normalizeToMinus180To180(getTurretAngleDegrees() - turretGoalAngleDegrees));
+        tempTurretSpeedAbsRps = Math.abs(turretVelocitySignal.getValueAsDouble());
+
+
+        if (!turretReadyLatchEnabled) {
+            if (tempTurretDegError <= TURRET_LATCH_ENGAGE_ERROR_DEG
+                && tempTurretSpeedAbsRps <= TURRET_LATCH_ENGAGE_SPEED_RPS) {
+                turretReadyLatchEnabled = true;
+            }
+        } else if (tempTurretDegError >= TURRET_LATCH_DISENGAGE_ERROR_DEG
+            || tempTurretSpeedAbsRps >= TURRET_LATCH_DISENGAGE_SPEED_RPS) {
+            turretReadyLatchEnabled = false;
+        }
+
+        return turretReadyLatchEnabled;
     }
 
     /** Check if the shooter is ready to fire (flywheel + hood + turret). */
     public boolean isReadyToShoot() {
         return isFlywheelAtSpeed() && isHoodAtAngle() && isTurretAtAngle() && getFlywheel1SpeedAbs() > 15;
+    }
+
+    /**
+     * Pass-ready check uses wider tolerances than shoot-ready so moving pass mode can feed reliably.
+     */
+    public boolean isReadyToPass() {
+        tempFlywheelSpeedAbsRps = getFlywheel1SpeedAbs();
+        tempFlywheelGoalAbsRps = Math.abs(flywheelGoalVelocity);
+        tempFlywheelRps = Math.abs(tempFlywheelSpeedAbsRps - tempFlywheelGoalAbsRps);
+        tempHoodDegError = Math.abs(getHoodAngleDegrees() - hoodGoalAngle);
+        tempTurretDegError = Math.abs(normalizeToMinus180To180(getTurretAngleDegrees() - turretGoalAngleDegrees));
+        tempTurretSpeedAbsRps = Math.abs(turretVelocitySignal.getValueAsDouble());
+
+        return tempFlywheelRps <= PASS_FLYWHEEL_ERROR_RPS
+            && tempHoodDegError <= PASS_HOOD_ERROR_DEG
+            && tempTurretDegError <= PASS_TURRET_ERROR_DEG
+            && tempTurretSpeedAbsRps <= PASS_TURRET_SPEED_RPS
+            && tempFlywheelSpeedAbsRps > PASS_MIN_FLYWHEEL_RPS;
     }
 
     public boolean isManualOverrideEnabled() {
@@ -565,7 +654,10 @@ public class ShooterSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Shooter/FlywheelReady", isFlywheelAtSpeed());
         SmartDashboard.putBoolean("Shooter/HoodReady", isHoodAtAngle());
         SmartDashboard.putBoolean("Shooter/TurretReady", isTurretAtAngle());
+        SmartDashboard.putBoolean("Shooter/FlywheelReadyLatch", flywheelReadyLatchEnabled);
+        SmartDashboard.putBoolean("Shooter/TurretReadyLatch", turretReadyLatchEnabled);
         SmartDashboard.putBoolean("Shooter/Ready", isReadyToShoot());
+        SmartDashboard.putBoolean("Shooter/PassReady", isReadyToPass());
         SmartDashboard.putBoolean("Shooter/ManualOverrideEnabled", manualOverrideEnabled);
     }
 
@@ -692,9 +784,14 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // ===== End of simulation =====
 
-    double turretLLX = TheMachineConstants.TURRET_LL_POSE.getX() + TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
-    double turretLLY = TheMachineConstants.TURRET_LL_POSE.getY() + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
-    double turretLLZ = TheMachineConstants.TURRET_LL_POSE.getZ() + TheMachineConstants.SHOOTER_ROTATION_AXIS.getZ();
+    // Internal math in FRC robot frame: +X forward, +Y left.
+    double turretCamFrcForward = TheMachineConstants.TURRET_LL_POSE.getX() + TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
+    double turretCamFrcLeft = TheMachineConstants.TURRET_LL_POSE.getY() + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
+
+    // Limelight robot-space output: forward/right/up.
+    double turretLLForward = turretCamFrcForward;
+    double turretLLRight = -turretCamFrcLeft;
+    double turretLLUp = TheMachineConstants.TURRET_LL_POSE.getZ() + TheMachineConstants.SHOOTER_ROTATION_AXIS.getZ();
     double turretLLPitchDegrees = Math.toDegrees(TheMachineConstants.TURRET_LL_POSE.getRotation().getY());
     double turretLLHeading = 0;
 
@@ -706,22 +803,28 @@ public class ShooterSubsystem extends SubsystemBase {
         // Recompute turret-mounted Limelight pose as turret rotates around shooter axis.
         // getTurretAngleRadians() is opposite of the robot-space convention expected by this
         // transform, so negate it to keep camera pose movement aligned with turret direction.
-        turretLLHeading = -getTurretAngleRadians();
-        turretLLX = TheMachineConstants.TURRET_LL_POSE.getX() * Math.cos(turretLLHeading) - TheMachineConstants.TURRET_LL_POSE.getY() * Math.sin(turretLLHeading);
-        turretLLY = TheMachineConstants.TURRET_LL_POSE.getY() * Math.cos(turretLLHeading) + TheMachineConstants.TURRET_LL_POSE.getX() * Math.sin(turretLLHeading);
+        turretLLHeading = getTurretAngleRadians();
+        turretCamFrcForward = TheMachineConstants.TURRET_LL_POSE.getX() * Math.cos(turretLLHeading)
+            - TheMachineConstants.TURRET_LL_POSE.getY() * Math.sin(turretLLHeading);
+        turretCamFrcLeft = TheMachineConstants.TURRET_LL_POSE.getX() * Math.sin(turretLLHeading)
+            + TheMachineConstants.TURRET_LL_POSE.getY() * Math.cos(turretLLHeading);
 
-        turretLLX = turretLLX + TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
-        turretLLY = turretLLY + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
+        turretCamFrcForward = turretCamFrcForward + TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
+        turretCamFrcLeft = turretCamFrcLeft + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
 
-    SmartDashboard.putNumber("Throughbore", TelemetryConstants.roundTelemetry(turretAbsoluteEncoder.get()));
-    SmartDashboard.putNumber("TurretLLHeading", TelemetryConstants.roundTelemetry(Math.toDegrees(turretLLHeading)));
+        // Convert FRC (+left) to Limelight (+right).
+        turretLLForward = turretCamFrcForward;
+        turretLLRight = -turretCamFrcLeft;
+
+        SmartDashboard.putNumber("Throughbore", TelemetryConstants.roundTelemetry(turretAbsoluteEncoder.get()));
+        SmartDashboard.putNumber("TurretLLHeading", TelemetryConstants.roundTelemetry(Math.toDegrees(turretLLHeading)));
 
                                                                 
         // Push updated camera pose to Limelight on real robot only.
         if(Robot.isReal()) 
-            LimelightHelpers.setCameraPose_RobotSpace("limelight-turret", turretLLX, turretLLY, turretLLZ, 0, 
+            LimelightHelpers.setCameraPose_RobotSpace("limelight-turret", turretLLForward, turretLLRight, turretLLUp, 0, 
                                                                                                                 turretLLPitchDegrees, 
-                                                                                                                 -Math.toDegrees(turretLLHeading));
+                                                                                                                 Math.toDegrees(turretLLHeading));
     }
 }
  

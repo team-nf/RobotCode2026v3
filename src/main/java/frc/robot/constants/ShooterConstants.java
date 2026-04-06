@@ -32,7 +32,6 @@ public class ShooterConstants {
 
     // Shooter Math Constants
     public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.95; // in meters (2 inches)
-    public static final double SHOOTER_VELOCITY_SIM_TRANSFER_COEFFICIENT = 0.95; // in meters (2 inches)
 
     // Configs
     public static final int NUMBER_OF_FLYWHEEL_MOTORS = 2;
@@ -105,19 +104,22 @@ public class ShooterConstants {
         .withSlot(0)
         .withEnableFOC(false);
 
-    public static final double TURRET_AGGRESSIVE_KS = 1.0;
-    public static final double TURRET_AGGRESSIVE_KV = 0.0;
-    public static final double TURRET_AGGRESSIVE_KP = 3;
-    public static final double TURRET_AGGRESSIVE_KI = 0.1;
-    public static final double TURRET_AGGRESSIVE_KD = 0.0;
-    public static final double TURRET_AGGRESSIVE_KA = 0.4;
+    private static final double TURRET_AGGRESSIVE_SIM_MULTIPLIER = Robot.isSimulation() ? 20.0 : 1.0;
+    private static final double TURRET_GENTLE_SIM_MULTIPLIER = Robot.isSimulation() ? 10.0 : 1.0;
+
+    public static final double TURRET_AGGRESSIVE_KS = 1.0 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
+    public static final double TURRET_AGGRESSIVE_KV = 0.0 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
+    public static final double TURRET_AGGRESSIVE_KP = 3 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
+    public static final double TURRET_AGGRESSIVE_KI = 0.1 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
+    public static final double TURRET_AGGRESSIVE_KD = 0.0 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
+    public static final double TURRET_AGGRESSIVE_KA = 0.4 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
 
 
-    public static final double TURRET_GENTLE_KS = 1;
-    public static final double TURRET_GENTLE_KV = 0.0;
-    public static final double TURRET_GENTLE_KP = 1.0;
-    public static final double TURRET_GENTLE_KI = 0;
-    public static final double TURRET_GENTLE_KD = 0.01;
+    public static final double TURRET_GENTLE_KS = 1 * TURRET_GENTLE_SIM_MULTIPLIER;
+    public static final double TURRET_GENTLE_KV = 0.0 * TURRET_GENTLE_SIM_MULTIPLIER;
+    public static final double TURRET_GENTLE_KP = 1.0 * TURRET_GENTLE_SIM_MULTIPLIER;
+    public static final double TURRET_GENTLE_KI = 0 * TURRET_GENTLE_SIM_MULTIPLIER;
+    public static final double TURRET_GENTLE_KD = 0.01 * TURRET_GENTLE_SIM_MULTIPLIER;
 
     public static final double TURRET_SMALL_ERROR_THRESHOLD_DEG = 12.0;
 
@@ -156,7 +158,7 @@ public class ShooterConstants {
 
     // Physical Constants
     public static final double FLYWHEEL_GEAR_REDUCTION = 1;
-    public static final double HOOD_GEAR_REDUCTION = 324.0/20.0*26/18*56/8;
+    public static final double HOOD_GEAR_REDUCTION = 348.0/19.0*24/18*30/8;
     
     public static final double TURRET_GEAR_REDUCTION = (Robot.isReal()) ? 36.44 : 5;
     // Turret mechanism frame zero corresponds to robot-frame 180 degrees.
@@ -186,9 +188,8 @@ public class ShooterConstants {
     public static final MomentOfInertia TOTAL_MOMENT_OF_INERTIA = FLYWHEEL_MOMENT_OF_INERTIA.plus(HOOD_MOMENT_OF_INERTIA);
 
     public static final Angle MIN_HOOD_ANGLE = Degrees.of(0);
-    public static final Angle MAX_HOOD_ANGLE = Degrees.of(20);
-    public static final Angle PASS_HOOD_ANGLE = Degrees.of(10);
-    public static final Angle HOOD_ANGLE_OFFSET = Degrees.of(18);
+    public static final Angle MAX_HOOD_ANGLE = Degrees.of(10);
+    public static final Angle PASS_HOOD_ANGLE = Degrees.of(8);
 
     public static final Angle MIN_HOOD_MOTOR_ANGLE = MIN_HOOD_ANGLE.times(HOOD_GEAR_REDUCTION);
     public static final Angle MAX_HOOD_MOTOR_ANGLE = MAX_HOOD_ANGLE.times(HOOD_GEAR_REDUCTION);

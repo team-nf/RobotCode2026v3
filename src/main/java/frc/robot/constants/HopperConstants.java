@@ -75,6 +75,10 @@ public class HopperConstants {
     public static final AngularVelocity HOPPER_FEEDING_VELOCITY = RotationsPerSecond.of(13); // in RPS 20
     public static final AngularVelocity HOPPER_SIDE_PUSHING_VELOCITY = RotationsPerSecond.of(-1); // in RPS
     public static final AngularVelocity HOPPER_REVERSE_VELOCITY = RotationsPerSecond.of(-10.0); // in RPS -10
+    public static final double HOPPER_ALLOWABLE_ERROR_RPS = HOPPER_ALLOWABLE_ERROR.in(RotationsPerSecond);
+    public static final double HOPPER_FEEDING_VELOCITY_RPS = HOPPER_FEEDING_VELOCITY.in(RotationsPerSecond);
+    public static final double HOPPER_SIDE_PUSHING_VELOCITY_RPS = HOPPER_SIDE_PUSHING_VELOCITY.in(RotationsPerSecond);
+    public static final double HOPPER_REVERSE_VELOCITY_RPS = HOPPER_REVERSE_VELOCITY.in(RotationsPerSecond);
 
     // Hopper physical constants (defaults - adjust if needed)
     public static final Mass ROLLER_MASS = Kilograms.of(0.25); // kg

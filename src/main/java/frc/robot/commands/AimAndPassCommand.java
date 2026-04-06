@@ -17,6 +17,7 @@ import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.Robot;
 import frc.robot.TheMachine;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
@@ -92,7 +93,6 @@ public class AimAndPassCommand extends Command {
   }
 
   private Pose2d robotPose = new Pose2d();
-  private Pose2d shooterPose = new Pose2d();
   private double filteredAngleError = 0.0;
 
   private double velocityRPS = 0.0;
@@ -116,6 +116,8 @@ public class AimAndPassCommand extends Command {
   double aimY ;
 
   double heading ;
+  double shooterX;
+  double shooterY;
   double robotAngleToPass;
   double rawAngleError;
 
@@ -124,7 +126,9 @@ public class AimAndPassCommand extends Command {
   public void execute() {
     // 1) Determine current pass target from robot lane side.
     robotPose = swerveDrivetrain.getPose();
-    shooterPose = ShooterCalculator.getShooterPoseFromRobotPose(robotPose);
+    heading = robotPose.getRotation().getRadians();
+    shooterX = ShooterCalculator.getShooterXFromRobotState(robotPose.getX(), heading);
+    shooterY = ShooterCalculator.getShooterYFromRobotState(robotPose.getY(), heading);
     passAimPose = selectPassAimPose(robotPose);
 
     filteredAngleError = 0.0;
@@ -136,8 +140,7 @@ public class AimAndPassCommand extends Command {
     aimX = passAimPose.getX();
     aimY = passAimPose.getY();
 
-    heading = robotPose.getRotation().getRadians();
-    robotAngleToPass = Math.atan2(aimY - shooterPose.getY(), aimX - shooterPose.getX());
+  robotAngleToPass = Math.atan2(aimY - shooterY, aimX - shooterX);
     rawAngleError = robotAngleToPass - heading;
     rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
 
@@ -157,10 +160,10 @@ public class AimAndPassCommand extends Command {
     );
 
     // 3) Solve pass setpoints and gate feed on shooter readiness.
-    velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentPose(robotPose);
+  velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentState(robotPose.getX(), heading);
     hoodAngle = ShooterCalculator.calculatePassHoodAngle();
 
-    if(theMachine.isShooterReady()) {
+    if(theMachine.isPassReady() || Robot.isSimulation()) {
       theMachine.pass(velocityRPS, hoodAngle, turretAngleDeg);
     } else {
       theMachine.getReadyPass(velocityRPS, hoodAngle, turretAngleDeg);

@@ -5,7 +5,6 @@
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import java.util.function.Supplier;
@@ -57,20 +56,30 @@ public class FeederSubsystem extends SubsystemBase {
   private double feederFeedGoalVelocity;
   private double feederBeltTestRPM;
   private double feederFeedTestRPM;
+  private boolean feederBeltFeedLatchEnabled = false;
 
-  private static final int FEEDER_FEED_VELOCITY_AVG_SAMPLES = 3;
+  private static final double FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS =
+    FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
+  private static final double FEEDER_BELT_LATCH_DISENGAGE_ERROR_RPS =
+    FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS * 3.0;
+
+  private static final int FEEDER_FEED_VELOCITY_AVG_SAMPLES = 5;
   private final double[] feederFeedVelocityWindow = new double[FEEDER_FEED_VELOCITY_AVG_SAMPLES];
   private int feederFeedVelocityWindowIndex = 0;
   private int feederFeedVelocityWindowCount = 0;
   private double feederFeedVelocityWindowSum = 0.0;
   private double feederFeedVelocityAverageRps = 0.0;
+  private double feederFeedVelocityRps;
+  private double feederFeedVelocityErrorRps;
+  private boolean feederCanEngageBelt;
+  private boolean feederMustDisengageBelt;
 
   private final VoltageOut feederBeltSysIdControl;
   private final VoltageOut feederFeedSysIdControl;
   private final SysIdRoutine feederBeltSysIdRoutine;
   private final SysIdRoutine feederFeedSysIdRoutine;
 
-  private static final double DEFAULT_FEEDER_FEED_RPS = FeederConstants.FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
+  private static final double DEFAULT_FEEDER_FEED_RPS = FeederConstants.FEEDER_FEEDING_VELOCITY_RPS;
 
   /** Creates a new FeederSubsystem. */
   public FeederSubsystem() {
@@ -163,6 +172,7 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void feederStop() {
+    feederBeltFeedLatchEnabled = false;
     feederBeltMotor.set(0.0);
     feederFeedMotor.set(0.0);
   }
@@ -185,8 +195,9 @@ public class FeederSubsystem extends SubsystemBase {
     return feederFeedVelocityAverageRps;
   }
 
+  double newSample;
   private void updateFeederFeedVelocityAverage() {
-    double newSample = feederFeedVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_GEAR_REDUCTION;
+    newSample = feederFeedVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_GEAR_REDUCTION;
 
     if (feederFeedVelocityWindowCount < FEEDER_FEED_VELOCITY_AVG_SAMPLES) {
       feederFeedVelocityWindowCount++;
@@ -203,7 +214,7 @@ public class FeederSubsystem extends SubsystemBase {
 
   public boolean isFeederFeedAtGoalSpeed() {
     return Math.abs(getFeederFeedVelocity() - feederFeedGoalVelocity)
-        < FeederConstants.FEEDER_ALLOWABLE_ERROR.in(RotationsPerSecond);
+    < FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
   }
 
   public void publishTelemetry() {
@@ -222,6 +233,7 @@ public class FeederSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Feeder/FeedMotorGoalVelocityRps", TelemetryConstants.roundTelemetry(feederFeedGoalVelocity));
     SmartDashboard.putNumber("Feeder/FeedMotorVelocityErrorRps", TelemetryConstants.roundTelemetry(feederFeedGoalVelocity - getFeederFeedVelocity()));
     SmartDashboard.putBoolean("Feeder/FeedMotorAtGoalSpeed", isFeederFeedAtGoalSpeed());
+    SmartDashboard.putBoolean("Feeder/BeltFeedLatchEnabled", feederBeltFeedLatchEnabled);
   }
 
   private void refreshStatusSignals() {
@@ -297,22 +309,33 @@ public class FeederSubsystem extends SubsystemBase {
   // End of simulation part
 
   public void zero() {
+    feederBeltFeedLatchEnabled = false;
     feederBeltGoalVelocity = 0;
     feederFeedGoalVelocity = 0;
     feederStop();
   }
 
   public void feed() {
-    // Gate belt feed until feed wheel reaches speed to reduce jams.
-    feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_BELT_VELOCITY.in(RotationsPerSecond);
+    // Gate belt feed with hysteresis to avoid stopping belt on momentary shot load dips.
     feederFeedGoalVelocity = getShooterGoalRpsForFeed();
     feederFeedSetSpeed(feederFeedGoalVelocity);
-    if(isFeederFeedAtGoalSpeed())
-    {
-      feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_BELT_VELOCITY.in(RotationsPerSecond);
+
+    feederFeedVelocityRps = getFeederFeedVelocity();
+    feederFeedVelocityErrorRps = Math.abs(feederFeedGoalVelocity - feederFeedVelocityRps);
+    feederCanEngageBelt = feederFeedVelocityErrorRps <= FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS;
+    feederMustDisengageBelt = feederFeedVelocityErrorRps >= FEEDER_BELT_LATCH_DISENGAGE_ERROR_RPS;
+
+    if (!feederBeltFeedLatchEnabled) {
+      if (feederCanEngageBelt) {
+        feederBeltFeedLatchEnabled = true;
+      }
+    } else if (feederMustDisengageBelt) {
+      feederBeltFeedLatchEnabled = false;
     }
-    else
-    {
+
+    if (feederBeltFeedLatchEnabled) {
+      feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_BELT_VELOCITY_RPS;
+    } else {
       feederBeltGoalVelocity = 0;
     }
 
@@ -321,6 +344,7 @@ public class FeederSubsystem extends SubsystemBase {
 
   public void feedGetReady() {
     // Spin feed wheel up while holding belt still.
+    feederBeltFeedLatchEnabled = false;
     feederBeltGoalVelocity = 0;
     feederFeedGoalVelocity = getShooterGoalRpsForFeed();
     feederBeltSetSpeed(feederBeltGoalVelocity);
@@ -335,8 +359,9 @@ public class FeederSubsystem extends SubsystemBase {
 
   public void reverse() {
     // Reverse both motors to clear jams.
-    feederBeltGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY.in(RotationsPerSecond);
-    feederFeedGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY.in(RotationsPerSecond);
+    feederBeltFeedLatchEnabled = false;
+    feederBeltGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY_RPS;
+    feederFeedGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY_RPS;
     feederBeltSetSpeed(feederBeltGoalVelocity);
     feederFeedSetSpeed(feederFeedGoalVelocity);
   }

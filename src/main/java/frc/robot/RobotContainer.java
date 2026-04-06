@@ -28,7 +28,7 @@ import frc.robot.subsystems.FeederSubsystem;
 import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
-import frc.robot.utils.Container;
+import frc.robot.utils.AllianceUtil;
 import frc.robot.utils.FuelSim;
 import frc.robot.utils.HopperSim;
 import frc.robot.utils.ShooterSim;
@@ -39,7 +39,6 @@ import static edu.wpi.first.units.Units.Meters;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -84,7 +83,7 @@ public class RobotContainer {
 
   public RobotContainer() {
     // Resolve alliance once at startup for mirrored-field calculations.
-    Container.isBlue = DriverStation.getAlliance().map(a -> a == DriverStation.Alliance.Blue).orElse(true);
+    AllianceUtil.refreshAllianceFromDriverStation();
 
     m_driverController =
         new CommandXboxController(TheMachineConstants.DRIVER_CONTROLLER_PORT_ID);
@@ -206,11 +205,14 @@ public class RobotContainer {
       if (nowSec >= nextSimTelemetryTimeSec) {
         nextSimTelemetryTimeSec = nowSec + SIM_TELEMETRY_PERIOD_SEC;
         m_theMachine.calculateSubsystemPoses();
-        //publishTelemetry();
+        publishTelemetry();
       }
     }
+    else {
+      //publishTelemetry();
 
-    publishTelemetry();
+    }
+
     // Always run machine periodic, both real robot and simulation.
     m_theMachine.machinePeriodic();
     //SmartDashboard.putData(CommandScheduler.getInstance());

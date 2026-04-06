@@ -84,6 +84,10 @@ public class FeederConstants {
     public static final AngularVelocity FEEDER_FEEDING_VELOCITY = RotationsPerSecond.of(30); // in RPS
     public static final AngularVelocity FEEDER_FEEDING_BELT_VELOCITY = RotationsPerSecond.of(50); // in RPS
     public static final AngularVelocity FEEDER_REVERSE_VELOCITY = RotationsPerSecond.of(-2.0); // in RPS
+    public static final double FEEDER_ALLOWABLE_ERROR_RPS = FEEDER_ALLOWABLE_ERROR.in(RotationsPerSecond);
+    public static final double FEEDER_FEEDING_VELOCITY_RPS = FEEDER_FEEDING_VELOCITY.in(RotationsPerSecond);
+    public static final double FEEDER_FEEDING_BELT_VELOCITY_RPS = FEEDER_FEEDING_BELT_VELOCITY.in(RotationsPerSecond);
+    public static final double FEEDER_REVERSE_VELOCITY_RPS = FEEDER_REVERSE_VELOCITY.in(RotationsPerSecond);
 
     // Feeder syystem constants
 

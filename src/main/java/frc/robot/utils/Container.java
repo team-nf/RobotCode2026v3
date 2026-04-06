@@ -1,5 +1,5 @@
 package frc.robot.utils;
 
 public class Container {
-    public static Boolean isBlue = null;
+    public static Boolean isBlue = true;
 }

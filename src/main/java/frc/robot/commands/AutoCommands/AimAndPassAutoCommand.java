@@ -74,7 +74,6 @@ public class AimAndPassAutoCommand extends Command {
   }
 
   private Pose2d robotPose = new Pose2d();
-  private Pose2d shooterPose = new Pose2d();
   private double filteredAngleError = 0.0;
 
   private double velocityRPS = 0.0;
@@ -98,6 +97,8 @@ public class AimAndPassAutoCommand extends Command {
   double aimY ;
 
   double heading ;
+  double shooterX;
+  double shooterY;
   double robotAngleToPass;
   double rawAngleError;
 
@@ -106,7 +107,9 @@ public class AimAndPassAutoCommand extends Command {
   public void execute() {
     // 1) Determine current pass target from robot lane side.
     robotPose = swerveDrivetrain.getPose();
-    shooterPose = ShooterCalculator.getShooterPoseFromRobotPose(robotPose);
+    heading = robotPose.getRotation().getRadians();
+    shooterX = ShooterCalculator.getShooterXFromRobotState(robotPose.getX(), heading);
+    shooterY = ShooterCalculator.getShooterYFromRobotState(robotPose.getY(), heading);
     passAimPose = selectPassAimPose(robotPose);
 
     filteredAngleError = 0.0;
@@ -118,8 +121,7 @@ public class AimAndPassAutoCommand extends Command {
     aimX = passAimPose.getX();
     aimY = passAimPose.getY();
 
-    heading = robotPose.getRotation().getRadians();
-    robotAngleToPass = Math.atan2(aimY - shooterPose.getY(), aimX - shooterPose.getX());
+  robotAngleToPass = Math.atan2(aimY - shooterY, aimX - shooterX);
     rawAngleError = robotAngleToPass - heading;
     rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
 
@@ -132,10 +134,10 @@ public class AimAndPassAutoCommand extends Command {
     ));
 
     // 2) Solve pass setpoints and gate feed on shooter readiness.
-    velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentPose(robotPose);
+  velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentState(robotPose.getX(), heading);
     hoodAngle = ShooterCalculator.calculatePassHoodAngle();
 
-    if(theMachine.isShooterReady()) {
+    if(theMachine.isPassReady()) {
       theMachine.pass(velocityRPS, hoodAngle, turretAngleDeg);
     } else {
       theMachine.getReadyPass(velocityRPS, hoodAngle, turretAngleDeg);

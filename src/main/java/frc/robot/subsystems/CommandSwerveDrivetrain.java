@@ -388,7 +388,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 ),
                 config,
                 // Manual path flip is handled elsewhere in this codebase.
-                () -> {return false;},
+                () -> {return !Container.isBlue;},
                 this // Subsystem for requirements
             );
         } catch (Exception ex) {

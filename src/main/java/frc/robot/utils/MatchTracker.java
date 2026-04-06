@@ -10,6 +10,9 @@ import edu.wpi.first.wpilibj.DriverStation;
 /** Add your docs here. */
 public class MatchTracker {
 
+    private static final int UPDATE_EVERY_LOOPS = 10;
+    private int loopCounter = 0;
+
     private boolean isBlueHubActive = false;
     private boolean isRedHubActive = false;
     private String firstPhaseStatus = "";
@@ -17,8 +20,20 @@ public class MatchTracker {
     private double activePhaseDuration = 0;
     private double matchTime = 0;
 
+    private String gameData = "";
+    private boolean redInactiveFirst = false;
+
+    private boolean isPractice = false;
+
     public void updateMatchTracker()
     {
+        loopCounter++;
+        if (loopCounter < UPDATE_EVERY_LOOPS) {
+            return;
+        }
+        loopCounter = 0;
+
+        isPractice = !DriverStation.isFMSAttached() && DriverStation.isEnabled();
 
         if (DriverStation.isAutonomousEnabled())
         {
@@ -42,9 +57,10 @@ public class MatchTracker {
 
         // We're teleop enabled, compute.
         matchTime = DriverStation.getMatchTime();
-        String gameData = DriverStation.getGameSpecificMessage();
+
+        gameData = DriverStation.getGameSpecificMessage();
         // If we have no game data, we cannot compute, assume hub is active, as its likely early in teleop.
-        if (gameData.isEmpty()) {
+        if (gameData.isEmpty() && !isPractice) {
             isBlueHubActive = true;
             isRedHubActive = true;
             activePhaseDuration = 0;
@@ -52,18 +68,28 @@ public class MatchTracker {
             publishStatus();
             return;
         }
-        boolean redInactiveFirst = false;
-        switch (gameData.charAt(0)) {
-            case 'R' -> redInactiveFirst = true;
-            case 'B' -> redInactiveFirst = false;
-            default -> {
-            // If we have invalid game data, assume hub is active.
-            isBlueHubActive = true;
-            isRedHubActive = true;
-            firstPhaseStatus = "InvalidData";
-            publishStatus();
-            return;
+        redInactiveFirst = false;
+        if(!isPractice)
+        {
+            switch (gameData.charAt(0)) {
+                case 'R' -> redInactiveFirst = true;
+                case 'B' -> redInactiveFirst = false;
+                default -> {
+                // If we have invalid game data, assume hub is active.
+                isBlueHubActive = true;
+                isRedHubActive = true;
+                firstPhaseStatus = "InvalidData";
+                publishStatus();
+                return;
+                }
             }
+        }
+        else
+        {
+            // In practice, infer first phase from selected alliance (blue => red inactive first).
+            redInactiveFirst = DriverStation.getAlliance()
+                .map(alliance -> alliance == DriverStation.Alliance.Blue)
+                .orElse(Boolean.TRUE.equals(Container.isBlue));
         }
 
         firstPhaseStatus = (redInactiveFirst ? "BlueFirst" : "RedFirst");

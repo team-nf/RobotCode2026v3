@@ -4,14 +4,14 @@ import com.pathplanner.lib.commands.PathfindingCommand;
 import com.pathplanner.lib.pathfinding.LocalADStar;
 import com.pathplanner.lib.pathfinding.Pathfinding;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.utils.Container;
+import frc.robot.utils.AllianceUtil;
 import frc.robot.utils.FuelSim;
 import frc.robot.utils.HopperSim;
+import frc.robot.utils.MatchTracker;
 import frc.robot.utils.ShooterSim;
 import frc.robot.utils.SwerveFieldContactSim;
 
@@ -24,8 +24,11 @@ import frc.robot.utils.SwerveFieldContactSim;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private final RobotContainer m_robotContainer;
+  private final MatchTracker matchTracker;
 
   public Robot() {
+    AllianceUtil.refreshAllianceFromDriverStation();
+    matchTracker = new MatchTracker();
     m_robotContainer = new RobotContainer();
   }
 
@@ -37,6 +40,9 @@ public class Robot extends TimedRobot {
     // Use local AD* for on-robot dynamic pathfinding.
     Pathfinding.setPathfinder(new LocalADStar());
 
+    // Cache alliance once on startup; refreshed again on each mode transition.
+    AllianceUtil.refreshAllianceFromDriverStation();
+
   }
 
   @Override
@@ -44,14 +50,16 @@ public class Robot extends TimedRobot {
     // Runs button bindings + scheduled commands each loop.
     CommandScheduler.getInstance().run();
 
+    // Refresh match-phase telemetry/state each loop.
+    matchTracker.updateMatchTracker();
+
     // Container-level periodic tasks (telemetry, machine periodic, sim hooks, etc.).
     m_robotContainer.containerPeriodic();
   }
 
   @Override
   public void disabledInit() {
-    // Cache alliance color for utilities that need mirrored field logic.
-    Container.isBlue = DriverStation.getAlliance().map(a -> a == DriverStation.Alliance.Blue).orElse(true);
+    AllianceUtil.refreshAllianceFromDriverStation();
   }
 
   @Override
@@ -59,6 +67,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousInit() {
+    AllianceUtil.refreshAllianceFromDriverStation();
     // Ask the chooser for the selected auto and schedule it if one is selected.
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
     if (m_autonomousCommand != null) {
@@ -71,6 +80,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
+    AllianceUtil.refreshAllianceFromDriverStation();
     // Stop autonomous when teleop starts so driver commands take over cleanly.
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();

@@ -14,24 +14,24 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructEntry;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Robot;
 import frc.robot.TheMachine;
 import frc.robot.constants.Dimensions;
-import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TheMachineConstants;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import frc.robot.utils.Container;
+import frc.robot.utils.AllianceUtil;
 import frc.robot.utils.ShooterCalculator;
 
 /**
@@ -44,12 +44,9 @@ public class AimAndShootCommand extends Command {
   private final DoubleEntry aimAngleErrorEntry = NetworkTableInstance.getDefault()
       .getDoubleTopic("/AIM/AimAngleError").getEntry(0.0);
 
-  private final DoubleEntry aimPoseXEntry = NetworkTableInstance.getDefault()
-      .getDoubleTopic("/AIM/AimPoseX").getEntry(0.0);
-  private final DoubleEntry aimPoseYEntry = NetworkTableInstance.getDefault()
-      .getDoubleTopic("/AIM/AimPoseY").getEntry(0.0);
-  private final DoubleEntry aimPoseZEntry = NetworkTableInstance.getDefault()
-      .getDoubleTopic("/AIM/AimPoseZ").getEntry(Dimensions.HUB_HEIGHT.in(Meters));
+  private final StructEntry<Pose3d> aimPose3d = NetworkTableInstance.getDefault()
+      .getStructTopic("/AIM/AimPose3d", Pose3d.struct).getEntry(new Pose3d());
+
   private final BooleanEntry aimOnTargetEntry = NetworkTableInstance.getDefault()
     .getBooleanTopic("/AIM/AimOnTarget").getEntry(false);
 
@@ -62,12 +59,6 @@ public class AimAndShootCommand extends Command {
       new Translation2d(
           TheMachineConstants.SHOOTER_ROTATION_AXIS.getX(),
           TheMachineConstants.SHOOTER_ROTATION_AXIS.getY());
-
-  private static final Transform2d SHOOTER_OFFSET_FROM_ROBOT = new Transform2d(
-        TheMachineConstants.SHOOTER_ROTATION_AXIS.getX(),
-        TheMachineConstants.SHOOTER_ROTATION_AXIS.getY(),
-        Rotation2d.kZero
-    );
 
   private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
@@ -101,15 +92,8 @@ public class AimAndShootCommand extends Command {
 
     addRequirements(drivetrain);
     addRequirements(theMachine.getSubsystems());
-    
-    if(Container.isBlue)
-    {
-      hubAimPose = PoseConstants.BLUE_HUB_AIM_POSE;
-    }
-    else
-    {
-      hubAimPose = PoseConstants.RED_HUB_AIM_POSE;
-    }
+
+    hubAimPose = AllianceUtil.getHubAimPose();
   }
 
   // Called when the command is initially scheduled.
@@ -125,18 +109,10 @@ public class AimAndShootCommand extends Command {
     validSampleCount = 0;
 
     // Re-resolve alliance hub target in case DS alliance changed while disabled.
-    if(Container.isBlue)
-    {
-      hubAimPose = PoseConstants.BLUE_HUB_AIM_POSE;
-    }
-    else
-    {
-      hubAimPose = PoseConstants.RED_HUB_AIM_POSE;
-    }
+    hubAimPose = AllianceUtil.getHubAimPose();
   }
 
   private Pose2d robotPose = new Pose2d();
-  private Pose2d shooterPose = new Pose2d();
   double robotAngleToHub =  0;
 
   double heading;
@@ -152,11 +128,9 @@ public class AimAndShootCommand extends Command {
   double hoodAngle;
   double turretAngleDeg;
 
-  Translation2d shooterOffsetField;
-
   double filteredSpeedX = 0.0, filteredSpeedY = 0.0, filteredAngleError = 0.0;
   private static final double TURRET_TOLERANCE_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
-  private static final double TURRET_LOOKAHEAD_SEC = 0.04;
+  private static final double TURRET_LOOKAHEAD_SEC = 0.1;
 
   double rawAngleError = 0.0;
   double shooterSpeedX = 0.0;
@@ -164,6 +138,12 @@ public class AimAndShootCommand extends Command {
   double predictedHeading = 0.0;
   double predictedShooterX = 0.0;
   double predictedShooterY = 0.0;
+  double shooterPoseX = 0.0;
+  double shooterPoseY = 0.0;
+  double shooterOffsetFieldX = 0.0;
+  double shooterOffsetFieldY = 0.0;
+  double headingSin = 0.0;
+  double headingCos = 0.0;
   double sumSin = 0.0;
   double sumCos = 0.0;
   // Called every time the scheduler runs while the command is scheduled.
@@ -171,17 +151,25 @@ public class AimAndShootCommand extends Command {
   public void execute() {
     // 1) Gather drivetrain state and derive shooter point kinematics.
     robotPose = swerveDrivetrain.getPose();
-    shooterPose = robotPose.transformBy(SHOOTER_OFFSET_FROM_ROBOT);
     speeds = swerveDrivetrain.getFieldSpeeds();
     heading = robotPose.getRotation().getRadians();
+  headingSin = Math.sin(heading);
+  headingCos = Math.cos(heading);
+
+  shooterOffsetFieldX = TheMachineConstants.SHOOTER_ROTATION_AXIS.getX() * headingCos
+    - TheMachineConstants.SHOOTER_ROTATION_AXIS.getY() * headingSin;
+  shooterOffsetFieldY = TheMachineConstants.SHOOTER_ROTATION_AXIS.getX() * headingSin
+    + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY() * headingCos;
+
+  shooterPoseX = robotPose.getX() + shooterOffsetFieldX;
+  shooterPoseY = robotPose.getY() + shooterOffsetFieldY;
 
     // Convert robot-relative CoR offset to field frame and compute shooter-point velocity:
     // v_point = v_center + omega x r
-    shooterOffsetField = SHOOTER_CENTER_OF_ROTATION.rotateBy(robotPose.getRotation());
-    shooterSpeedX = speeds.vxMetersPerSecond - speeds.omegaRadiansPerSecond * shooterOffsetField.getY();
-    shooterSpeedY = speeds.vyMetersPerSecond + speeds.omegaRadiansPerSecond * shooterOffsetField.getX();
+  shooterSpeedX = speeds.vxMetersPerSecond - speeds.omegaRadiansPerSecond * shooterOffsetFieldY;
+  shooterSpeedY = speeds.vyMetersPerSecond + speeds.omegaRadiansPerSecond * shooterOffsetFieldX;
 
-    distance = hubAimPose.getTranslation().getDistance(shooterPose.getTranslation());
+  distance = Math.hypot(hubAimPose.getX() - shooterPoseX, hubAimPose.getY() - shooterPoseY);
     time = ShooterCalculator.flightTimeOfFuelFormula(distance);
 
     filteredSpeedX = 0.0;
@@ -205,8 +193,8 @@ public class AimAndShootCommand extends Command {
     filteredSpeedY /= validSampleCount;
 
     // 2) Predict where shooter/chassis will be when turret reaches setpoint.
-    predictedShooterX = shooterPose.getX() + filteredSpeedX * TURRET_LOOKAHEAD_SEC;
-    predictedShooterY = shooterPose.getY() + filteredSpeedY * TURRET_LOOKAHEAD_SEC;
+  predictedShooterX = shooterPoseX + filteredSpeedX * TURRET_LOOKAHEAD_SEC;
+  predictedShooterY = shooterPoseY + filteredSpeedY * TURRET_LOOKAHEAD_SEC;
     predictedHeading = heading + speeds.omegaRadiansPerSecond * TURRET_LOOKAHEAD_SEC;
 
     aimX = hubAimPose.getX() - (filteredSpeedX * time);
@@ -238,23 +226,26 @@ public class AimAndShootCommand extends Command {
     );
 
     // 4) Solve shooter parameters from filtered motion estimate and predicted aim point.
-    shootParams = ShooterCalculator.calculateShootingParameters(filteredSpeedX, filteredSpeedY, robotPose, time);
+  shootParams = ShooterCalculator.calculateShootingParameters(
+      filteredSpeedX,
+      filteredSpeedY,
+      shooterPoseX,
+      shooterPoseY,
+      time + TURRET_LOOKAHEAD_SEC);
     velocityRPS = shootParams[0];
     hoodAngle = shootParams[1];
     turretAngleDeg = Math.toDegrees(Math.atan2(Math.sin(robotAngleToHub - predictedHeading), Math.cos(robotAngleToHub - predictedHeading)));
 
     // Feed only once shooter is ready; otherwise stay in spin-up state.
-    if(theMachine.isShooterReady()) {
+    if(theMachine.isShooterReady() || Robot.isSimulation()) {
       theMachine.shoot(velocityRPS, hoodAngle, turretAngleDeg);
     } else {
       theMachine.getReady(velocityRPS, hoodAngle, turretAngleDeg);
-  }
+    }
 
   // Publish simulated aiming telemetry for dashboards/3D overlays.
     if(Robot.isSimulation()) {
-      aimPoseXEntry.set(aimX);
-      aimPoseYEntry.set(aimY);
-      aimPoseZEntry.set(Dimensions.HUB_HEIGHT.in(Meters));
+      aimPose3d.set(new Pose3d(aimX, aimY, Dimensions.HUB_HEIGHT.in(Meters), new Rotation3d()));
       aimOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
       aimAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
     }

@@ -7,11 +7,8 @@ package frc.robot.utils;
 import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.Robot;
-import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.SimConstants;
 import frc.robot.constants.TheMachineConstants;
@@ -29,19 +26,33 @@ public final class ShooterCalculator {
     private static final double PASS_HOOD_DEG = ShooterConstants.PASS_HOOD_ANGLE.in(Degrees);
 
     public static Translation2d getHubTranslation() {
-        return Boolean.TRUE.equals(Container.isBlue)
-            ? PoseConstants.BLUE_HUB_AIM_POSE.getTranslation()
-            : PoseConstants.RED_HUB_AIM_POSE.getTranslation();
+        return AllianceUtil.getHubAimPose().getTranslation();
     }
 
-    private static final Transform2d SHOOTER_OFFSET_FROM_ROBOT = new Transform2d(
-        TheMachineConstants.SHOOTER_ROTATION_AXIS.getX(),
-        TheMachineConstants.SHOOTER_ROTATION_AXIS.getY(),
-        Rotation2d.kZero
-    );
+    private static final double SHOOTER_AXIS_X = TheMachineConstants.SHOOTER_ROTATION_AXIS.getX();
+    private static final double SHOOTER_AXIS_Y = TheMachineConstants.SHOOTER_ROTATION_AXIS.getY();
 
     public static Pose2d getShooterPoseFromRobotPose(Pose2d robotPose) {
-        return robotPose.transformBy(SHOOTER_OFFSET_FROM_ROBOT);
+        return new Pose2d(
+            getShooterXFromRobotPose(robotPose),
+            getShooterYFromRobotPose(robotPose),
+            robotPose.getRotation());
+    }
+
+    public static double getShooterXFromRobotPose(Pose2d robotPose) {
+        return getShooterXFromRobotState(robotPose.getX(), robotPose.getRotation().getRadians());
+    }
+
+    public static double getShooterYFromRobotPose(Pose2d robotPose) {
+        return getShooterYFromRobotState(robotPose.getY(), robotPose.getRotation().getRadians());
+    }
+
+    public static double getShooterXFromRobotState(double robotX, double robotHeadingRadians) {
+        return robotX + SHOOTER_AXIS_X * Math.cos(robotHeadingRadians) - SHOOTER_AXIS_Y * Math.sin(robotHeadingRadians);
+    }
+
+    public static double getShooterYFromRobotState(double robotY, double robotHeadingRadians) {
+        return robotY + SHOOTER_AXIS_X * Math.sin(robotHeadingRadians) + SHOOTER_AXIS_Y * Math.cos(robotHeadingRadians);
     }
 
     public static Translation2d getShooterTranslation(Pose2d robotPose) {
@@ -49,55 +60,132 @@ public final class ShooterCalculator {
     }
 
     public static double getDistanceToHub(Pose2d pose) {
-        return getHubTranslation().getDistance(getShooterTranslation(pose));
+        tempHubAimPose = AllianceUtil.getHubAimPose();
+        tempShooterX = getShooterXFromRobotPose(pose);
+        tempShooterY = getShooterYFromRobotPose(pose);
+        tempDx = tempHubAimPose.getX() - tempShooterX;
+        tempDy = tempHubAimPose.getY() - tempShooterY;
+        return Math.hypot(tempDx, tempDy);
     }
 
     // Reusable result array to avoid allocation every loop
     private static final double[] shootingParams = new double[2];
+    private static Pose2d tempHubAimPose;
+    private static double tempHubX;
+    private static double tempHubY;
+    private static double tempShooterX;
+    private static double tempShooterY;
+    private static double tempDx;
+    private static double tempDy;
+    private static double tempDistance;
+    private static double tempWheelSpeed;
+    private static double tempHoodAngleDeg;
+    private static double tempY;
+
+    private static final double HOOD_A = 1.79;
+    private static final double HOOD_B = 14.43;
+    private static final double HOOD_OFFSET = 14.312;
+    private static final double HOOD_SHORT_RANGE_BREAKPOINT_METERS = 2.05;
+    private static final double HOOD_SHORT_RANGE_DEGREES = 3.5;
+
+    private static final double FLYWHEEL_A = -29.72883;
+    private static final double FLYWHEEL_B = 473.27393;
+    private static final double FLYWHEEL_C = -2886.63609;
+    private static final double FLYWHEEL_D = 8444.7507;
+    private static final double FLYWHEEL_E = -11605.2592;
+    private static final double FLYWHEEL_F = 7475.15141;
+    private static final double FLYWHEEL_CLOSE_RANGE_BREAKPOINT_METERS = 1.7;
+    private static final double FLYWHEEL_CLOSE_RANGE_RPM = 1500.0;
+    private static final double FLYWHEEL_FAR_RANGE_BREAKPOINT_METERS = 5.0;
+    private static final double FLYWHEEL_FAR_RANGE_BASE_RPM = 2631.0;
+    private static final double FLYWHEEL_FAR_RANGE_SLOPE_RPM_PER_METER = 20.0;
+
+    private static final double FLYWHEEL_SIM_A = -0.236999;
+    private static final double FLYWHEEL_SIM_B = 3.9759;
+    private static final double FLYWHEEL_SIM_C = 13.86351;
+    private static final double FLYWHEEL_SIM_CLOSE_RANGE_BREAKPOINT_METERS = 1.0;
+    private static final double FLYWHEEL_SIM_CLOSE_RANGE_RPS = 17.5;
+
+    private static final double PASS_RPS_A = 250.0;
+    private static final double PASS_RPS_B = 1500.0;
+
+    private static final double FLIGHT_TIME_A = -0.0374327;
+    private static final double FLIGHT_TIME_B = 0.418028;
+    private static final double FLIGHT_TIME_C = 0.277584;
+    private static final double FLIGHT_TIME_SHORT_RANGE_BREAKPOINT_METERS = 1.0;
+    private static final double FLIGHT_TIME_SHORT_RANGE_SECONDS = 0.65;
 
     public static double getDistanceToHubWithSpeedCalculation(double filteredSpeedX, double filteredSpeedY, Pose2d pose, double time) {
-        Translation2d hub = getHubTranslation();
-        Translation2d shooterTranslation = getShooterTranslation(pose);
-        double dx = hub.getX() - filteredSpeedX * time - shooterTranslation.getX();
-        double dy = hub.getY() - filteredSpeedY * time - shooterTranslation.getY();
-        return Math.hypot(dx, dy);
+        tempShooterX = getShooterXFromRobotPose(pose);
+        tempShooterY = getShooterYFromRobotPose(pose);
+        return getDistanceToHubWithSpeedCalculation(filteredSpeedX, filteredSpeedY, tempShooterX, tempShooterY, time);
+    }
+
+    public static double getDistanceToHubWithSpeedCalculation(double filteredSpeedX, double filteredSpeedY, double shooterX, double shooterY, double time) {
+        tempHubAimPose = AllianceUtil.getHubAimPose();
+        tempHubX = tempHubAimPose.getX();
+        tempHubY = tempHubAimPose.getY();
+        tempDx = tempHubX - filteredSpeedX * time - shooterX;
+        tempDy = tempHubY - filteredSpeedY * time - shooterY;
+        return Math.hypot(tempDx, tempDy);
     }
 
     public static double getXDistanceToHub(Pose2d pose) {
-        return Math.abs(getHubTranslation().getX() - getShooterTranslation(pose).getX());
+        return Math.abs(AllianceUtil.getHubAimPose().getX() - getShooterXFromRobotPose(pose));
+    }
+
+    public static double getXDistanceToHub(double robotX, double robotHeadingRadians) {
+        return Math.abs(AllianceUtil.getHubAimPose().getX() - getShooterXFromRobotState(robotX, robotHeadingRadians));
     }
 
     public static double[] calculateShootingParameters(double filteredSpeedX, double filteredSpeedY, Pose2d pose, double time) {
-        double distance = getDistanceToHubWithSpeedCalculation(filteredSpeedX, filteredSpeedY, pose, time);
+        tempDistance = getDistanceToHubWithSpeedCalculation(filteredSpeedX, filteredSpeedY, pose, time);
+        return calculateShootingParametersFromDistance(tempDistance);
+    }
 
-        double wheelSpeed;
+    public static double[] calculateShootingParameters(double filteredSpeedX, double filteredSpeedY, double shooterX, double shooterY, double time) {
+        tempDistance = getDistanceToHubWithSpeedCalculation(filteredSpeedX, filteredSpeedY, shooterX, shooterY, time);
+        return calculateShootingParametersFromDistance(tempDistance);
+    }
+
+    private static double[] calculateShootingParametersFromDistance(double distanceMeters) {
+        tempDistance = distanceMeters;
 
         if (Robot.isReal()) {
-            wheelSpeed = flywheelRPSFormula(distance) / ShooterConstants.SHOOTER_VELOCITY_TRANSFER_COEFFICIENT;
+            tempWheelSpeed = flywheelRPSFormula(tempDistance) / ShooterConstants.SHOOTER_VELOCITY_TRANSFER_COEFFICIENT;
         }
         else {
-            wheelSpeed = flywheelRPSFormulaSIM(distance) / SimConstants.SIMULATION_VELOCITY_TRANSFER_COEFFICIENT;
+            tempWheelSpeed = flywheelRPSFormulaSIM(tempDistance) / SimConstants.SIMULATION_VELOCITY_TRANSFER_COEFFICIENT;
         }
 
-        wheelSpeed = Math.max(
+        tempWheelSpeed = Math.max(
             MIN_FLYWHEEL_RPS,
-            Math.min(wheelSpeed, MAX_FLYWHEEL_RPS)
+            Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS)
         );
 
-        double hoodAngleDeg = hoodAngleFormula(distance);
-        hoodAngleDeg = Math.max(MIN_HOOD_DEG, Math.min(hoodAngleDeg, MAX_HOOD_DEG));
-        shootingParams[0] = wheelSpeed;
-        shootingParams[1] = hoodAngleDeg;
+        tempHoodAngleDeg = hoodAngleFormula(tempDistance);
+        tempHoodAngleDeg = Math.max(MIN_HOOD_DEG, Math.min(tempHoodAngleDeg, MAX_HOOD_DEG));
+        shootingParams[0] = tempWheelSpeed;
+        shootingParams[1] = tempHoodAngleDeg;
         return shootingParams;
     }
 
     public static double calculatePassSpeedFromCurrentPose(Pose2d pose) {
-        double wheelSpeed = passRPSFormula(getXDistanceToHub(pose));
-        wheelSpeed = Math.max(
+        tempWheelSpeed = passRPSFormula(getXDistanceToHub(pose)) / ShooterConstants.SHOOTER_VELOCITY_TRANSFER_COEFFICIENT;
+        tempWheelSpeed = Math.max(
             MIN_FLYWHEEL_RPS,
-            Math.min(wheelSpeed, MAX_FLYWHEEL_RPS)
+            Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS)
         );
-        return wheelSpeed;
+        return tempWheelSpeed;
+    }
+
+    public static double calculatePassSpeedFromCurrentState(double robotX, double robotHeadingRadians) {
+        tempWheelSpeed = passRPSFormula(getXDistanceToHub(robotX, robotHeadingRadians));
+        tempWheelSpeed = Math.max(
+            MIN_FLYWHEEL_RPS,
+            Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS)
+        );
+        return tempWheelSpeed;
     }
 
     public static double calculateRestFlywheelSpeed() {
@@ -113,71 +201,48 @@ public final class ShooterCalculator {
     }
 
     public static double hoodAngleFormula(double x) {
-        double a = 1.79;
-        double b = 14.43;
-
-        if (x < 2.05) {
-            return 3.5;
+        if (x < HOOD_SHORT_RANGE_BREAKPOINT_METERS) {
+            return HOOD_SHORT_RANGE_DEGREES;
         } else {
-            return a * x + b - 14.312;
+            return HOOD_A * x + HOOD_B - HOOD_OFFSET;
         }
     }
 
     public static double flywheelRPSFormula(double x) {
-        double a = -29.72883;
-        double b = 473.27393;
-        double c = -2886.63609;
-        double d = 8444.7507;
-        double f = -11605.2592;
-        double g = 7475.15141;
-
-        if (x < 1.7) {
-            return 1500 / 60;
+        if (x < FLYWHEEL_CLOSE_RANGE_BREAKPOINT_METERS) {
+            return FLYWHEEL_CLOSE_RANGE_RPM / 60.0;
         }
 
-        double y = (((((a * x + b) * x + c) * x + d) * x + f) * x + g);
+        tempY = (((((FLYWHEEL_A * x + FLYWHEEL_B) * x + FLYWHEEL_C) * x + FLYWHEEL_D) * x + FLYWHEEL_E) * x + FLYWHEEL_F);
 
-        if (x > 5) {
-            y = 2631;
-            y += 20 * (x - 5);
+        if (x > FLYWHEEL_FAR_RANGE_BREAKPOINT_METERS) {
+            tempY = FLYWHEEL_FAR_RANGE_BASE_RPM;
+            tempY += FLYWHEEL_FAR_RANGE_SLOPE_RPM_PER_METER * (x - FLYWHEEL_FAR_RANGE_BREAKPOINT_METERS);
         }
 
-        return y / 60;
+        return tempY / 60.0;
     }
 
-        public static double flywheelRPSFormulaSIM(double x) {
-        double a = -0.236999;
-        double b = 3.9759;
-        double c = 13.86351;
-
-
-        if (x < 1) {
-            return 17.5;
+    public static double flywheelRPSFormulaSIM(double x) {
+        if (x < FLYWHEEL_SIM_CLOSE_RANGE_BREAKPOINT_METERS) {
+            return FLYWHEEL_SIM_CLOSE_RANGE_RPS;
         }
 
-        double y = ((a * x + b) * x + c);
+        tempY = ((FLYWHEEL_SIM_A * x + FLYWHEEL_SIM_B) * x + FLYWHEEL_SIM_C);
 
-        return y;
+        return tempY;
     }
 
     public static double passRPSFormula(double x) {
-        double a = 250;
-        double b = 1500;
-
-        double y = a * x + b;
-
-        return y / 60;
+        tempY = PASS_RPS_A * x + PASS_RPS_B;
+        return tempY / 60.0;
     }
 
     public static double flightTimeOfFuelFormula(double x) {
-        double a = -0.0374327;
-        double b = 0.418028;
-        double c = 0.277584;
-
-        if (x < 1) {
-            return 0.65;
+        if (x < FLIGHT_TIME_SHORT_RANGE_BREAKPOINT_METERS) {
+            return FLIGHT_TIME_SHORT_RANGE_SECONDS;
         }
 
-        return ((a * x + b) * x + c) + 0.0;
+        return ((FLIGHT_TIME_A * x + FLIGHT_TIME_B) * x + FLIGHT_TIME_C) + 0.0;
     }
 }

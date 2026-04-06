@@ -48,6 +48,10 @@ public class IntakeSubsystem extends SubsystemBase {
 
   // Stop intake-arm SysId slightly before hard end offsets.
   private static final double INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS = 0.010; // 10 mm
+  private static final double INTAKE_DEPLOYED_THRESHOLD_METERS =
+    IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS - IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
+  private static final double INTAKE_RETRACTED_THRESHOLD_METERS =
+    IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS + IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
 
   private TalonFX intakeMotor;
   private TalonFX intakeMotor2;
@@ -116,7 +120,7 @@ public class IntakeSubsystem extends SubsystemBase {
     // On real hardware, seed extension encoder to known retracted position at boot.
     if (Robot.isReal()) {
       intakeArmMotor.setPosition(IntakeConstants.extensionMetersToMotorRotations(
-          IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters)));
+      IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
     }
 
     intakeVelocityControl = IntakeConstants.INTAKE_VELOCITY_CONTROL.clone();
@@ -190,9 +194,9 @@ public class IntakeSubsystem extends SubsystemBase {
   private boolean isIntakeArmNearSysIdLimit(SysIdRoutine.Direction direction) {
     double extensionMeters = getIntakeExtensionMeters();
     double minSafeExtension =
-        IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters) + INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
+    IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS + INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
     double maxSafeExtension =
-        IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters) - INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
+    IntakeConstants.INTAKE_EXTENSION_MAX_METERS - INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
 
     return direction == SysIdRoutine.Direction.kForward
         ? extensionMeters >= maxSafeExtension
@@ -217,8 +221,8 @@ public class IntakeSubsystem extends SubsystemBase {
   public void setIntakeExtensionMeters(double extensionMeters) {
     // Clamp requested extension to physical limits before commanding closed-loop position.
     double clampedExtension = Math.max(
-      IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
-      Math.min(extensionMeters, IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters))
+      IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS,
+      Math.min(extensionMeters, IntakeConstants.INTAKE_EXTENSION_MAX_METERS)
     );
 
     double motorRotations = IntakeConstants.extensionMetersToMotorRotations(clampedExtension);
@@ -231,13 +235,11 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public boolean isIntakeDeployed() {
-    return getIntakeExtensionMeters() >=
-        IntakeConstants.INTAKE_EXTENSION_DEPLOYED.minus(IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR).in(Meters);
+    return getIntakeExtensionMeters() >= INTAKE_DEPLOYED_THRESHOLD_METERS;
   }
 
   public boolean isIntakeRetracted() {
-    return getIntakeExtensionMeters() <=
-        IntakeConstants.INTAKE_EXTENSION_RETRACTED.plus(IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR).in(Meters);
+    return getIntakeExtensionMeters() <= INTAKE_RETRACTED_THRESHOLD_METERS;
   }
 
   public void publishTelemetry() {
@@ -377,14 +379,14 @@ public class IntakeSubsystem extends SubsystemBase {
   public void close() {
     // Fully retract and stop rollers.
     intakeGoalVelocity = 0;
-    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS;
     intakeStop();
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
   }
 
   public void deploy() {
     // Deploy arm without running rollers.
-    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS;
     intakeGoalVelocity = 0;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     intakeStop();
@@ -392,8 +394,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void intake() {
     // Deploy then run intake rollers at acquisition speed.
-    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
-    intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY.in(RotationsPerSecond);
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS;
+    intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY_RPS;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
     
@@ -401,24 +403,24 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void intakeWithOffset() {
     // Alternative intake mode currently mapped to deployed intake behavior.
-    intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY.in(RotationsPerSecond);
-    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
+    intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY_RPS;
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
   }
 
   public void feed() {
     // Move to feed position and run rollers toward feeder path.
-    intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY.in(RotationsPerSecond);
-    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED.in(Meters);
+    intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY_RPS;
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED_METERS;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
   }
 
   public void reverse() {
     // Reverse rollers; only run once intake is deployed to avoid stalling retracted geometry.
-    intakeGoalVelocity = IntakeConstants.INTAKE_REVERSE_VELOCITY.in(RotationsPerSecond);
-    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED.in(Meters);
+    intakeGoalVelocity = IntakeConstants.INTAKE_REVERSE_VELOCITY_RPS;
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     if (isIntakeDeployed()) {
       setIntakeSpeed(intakeGoalVelocity);
@@ -427,8 +429,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void idleBetween() {
     // Intermediate hold state used between intake and shooter handoff.
-    intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY.in(RotationsPerSecond);
-    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED.in(Meters);
+    intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY_RPS;
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED_METERS;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
   }
