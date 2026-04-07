@@ -141,6 +141,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
   private boolean flywheelReadyLatchEnabled = false;
   private boolean turretReadyLatchEnabled = false;
+  private boolean isTurretHomed = false;
   private double flywheelLatchGoalVelocityAbsRps = 0.0;
   private double turretLatchGoalAngleDegrees = 0.0;
 
@@ -299,6 +300,10 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public double setTurretAngleDegrees(double requestedAngleDegrees) {
+    if (!isTurretHomed) {
+
+      return turretFrameToRobotFrameDeg(getTurretAngleDegrees());
+    }
     // Public turret API uses robot-frame degrees. Convert to turret-mechanism frame first.
     tempRequestedTurretFrameDeg = robotFrameToTurretFrameDeg(requestedAngleDegrees);
 
@@ -320,20 +325,22 @@ public class ShooterSubsystem extends SubsystemBase {
     return turretFrameToRobotFrameDeg(tempWrappedTargetDeg);
   }
 
-  public double moveTurretWithoutHome(double requestedAngleDegrees) {
-    tempCurrentAngleDeg = getTurretAngleDegrees();
-    tempAngleErrorDeg = normalizeToMinus180To180(requestedAngleDegrees - tempCurrentAngleDeg);
-
-    // When not homed, preserve current internal turret-frame reference and move by delta.
-    tempWrappedTargetDeg = clampTurretRange(getTurretAngleDegreesRaw() + tempAngleErrorDeg);
-    tempMotorPosition = tempWrappedTargetDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
-
+  /**
+   * Move turret directly by a raw turret-frame angle difference.
+   *
+   * <p>Command target is computed as: {@code currentRawTurretAngle + goalDifferenceDegrees}.
+   *
+   * @param goalDifferenceDegrees Difference to apply in turret-frame degrees.
+   * @return Commanded turret angle in robot-frame degrees.
+   */
+  public void moveTurretRaw(double goal) {
+    isTurretHomed = false;
     turretMotor.setControl(
-        turretPositionControl
-            .withSlot(ShooterConstants.TURRET_GENTLE_SLOT)
-            .withPosition(tempMotorPosition));
+        turretPositionControl.withSlot(ShooterConstants.TURRET_AGGRESSIVE_SLOT).withPosition(goal));
+  }
 
-    return turretFrameToRobotFrameDeg(tempWrappedTargetDeg);
+  public double getTurretMotorPos() {
+    return turretMotor.getPosition().getValueAsDouble();
   }
 
   private double normalizeToMinus180To180(double angleDeg) {
@@ -417,6 +424,7 @@ public class ShooterSubsystem extends SubsystemBase {
     tempTurretMotorRot = tempAbsoluteTurretDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
     turretMotor.setPosition(tempTurretMotorRot);
     turretGoalAngleDegrees = turretFrameToRobotFrameDeg(tempAbsoluteTurretDeg);
+    isTurretHomed = true;
   }
 
   // ===== Action Methods =====
@@ -515,6 +523,10 @@ public class ShooterSubsystem extends SubsystemBase {
     return turretGoalAngleDegrees;
   }
 
+  public boolean isTurretHomed() {
+    return isTurretHomed;
+  }
+
   public double getFlywheel1SpeedAbs() {
     return Math.abs(getFlywheel1Velocity());
   }
@@ -538,58 +550,6 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public double getTurretAnalogRotation() {
     return turretAbsoluteEncoder.get();
-  }
-
-  private double stepIndexToRobotFrameDegrees(double stepIndex) {
-    // At analog reference rotation, turret is treated as robot-frame 180 deg.
-    return normalizeToMinus180To180(
-        ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG
-            - (stepIndex * ShooterConstants.TURRET_STEP_DEGREES));
-  }
-
-  /**
-   * Resolve analog reading to the 45-degree window anchor (0.327-equivalent) nearest the provided
-   * reference angle.
-   */
-  private double getWindowAnchorAngleDegreesNear(double referenceRobotFrameDeg) {
-    tempAbsoluteEncoderRot = getTurretAnalogRotation();
-    double fractionalStepIndex =
-        tempAbsoluteEncoderRot - ShooterConstants.TURRET_ABSOLUTE_ZERO_ROTATION;
-    double baseAnchorAngleDeg = stepIndexToRobotFrameDegrees(fractionalStepIndex);
-    double nearestWindowCount =
-        Math.round(
-            (referenceRobotFrameDeg - baseAnchorAngleDeg) / ShooterConstants.TURRET_STEP_DEGREES);
-
-    return normalizeToMinus180To180(
-        baseAnchorAngleDeg + nearestWindowCount * ShooterConstants.TURRET_STEP_DEGREES);
-  }
-
-  /**
-   * Returns the nearest 45-deg step to the LEFT (positive robot-frame angle direction) using analog
-   * sensor anchor rotation at turret absolute zero calibration.
-   */
-  public double getClosestLeftStepAngleDegreesFromAnalog() {
-    double currentWindowAnchorDeg = getWindowAnchorAngleDegreesNear(getTurretAngleDegrees());
-    double currentWindowIndex =
-        (ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG - currentWindowAnchorDeg)
-            / ShooterConstants.TURRET_STEP_DEGREES;
-    double currentWindowIndexRounded = Math.rint(currentWindowIndex);
-    double leftWindowIndex = currentWindowIndexRounded - 1.0;
-    return stepIndexToRobotFrameDegrees(leftWindowIndex);
-  }
-
-  /**
-   * Returns the nearest 45-deg step to the RIGHT (negative robot-frame angle direction) using
-   * analog sensor anchor rotation at turret absolute zero calibration.
-   */
-  public double getClosestRightStepAngleDegreesFromAnalog() {
-    double currentWindowAnchorDeg = getWindowAnchorAngleDegreesNear(getTurretAngleDegrees());
-    double currentWindowIndex =
-        (ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG - currentWindowAnchorDeg)
-            / ShooterConstants.TURRET_STEP_DEGREES;
-    double currentWindowIndexRounded = Math.rint(currentWindowIndex);
-    double rightWindowIndex = currentWindowIndexRounded + 1.0;
-    return stepIndexToRobotFrameDegrees(rightWindowIndex);
   }
 
   public double getHoodAngleDegrees() {

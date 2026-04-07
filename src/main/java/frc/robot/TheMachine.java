@@ -312,11 +312,11 @@ public class TheMachine {
     if (shooterSubsystem.isReadyToShoot() || Robot.isSimulation()) {
       feederSubsystem.feed();
       hopperSubsystem.feed();
-      intakeSubsystem.feed();
+      intakeSubsystem.intake();
     } else {
       feederSubsystem.feedGetReady();
       hopperSubsystem.idle();
-      intakeSubsystem.feed();
+      intakeSubsystem.intake();
     }
     state = TheMachineState.TEST;
   }

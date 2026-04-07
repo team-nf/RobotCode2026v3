@@ -140,7 +140,7 @@ public final class ShooterCalculator {
   private static final double FLYWHEEL_SIM_CLOSE_RANGE_BREAKPOINT_METERS = 1.0;
   private static final double FLYWHEEL_SIM_CLOSE_RANGE_RPS = 17.5;
 
-  private static final double PASS_RPS_A = 350.0;
+  private static final double PASS_RPS_A = 250.0;
   private static final double PASS_RPS_B = 1500.0;
 
   private static final double FLIGHT_TIME_A = -0.0374327;
@@ -211,9 +211,7 @@ public final class ShooterCalculator {
   }
 
   public static double calculatePassSpeedFromCurrentPose(Pose2d pose) {
-    tempWheelSpeed =
-        passRPSFormula(getXDistanceToHub(pose))
-            / ShooterConstants.SHOOTER_VELOCITY_TRANSFER_COEFFICIENT;
+    tempWheelSpeed = passRPSFormula(getXDistanceToHub(pose));
     tempWheelSpeed = Math.max(MIN_FLYWHEEL_RPS, Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS));
     return tempWheelSpeed;
   }
@@ -308,6 +306,7 @@ public final class ShooterCalculator {
 
   public static double passRPSFormula(double x) {
     tempY = PASS_RPS_A * x + PASS_RPS_B;
+    if (tempY > 3000) tempY = 3000;
     return tempY / 60.0;
   }
 

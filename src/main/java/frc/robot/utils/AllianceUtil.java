@@ -12,15 +12,11 @@ public final class AllianceUtil {
 
   /** Refresh cached alliance from Driver Station; call at startup/mode init, not every loop. */
   public static void refreshAllianceFromDriverStation() {
-    DriverStation.getAlliance()
-        .ifPresentOrElse(
-            alliance -> lastKnownBlueAlliance = alliance == DriverStation.Alliance.Blue,
-            () -> {
-              if (Container.isBlue != null) {
-                lastKnownBlueAlliance = Container.isBlue;
-              }
-            });
-
+    if (DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
+      lastKnownBlueAlliance = false;
+    } else if (DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
+      lastKnownBlueAlliance = true;
+    }
     Container.isBlue = lastKnownBlueAlliance;
   }
 

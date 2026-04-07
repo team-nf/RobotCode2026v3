@@ -17,6 +17,12 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "AutoShootSequenceNC"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "UnderLeftDouble_2"

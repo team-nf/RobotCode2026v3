@@ -90,6 +90,8 @@ public class MatchTracker {
 
     firstPhaseStatus = (redInactiveFirst ? "BlueFirst" : "RedFirst");
 
+    if (isPractice) matchTime = matchTime - 30;
+
     if (matchTime > 130) {
       // Transition shift, hub is active.
       isBlueHubActive = true;

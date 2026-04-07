@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
@@ -180,9 +181,6 @@ public class RobotContainer {
     // B -> stow intake and settle machine.
     m_driverController.b().onTrue(m_idleRetractedCommand);
 
-    // X -> begin intake state machine.
-    m_driverController.x().onTrue(m_intakeCommand);
-
     // Left trigger:
     // - In shooting zone: aim + shoot
     // - Elsewhere: aim + pass
@@ -210,15 +208,18 @@ public class RobotContainer {
     // - Outside shooting zone, return from trench back toward shooting area
     m_driverController.leftBumper().whileTrue(m_leftBumperTrenchCommand);
 
+    // X -> begin intake state machine.
+    m_driverController.rightBumper().onTrue(m_intakeCommand);
+
     // Emergency controller turret recovery controls.
     // X: step turret to closest LEFT 45-deg window anchor.
     // B: step turret to closest RIGHT 45-deg window anchor.
     // Y: reset turret integrated position from known absolute sensor position.
     // A: run intake hardstop zeroing.
-    m_emergencyController.x().onTrue(m_turretStepClosestLeftCommand);
-    m_emergencyController.b().onTrue(m_turretStepClosestRightCommand);
-    m_emergencyController.y().onTrue(m_resetTurretFromKnownPositionCommand);
-    m_emergencyController.a().onTrue(m_zeroIntakeAtHardstopCommand);
+    m_emergencyController.x().whileTrue(m_turretStepClosestLeftCommand);
+    m_emergencyController.b().whileTrue(m_turretStepClosestRightCommand);
+    m_emergencyController.y().whileTrue(m_resetTurretFromKnownPositionCommand);
+    m_emergencyController.a().whileTrue(m_zeroIntakeAtHardstopCommand);
 
     // Named commands are used by PathPlanner autos.
     // Keep names stable once autos are authored to avoid broken references.
@@ -267,6 +268,7 @@ public class RobotContainer {
       if (telemetryEnabled) {
         SmartDashboard.putNumber(
             "Conf/RobotContainerLoopMs", TelemetryConstants.roundTelemetry(loopTimeMs));
+        SmartDashboard.putData(CommandScheduler.getInstance());
         publishTelemetry();
       }
     }
