@@ -33,8 +33,8 @@ public final class ShooterCalculator {
   private static final double LOOKUP_STEP_METERS = 0.5;
   private static final double LOOKUP_MAX_DISTANCE_METERS = 6.5;
 
-  // Columns: [0] = shooter RPS, [1] = hood angle deg
-  private static final double[][] SHOOTER_LOOKUP_TABLE = {
+   // Columns: [0] = shooter RPS, [1] = hood angle deg
+  private static final double[][] SHOOTER_LOOKUP_TABLE_PREV = {
     {38, 4}, // 0.5 meters
     {29, 4.5}, // 1.0 meters
     {30.5, 5}, // 1.5 meters
@@ -48,6 +48,23 @@ public final class ShooterCalculator {
     {45, 18}, // 5.5 meters
     {47.7, 20.0}, // 6.0 meters
     {50.5, 20} // 6.5 meters
+  };
+
+  // Columns: [0] = shooter RPS, [1] = hood angle deg
+  private static final double[][] SHOOTER_LOOKUP_TABLE = {
+    {29, 0}, // 0.5 meters
+    {29, 0}, // 1.0 meters
+    {29.5, 3}, // 1.5 meters
+    {31.4, 5.5}, // 2.0 meters
+    {33.3, 5.5}, // 2.5 meters
+    {34.5, 6}, // 3.0 meters
+    {36.6, 8}, // 3.5 meters
+    {38, 8}, // 4.0 meters
+    {40, 10}, // 4.5 meters
+    {41, 12}, // 5.0 meters
+    {41, 14.4}, // 5.5 meters
+    {41.8, 16.0}, // 6.0 meters
+    {42.4, 18.0} // 6.5 meters
   };
 
   public static Translation2d getHubTranslation() {
@@ -205,7 +222,7 @@ public final class ShooterCalculator {
     tempWheelSpeed = Math.max(MIN_FLYWHEEL_RPS, Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS));
 
     tempHoodAngleDeg = Math.max(MIN_HOOD_DEG, Math.min(tempHoodAngleDeg, MAX_HOOD_DEG));
-    shootingParams[0] = tempWheelSpeed * 0.945;
+    shootingParams[0] = tempWheelSpeed;
     shootingParams[1] = tempHoodAngleDeg;
     return shootingParams;
   }
@@ -306,7 +323,7 @@ public final class ShooterCalculator {
 
   public static double passRPSFormula(double x) {
     tempY = PASS_RPS_A * x + PASS_RPS_B;
-    if (tempY > 3000) tempY = 3000;
+    if (tempY > 3200) tempY = 3200;
     return tempY / 60.0;
   }
 
@@ -315,6 +332,6 @@ public final class ShooterCalculator {
       return FLIGHT_TIME_SHORT_RANGE_SECONDS;
     }
 
-    return ((FLIGHT_TIME_A * x + FLIGHT_TIME_B) * x + FLIGHT_TIME_C) + 0.0;
+    return ((FLIGHT_TIME_A * x + FLIGHT_TIME_B) * x + FLIGHT_TIME_C) + 0.05;
   }
 }
