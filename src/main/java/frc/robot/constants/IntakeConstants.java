@@ -37,12 +37,12 @@ public class IntakeConstants {
                   .withKP(INTAKE_KP)
                   .withKI(INTAKE_KI)
                   .withKD(INTAKE_KD))
-          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(9).withPeakReverseVoltage(-9))
+          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(10).withPeakReverseVoltage(-10))
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
-                  .withSupplyCurrentLimit(30)
-                  .withStatorCurrentLimit(30))
+                  .withSupplyCurrentLimit(39)
+                  .withStatorCurrentLimit(39))
           .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive));
 
   public static final VelocityVoltage INTAKE_VELOCITY_CONTROL =
@@ -58,7 +58,7 @@ public class IntakeConstants {
 
   // Linear extension targets
   public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
-  public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(263);
+  public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(273);
   public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(120);
   public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
   public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);

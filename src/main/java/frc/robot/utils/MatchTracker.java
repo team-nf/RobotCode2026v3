@@ -6,6 +6,7 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
+import frc.robot.constants.TelemetryConstants;
 
 /** Add your docs here. */
 public class MatchTracker {
@@ -19,6 +20,8 @@ public class MatchTracker {
 
   private double activePhaseDuration = 0;
   private double matchTime = 0;
+
+  private boolean isEndGame = false;
 
   private String gameData = "";
   private boolean redInactiveFirst = false;
@@ -37,6 +40,7 @@ public class MatchTracker {
     if (DriverStation.isAutonomousEnabled()) {
       isBlueHubActive = true;
       isRedHubActive = true;
+      isEndGame = false;
       activePhaseDuration = 0;
       firstPhaseStatus = "Auto";
       publishStatus();
@@ -46,6 +50,7 @@ public class MatchTracker {
     if (!DriverStation.isTeleopEnabled()) {
       isBlueHubActive = false;
       isRedHubActive = false;
+      isEndGame = false;
       activePhaseDuration = 0;
       firstPhaseStatus = "NotTeleop";
       publishStatus();
@@ -61,6 +66,7 @@ public class MatchTracker {
     if (gameData.isEmpty() && !isPractice) {
       isBlueHubActive = true;
       isRedHubActive = true;
+      isEndGame = false;
       activePhaseDuration = 0;
       firstPhaseStatus = "Empty";
       publishStatus();
@@ -105,6 +111,7 @@ public class MatchTracker {
       isRedHubActive = !redInactiveFirst;
       activePhaseDuration = matchTime - 105;
       publishStatus();
+      isEndGame = false;
       return;
     } else if (matchTime > 80) {
       // Shift 2
@@ -112,6 +119,7 @@ public class MatchTracker {
       isRedHubActive = redInactiveFirst;
       activePhaseDuration = matchTime - 80;
       publishStatus();
+      isEndGame = false;
       return;
     } else if (matchTime > 55) {
       // Shift 3
@@ -119,6 +127,7 @@ public class MatchTracker {
       isRedHubActive = !redInactiveFirst;
       activePhaseDuration = matchTime - 55;
       publishStatus();
+      isEndGame = false;
       return;
     } else if (matchTime > 30) {
       // Shift 4
@@ -126,12 +135,14 @@ public class MatchTracker {
       isRedHubActive = redInactiveFirst;
       activePhaseDuration = matchTime - 30;
       publishStatus();
+      isEndGame = false;
       return;
     } else {
       // End game, hub always active.
       isBlueHubActive = true;
       isRedHubActive = true;
       activePhaseDuration = matchTime;
+      isEndGame = true;
       publishStatus();
       return;
     }
@@ -147,12 +158,14 @@ public class MatchTracker {
       table.getDoubleTopic("ActivePhaseDuration").publish();
   private DoublePublisher matchTimePublisher = table.getDoubleTopic("GameTime").publish();
   private StringPublisher firstPhaseStatusPublisher = table.getStringTopic("Status").publish();
+  private BooleanPublisher isEndGamePublisher = table.getBooleanTopic("isEndGame").publish();
 
   public void publishStatus() {
     isBlueHubActivePublisher.set(isBlueHubActive);
     isRedHubActivePublisher.set(isRedHubActive);
-    activePhaseDurationPublisher.set(activePhaseDuration);
-    matchTimePublisher.set(matchTime);
+    activePhaseDurationPublisher.set((int) activePhaseDuration);
+    matchTimePublisher.set((int) matchTime);
     firstPhaseStatusPublisher.set(firstPhaseStatus);
+    isEndGamePublisher.set(isEndGame);
   }
 }

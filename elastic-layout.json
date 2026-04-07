@@ -9,9 +9,9 @@
         "containers": [
           {
             "title": "Auto Chooser",
-            "x": 1280.0,
-            "y": 0.0,
-            "width": 192.0,
+            "x": 1408.0,
+            "y": 128.0,
+            "width": 256.0,
             "height": 128.0,
             "type": "ComboBox Chooser",
             "properties": {
@@ -23,8 +23,8 @@
           {
             "title": "StartPoseChooser",
             "x": 1152.0,
-            "y": 0.0,
-            "width": 128.0,
+            "y": 128.0,
+            "width": 256.0,
             "height": 128.0,
             "type": "ComboBox Chooser",
             "properties": {
@@ -56,9 +56,9 @@
           },
           {
             "title": "State",
-            "x": 1472.0,
+            "x": 1536.0,
             "y": 0.0,
-            "width": 192.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Text Display",
             "properties": {
@@ -71,8 +71,8 @@
           {
             "title": "ManualOverrideEnabled",
             "x": 1152.0,
-            "y": 128.0,
-            "width": 128.0,
+            "y": 0.0,
+            "width": 256.0,
             "height": 128.0,
             "type": "Toggle Button",
             "properties": {
@@ -85,7 +85,7 @@
             "title": "GameTime",
             "x": 512.0,
             "y": 512.0,
-            "width": 640.0,
+            "width": 512.0,
             "height": 256.0,
             "type": "Match Time",
             "properties": {
@@ -100,9 +100,9 @@
           {
             "title": "ActivePhaseDuration",
             "x": 1152.0,
-            "y": 256.0,
+            "y": 448.0,
             "width": 512.0,
-            "height": 512.0,
+            "height": 320.0,
             "type": "Match Time",
             "properties": {
               "topic": "/MatchTracker/ActivePhaseDuration",
@@ -115,8 +115,8 @@
           },
           {
             "title": "IsBlueHubActive",
-            "x": 1408.0,
-            "y": 128.0,
+            "x": 1024.0,
+            "y": 512.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
@@ -132,8 +132,8 @@
           },
           {
             "title": "IsRedHubActive",
-            "x": 1536.0,
-            "y": 128.0,
+            "x": 1024.0,
+            "y": 640.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
@@ -162,8 +162,8 @@
           },
           {
             "title": "IsBlue",
-            "x": 1280.0,
-            "y": 128.0,
+            "x": 1408.0,
+            "y": 0.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
@@ -228,6 +228,23 @@
               "topic": "/LL/DisabledLocoEnabled",
               "period": 0.06,
               "data_type": "boolean"
+            }
+          },
+          {
+            "title": "isEndGame",
+            "x": 1152.0,
+            "y": 256.0,
+            "width": 512.0,
+            "height": 192.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/MatchTracker/isEndGame",
+              "period": 0.06,
+              "data_type": "boolean",
+              "true_color": 4294901957,
+              "false_color": 4278190080,
+              "true_icon": "None",
+              "false_icon": "None"
             }
           }
         ]
@@ -1050,10 +1067,10 @@
         "containers": [
           {
             "title": "Field",
-            "x": 768.0,
+            "x": 1216.0,
             "y": 0.0,
-            "width": 896.0,
-            "height": 576.0,
+            "width": 448.0,
+            "height": 640.0,
             "type": "Field",
             "properties": {
               "topic": "/SmartDashboard/Conf/Field",
@@ -1063,7 +1080,7 @@
               "robot_length": 0.85,
               "show_other_objects": true,
               "show_trajectories": true,
-              "field_rotation": 0.0,
+              "field_rotation": -90.0,
               "robot_color": 4294198070,
               "trajectory_color": 4294967295,
               "show_robot_outside_widget": true
@@ -1182,9 +1199,9 @@
           {
             "title": "Flywheel2VelocityRps",
             "x": 1152.0,
-            "y": 576.0,
+            "y": 640.0,
             "width": 256.0,
-            "height": 320.0,
+            "height": 256.0,
             "type": "Graph",
             "properties": {
               "topic": "/SmartDashboard/Shooter/Flywheel2VelocityRps",
@@ -1198,9 +1215,9 @@
           {
             "title": "TurretDegError",
             "x": 1408.0,
-            "y": 576.0,
+            "y": 640.0,
             "width": 256.0,
-            "height": 320.0,
+            "height": 256.0,
             "type": "Graph",
             "properties": {
               "topic": "/SmartDashboard/Shooter/TurretDegError",
@@ -1226,6 +1243,32 @@
               "false_color": 4294198070,
               "true_icon": "None",
               "false_icon": "None"
+            }
+          },
+          {
+            "title": "limelight-normal",
+            "x": 768.0,
+            "y": 0.0,
+            "width": 448.0,
+            "height": 320.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/limelight-normal",
+              "period": 0.06,
+              "rotation_turns": 0
+            }
+          },
+          {
+            "title": "limelight-turret",
+            "x": 768.0,
+            "y": 320.0,
+            "width": 448.0,
+            "height": 256.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/limelight-turret",
+              "period": 0.06,
+              "rotation_turns": 0
             }
           }
         ]

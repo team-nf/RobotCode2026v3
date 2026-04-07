@@ -223,8 +223,8 @@ public class RobotContainer {
     // B: step turret to closest RIGHT 45-deg window anchor.
     // Y: reset turret integrated position from known absolute sensor position.
     // A: run intake hardstop zeroing.
-    m_emergencyController.x().whileTrue(m_turretStepClosestLeftCommand);
-    m_emergencyController.b().whileTrue(m_turretStepClosestRightCommand);
+    m_emergencyController.b().whileTrue(m_turretStepClosestLeftCommand);
+    m_emergencyController.x().whileTrue(m_turretStepClosestRightCommand);
     m_emergencyController.y().whileTrue(m_resetTurretFromKnownPositionCommand);
     m_emergencyController.a().whileTrue(m_zeroIntakeAtHardstopCommand);
 
@@ -245,7 +245,7 @@ public class RobotContainer {
         "AutoShootSequenceNC",
         new SequentialCommandGroup(
             new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine)
-                .withTimeout(5),
+                .withTimeout(9),
             new IdleDeployedCommand(m_theMachine).until(m_shooterSubsystem::isHoodClosed)));
   }
 

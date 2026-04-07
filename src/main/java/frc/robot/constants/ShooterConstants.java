@@ -179,8 +179,8 @@ public class ShooterConstants {
   public static final double TURRET_ABSOLUTE_OFFSET_DEGREES =
       -TURRET_ABSOLUTE_ZERO_ROTATION * TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION;
   // Full turret working range in turret frame.
-  public static final Angle MIN_TURRET_ANGLE = Degrees.of(-190);
-  public static final Angle MAX_TURRET_ANGLE = Degrees.of(190);
+  public static final Angle MIN_TURRET_ANGLE = Degrees.of(-182);
+  public static final Angle MAX_TURRET_ANGLE = Degrees.of(182);
 
   private static final Mass FLYWHEEL_MASS = Kilogram.of(0.1);
   public static final Distance FLYWHEEL_RADIUS =

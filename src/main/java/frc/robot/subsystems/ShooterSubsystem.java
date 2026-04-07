@@ -463,9 +463,9 @@ public class ShooterSubsystem extends SubsystemBase {
       return;
     } else {
       // Pit/debug fallback constants when manual override is enabled.
-      flywheelGoalVelocity = 25;
-      hoodGoalAngle = 0.0;
-      turretGoalAngleDegrees = setTurretAngleDegrees(180);
+      flywheelGoalVelocity = velocityRPS;
+      hoodGoalAngle = hoodAngle;
+      turretGoalAngleDegrees = getTurretAngleDegrees();
       resetReadyLatchesIfGoalChanged();
       setFlywheelSpeed(flywheelGoalVelocity);
       setHoodAngle(hoodGoalAngle);

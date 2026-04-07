@@ -48,7 +48,7 @@ public class AimAndPassCommand extends Command {
       NetworkTableInstance.getDefault().getBooleanTopic("/PASS/AimOnTarget").getEntry(false);
 
   private double MaxSpeed =
-      0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+      0.4 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
   private double MaxAngularRate =
       RotationsPerSecond.of(0.4)
           .in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
