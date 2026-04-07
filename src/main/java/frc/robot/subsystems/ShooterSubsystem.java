@@ -575,7 +575,7 @@ public class ShooterSubsystem extends SubsystemBase {
   private static final double PASS_HOOD_ERROR_DEG = HOOD_ERROR_DEG * 1.5;
   private static final double PASS_TURRET_ERROR_DEG = TURRET_LATCH_DISENGAGE_ERROR_DEG;
   private static final double PASS_TURRET_SPEED_RPS = TURRET_LATCH_DISENGAGE_SPEED_RPS;
-  private static final double PASS_FLYWHEEL_ERROR_RPS = FLYWHEEL_LATCH_DISENGAGE_ERROR_RPS;
+  private static final double PASS_FLYWHEEL_ERROR_RPS = 9.0;
   private static final double PASS_MIN_FLYWHEEL_RPS = 10.0;
 
   private void resetReadyLatches() {
@@ -665,7 +665,6 @@ public class ShooterSubsystem extends SubsystemBase {
     return tempFlywheelRps <= PASS_FLYWHEEL_ERROR_RPS
         && tempHoodDegError <= PASS_HOOD_ERROR_DEG
         && tempTurretDegError <= PASS_TURRET_ERROR_DEG
-        && tempTurretSpeedAbsRps <= PASS_TURRET_SPEED_RPS
         && tempFlywheelSpeedAbsRps > PASS_MIN_FLYWHEEL_RPS;
   }
 

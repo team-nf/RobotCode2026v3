@@ -302,14 +302,11 @@ public class AimAndShootCommand extends Command {
 
     // Feed only once shooter is ready; otherwise stay in spin-up state.
     shouldShoot = theMachine.isShooterReady() || Robot.isSimulation();
-    if (shouldUpdateShooterSetpoint(velocityRPS, hoodAngle, turretAngleDeg, shouldShoot)) {
       if (shouldShoot) {
         theMachine.shoot(velocityRPS, hoodAngle, turretAngleDeg);
       } else {
         theMachine.getReady(velocityRPS, hoodAngle, turretAngleDeg);
       }
-      cacheLastShooterSetpoint(velocityRPS, hoodAngle, turretAngleDeg, shouldShoot);
-    }
 
     if (telemetryEnabledEntry.get(false)) {
       SmartDashboard.putNumber(

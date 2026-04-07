@@ -177,11 +177,14 @@ public class AimAndPassCommand extends Command {
       theMachine.getReadyPass(velocityRPS, hoodAngle, turretAngleDeg);
     }
 
+    if(Robot.isSimulation())
+    {
     passOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
     passAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
     passAimPoseXEntry.set(aimX);
     passAimPoseYEntry.set(aimY);
     passAimPoseZEntry.set(0.0);
+    }
   }
 
   // Called once the command ends or is interrupted.
