@@ -7,8 +7,6 @@ package frc.robot.subsystems;
 import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Volts;
 
-import java.util.function.Supplier;
-
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.StatusCode;
@@ -18,7 +16,6 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.sim.ChassisReference;
 import com.ctre.phoenix6.sim.TalonFXSimState;
-
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.system.LinearSystem;
@@ -32,10 +29,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.constants.FeederConstants;
 import frc.robot.constants.TelemetryConstants;
+import java.util.function.Supplier;
 
-/**
- * Controls belt + feed motors that transfer cargo from hopper path into shooter.
- */
+/** Controls belt + feed motors that transfer cargo from hopper path into shooter. */
 public class FeederSubsystem extends SubsystemBase {
 
   private TalonFX feederBeltMotor;
@@ -59,9 +55,9 @@ public class FeederSubsystem extends SubsystemBase {
   private boolean feederBeltFeedLatchEnabled = false;
 
   private static final double FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS =
-    FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
+      FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
   private static final double FEEDER_BELT_LATCH_DISENGAGE_ERROR_RPS =
-    FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS * 3.0;
+      FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS * 3.0;
 
   private static final int FEEDER_FEED_VELOCITY_AVG_SAMPLES = 5;
   private final double[] feederFeedVelocityWindow = new double[FEEDER_FEED_VELOCITY_AVG_SAMPLES];
@@ -107,7 +103,8 @@ public class FeederSubsystem extends SubsystemBase {
       if (status.isOK()) break;
     }
     if (!status.isOK()) {
-      System.out.println("Could not apply configs to feeder motor 2, error code: " + status.toString());
+      System.out.println(
+          "Could not apply configs to feeder motor 2, error code: " + status.toString());
     }
 
     feederBeltPositionSignal = feederBeltMotor.getPosition(false);
@@ -121,9 +118,11 @@ public class FeederSubsystem extends SubsystemBase {
 
     feederBeltSysIdControl = new VoltageOut(0).withEnableFOC(false);
     feederFeedSysIdControl = new VoltageOut(0).withEnableFOC(false);
-  feederBeltSysIdRoutine = createSysIdRoutine("feeder/Belt", feederBeltMotor, feederBeltSysIdControl);
-  feederFeedSysIdRoutine = createSysIdRoutine("feeder/Feed", feederFeedMotor, feederFeedSysIdControl);
-    
+    feederBeltSysIdRoutine =
+        createSysIdRoutine("feeder/Belt", feederBeltMotor, feederBeltSysIdControl);
+    feederFeedSysIdRoutine =
+        createSysIdRoutine("feeder/Feed", feederFeedMotor, feederFeedSysIdControl);
+
     feederVelocityControl = FeederConstants.FEEDER_VELOCITY_CONTROL.clone();
   }
 
@@ -134,41 +133,50 @@ public class FeederSubsystem extends SubsystemBase {
     return Math.abs(shooterGoalRpsSupplier.get());
   }
 
-  private SysIdRoutine createSysIdRoutine(String logPrefix, TalonFX motor, VoltageOut voltageControl) {
+  private SysIdRoutine createSysIdRoutine(
+      String logPrefix, TalonFX motor, VoltageOut voltageControl) {
     return new SysIdRoutine(
         new SysIdRoutine.Config(
             null,
             Volts.of(4),
             null,
-            state -> SignalLogger.writeString(logPrefix + "_State", state.toString())
-        ),
+            state -> SignalLogger.writeString(logPrefix + "_State", state.toString())),
         new SysIdRoutine.Mechanism(
             output -> {
               motor.setControl(voltageControl.withOutput(output.in(Volts)));
-              SignalLogger.writeDouble(logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
-              SignalLogger.writeDouble(logPrefix + "_Position", motor.getPosition().getValueAsDouble());
-              SignalLogger.writeDouble(logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
+              SignalLogger.writeDouble(
+                  logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
+              SignalLogger.writeDouble(
+                  logPrefix + "_Position", motor.getPosition().getValueAsDouble());
+              SignalLogger.writeDouble(
+                  logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
             },
             null,
-            this
-        )
-    );
+            this));
   }
 
   public Command feederBeltSysIdQuasistatic(SysIdRoutine.Direction direction) {
-    return feederBeltSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> feederBeltMotor.set(0.0));
+    return feederBeltSysIdRoutine
+        .quasistatic(direction)
+        .finallyDo(interrupted -> feederBeltMotor.set(0.0));
   }
 
   public Command feederBeltSysIdDynamic(SysIdRoutine.Direction direction) {
-    return feederBeltSysIdRoutine.dynamic(direction).finallyDo(interrupted -> feederBeltMotor.set(0.0));
+    return feederBeltSysIdRoutine
+        .dynamic(direction)
+        .finallyDo(interrupted -> feederBeltMotor.set(0.0));
   }
 
   public Command feederFeedSysIdQuasistatic(SysIdRoutine.Direction direction) {
-    return feederFeedSysIdRoutine.quasistatic(direction).finallyDo(interrupted -> feederFeedMotor.set(0.0));
+    return feederFeedSysIdRoutine
+        .quasistatic(direction)
+        .finallyDo(interrupted -> feederFeedMotor.set(0.0));
   }
 
   public Command feederFeedSysIdDynamic(SysIdRoutine.Direction direction) {
-    return feederFeedSysIdRoutine.dynamic(direction).finallyDo(interrupted -> feederFeedMotor.set(0.0));
+    return feederFeedSysIdRoutine
+        .dynamic(direction)
+        .finallyDo(interrupted -> feederFeedMotor.set(0.0));
   }
 
   public void feederStop() {
@@ -180,15 +188,13 @@ public class FeederSubsystem extends SubsystemBase {
   public void feederBeltSetSpeed(double velocity) {
     // Convert mechanism rps to motor-side rps through gear reduction.
     feederBeltMotor.setControl(
-      feederVelocityControl.withVelocity(velocity * FeederConstants.FEEDER_BELT_GEAR_REDUCTION)
-    );
+        feederVelocityControl.withVelocity(velocity * FeederConstants.FEEDER_BELT_GEAR_REDUCTION));
   }
 
   public void feederFeedSetSpeed(double velocity) {
     // Convert mechanism rps to motor-side rps through gear reduction.
     feederFeedMotor.setControl(
-      feederVelocityControl.withVelocity(velocity * FeederConstants.FEEDER_GEAR_REDUCTION)
-    );
+        feederVelocityControl.withVelocity(velocity * FeederConstants.FEEDER_GEAR_REDUCTION));
   }
 
   public double getFeederFeedVelocity() {
@@ -206,6 +212,7 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   double newSample;
+
   private void updateFeederFeedVelocityAverage() {
     newSample = feederFeedVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_GEAR_REDUCTION;
 
@@ -217,46 +224,79 @@ public class FeederSubsystem extends SubsystemBase {
 
     feederFeedVelocityWindow[feederFeedVelocityWindowIndex] = newSample;
     feederFeedVelocityWindowSum += newSample;
-    feederFeedVelocityWindowIndex = (feederFeedVelocityWindowIndex + 1) % FEEDER_FEED_VELOCITY_AVG_SAMPLES;
+    feederFeedVelocityWindowIndex =
+        (feederFeedVelocityWindowIndex + 1) % FEEDER_FEED_VELOCITY_AVG_SAMPLES;
 
     feederFeedVelocityAverageRps = feederFeedVelocityWindowSum / feederFeedVelocityWindowCount;
   }
 
   public boolean isFeederFeedAtGoalSpeed() {
     return Math.abs(getFeederFeedVelocity() - feederFeedGoalVelocity)
-    < FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
+        < FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
   }
 
   public void publishTelemetry() {
-    SmartDashboard.putNumber("Feeder/BeltMotorPositionRot", TelemetryConstants.roundTelemetry(feederBeltPositionSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Feeder/BeltMotorVelocityRps", TelemetryConstants.roundTelemetry(feederBeltVelocitySignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Feeder/BeltMotorCurrentA", TelemetryConstants.roundTelemetry(feederBeltCurrentSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Feeder/BeltMotorVoltageV", TelemetryConstants.roundTelemetry(feederBeltVoltageSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/BeltMotorPositionRot",
+        TelemetryConstants.roundTelemetry(feederBeltPositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/BeltMotorVelocityRps",
+        TelemetryConstants.roundTelemetry(feederBeltVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/BeltMotorCurrentA",
+        TelemetryConstants.roundTelemetry(feederBeltCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/BeltMotorVoltageV",
+        TelemetryConstants.roundTelemetry(feederBeltVoltageSignal.getValueAsDouble()));
 
-    SmartDashboard.putNumber("Feeder/FeedMotorPositionRot", TelemetryConstants.roundTelemetry(feederFeedPositionSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Feeder/FeedMotorVelocityRps", TelemetryConstants.roundTelemetry(feederFeedVelocitySignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Feeder/FeedMotorCurrentA", TelemetryConstants.roundTelemetry(feederFeedCurrentSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Feeder/FeedMotorVoltageV", TelemetryConstants.roundTelemetry(feederFeedVoltageSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Feeder/BeltMotorGoalVelocityRps", TelemetryConstants.roundTelemetry(feederBeltGoalVelocity));
-    SmartDashboard.putNumber("Feeder/BeltMotorVelocityErrorRps", TelemetryConstants.roundTelemetry(feederBeltGoalVelocity - (feederBeltVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_BELT_GEAR_REDUCTION)));
-    SmartDashboard.putNumber("feederBeltRpsError", TelemetryConstants.roundTelemetry(feederBeltGoalVelocity - (feederBeltVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_BELT_GEAR_REDUCTION)));
-    SmartDashboard.putNumber("Feeder/FeedMotorGoalVelocityRps", TelemetryConstants.roundTelemetry(feederFeedGoalVelocity));
-    SmartDashboard.putNumber("Feeder/FeedMotorVelocityErrorRps", TelemetryConstants.roundTelemetry(feederFeedGoalVelocity - getFeederFeedVelocity()));
+    SmartDashboard.putNumber(
+        "Feeder/FeedMotorPositionRot",
+        TelemetryConstants.roundTelemetry(feederFeedPositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/FeedMotorVelocityRps",
+        TelemetryConstants.roundTelemetry(feederFeedVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/FeedMotorCurrentA",
+        TelemetryConstants.roundTelemetry(feederFeedCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/FeedMotorVoltageV",
+        TelemetryConstants.roundTelemetry(feederFeedVoltageSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Feeder/BeltMotorGoalVelocityRps",
+        TelemetryConstants.roundTelemetry(feederBeltGoalVelocity));
+    SmartDashboard.putNumber(
+        "Feeder/BeltMotorVelocityErrorRps",
+        TelemetryConstants.roundTelemetry(
+            feederBeltGoalVelocity
+                - (feederBeltVelocitySignal.getValueAsDouble()
+                    / FeederConstants.FEEDER_BELT_GEAR_REDUCTION)));
+    SmartDashboard.putNumber(
+        "feederBeltRpsError",
+        TelemetryConstants.roundTelemetry(
+            feederBeltGoalVelocity
+                - (feederBeltVelocitySignal.getValueAsDouble()
+                    / FeederConstants.FEEDER_BELT_GEAR_REDUCTION)));
+    SmartDashboard.putNumber(
+        "Feeder/FeedMotorGoalVelocityRps",
+        TelemetryConstants.roundTelemetry(feederFeedGoalVelocity));
+    SmartDashboard.putNumber(
+        "Feeder/FeedMotorVelocityErrorRps",
+        TelemetryConstants.roundTelemetry(feederFeedGoalVelocity - getFeederFeedVelocity()));
     SmartDashboard.putBoolean("Feeder/FeedMotorAtGoalSpeed", isFeederFeedAtGoalSpeed());
     SmartDashboard.putBoolean("Feeder/BeltFeedLatchEnabled", feederBeltFeedLatchEnabled);
   }
 
   private void refreshStatusSignals() {
     BaseStatusSignal.refreshAll(
-    //feederBeltPositionSignal,
-    feederBeltVelocitySignal,
-    //feederBeltCurrentSignal,
-    //feederBeltVoltageSignal,
-    //feederFeedPositionSignal,
-    feederFeedVelocitySignal
-    //feederFeedCurrentSignal,
-    //feederFeedVoltageSignal
-    );
+        // feederBeltPositionSignal,
+        feederBeltVelocitySignal,
+        // feederBeltCurrentSignal,
+        // feederBeltVoltageSignal,
+        // feederFeedPositionSignal,
+        feederFeedVelocitySignal
+        // feederFeedCurrentSignal,
+        // feederFeedVoltageSignal
+        );
   }
 
   // SIMULATION
@@ -271,45 +311,46 @@ public class FeederSubsystem extends SubsystemBase {
 
   public void simUpdate() {
 
-        if (!isSimulationInitialized) {
+    if (!isSimulationInitialized) {
       // Initialize feeder simulation model once.
-            isSimulationInitialized = true;
-            feederDcMotor = DCMotor.getKrakenX60(1);
-            feederSystem = LinearSystemId.createDCMotorSystem(
-            feederDcMotor,
-            FeederConstants.FEEDER_MOMENT_OF_INERTIA.in(KilogramSquareMeters), // Moment of Inertia
-            FeederConstants.FEEDER_BELT_GEAR_REDUCTION);
+      isSimulationInitialized = true;
+      feederDcMotor = DCMotor.getKrakenX60(1);
+      feederSystem =
+          LinearSystemId.createDCMotorSystem(
+              feederDcMotor,
+              FeederConstants.FEEDER_MOMENT_OF_INERTIA.in(
+                  KilogramSquareMeters), // Moment of Inertia
+              FeederConstants.FEEDER_BELT_GEAR_REDUCTION);
 
-            feederSim = new DCMotorSim(feederSystem, feederDcMotor);
-            feederBeltMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
-            feederBeltMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
-            feederFeedMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
-            feederFeedMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
-        }
-        else {
+      feederSim = new DCMotorSim(feederSystem, feederDcMotor);
+      feederBeltMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
+      feederBeltMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
+      feederFeedMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
+      feederFeedMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
+    } else {
       // Step feeder simulation and mirror state to both motors.
       feederBeltMotorSimState = feederBeltMotor.getSimState();
       feederFeedMotorSimState = feederFeedMotor.getSimState();
 
       feederBeltMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
       feederFeedMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
-            
+
       feederSim.setInputVoltage(feederBeltMotorSimState.getMotorVoltage());
-            feederSim.update(0.002);
+      feederSim.update(0.002);
 
       feederBeltMotorSimState.setRawRotorPosition(
-                feederSim.getAngularPosition().times(FeederConstants.FEEDER_BELT_GEAR_REDUCTION));
+          feederSim.getAngularPosition().times(FeederConstants.FEEDER_BELT_GEAR_REDUCTION));
 
       feederBeltMotorSimState.setRotorVelocity(
-                feederSim.getAngularVelocity().times(FeederConstants.FEEDER_BELT_GEAR_REDUCTION));
+          feederSim.getAngularVelocity().times(FeederConstants.FEEDER_BELT_GEAR_REDUCTION));
 
       feederFeedMotorSimState.setRawRotorPosition(
-        feederSim.getAngularPosition().times(FeederConstants.FEEDER_GEAR_REDUCTION));
+          feederSim.getAngularPosition().times(FeederConstants.FEEDER_GEAR_REDUCTION));
 
       feederFeedMotorSimState.setRotorVelocity(
-        feederSim.getAngularVelocity().times(FeederConstants.FEEDER_GEAR_REDUCTION));
-        }   
+          feederSim.getAngularVelocity().times(FeederConstants.FEEDER_GEAR_REDUCTION));
     }
+  }
 
   @Override
   public void simulationPeriodic() {
@@ -361,7 +402,9 @@ public class FeederSubsystem extends SubsystemBase {
     feederFeedSetSpeed(feederFeedGoalVelocity);
   }
 
-  /** @deprecated Use {@link #feedGetReady()}. */
+  /**
+   * @deprecated Use {@link #feedGetReady()}.
+   */
   @Deprecated
   public void feed_get_ready() {
     feedGetReady();
@@ -390,12 +433,13 @@ public class FeederSubsystem extends SubsystemBase {
     test();
   }
 
-  /** @deprecated Use {@link #test(double, double)}. */
+  /**
+   * @deprecated Use {@link #test(double, double)}.
+   */
   @Deprecated
   public void test(double feederRps) {
     test(feederRps, feederRps);
   }
-
 
   @Override
   public void periodic() {

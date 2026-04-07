@@ -22,7 +22,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.sim.ChassisReference;
 import com.ctre.phoenix6.sim.TalonFXSimState;
-
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.system.LinearSystem;
@@ -50,9 +49,11 @@ public class IntakeSubsystem extends SubsystemBase {
   // Stop intake-arm SysId slightly before hard end offsets.
   private static final double INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS = 0.010; // 10 mm
   private static final double INTAKE_DEPLOYED_THRESHOLD_METERS =
-    IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS - IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
+      IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS
+          - IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
   private static final double INTAKE_RETRACTED_THRESHOLD_METERS =
-    IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS + IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
+      IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS
+          + IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
   private static final double INTAKE_ARM_ZEROING_REVERSE_OUTPUT = -0.12;
   private static final double INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS = 0.05;
   private static final double INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC = 0.20;
@@ -92,7 +93,6 @@ public class IntakeSubsystem extends SubsystemBase {
   private final SysIdRoutine intakeRollerSysIdRoutine;
   private final SysIdRoutine intakeArmSysIdRoutine;
 
-
   /** Creates a new IntakeSubsystem. */
   public IntakeSubsystem() {
     intakeMotor = new TalonFX(IntakeConstants.INTAKE_ROLLER_PRIMARY_MOTOR_ID);
@@ -114,10 +114,11 @@ public class IntakeSubsystem extends SubsystemBase {
       if (status.isOK()) break;
     }
     if (!status.isOK()) {
-      System.out.println("Could not apply intake motor 2 configs, error code: " + status.toString());
+      System.out.println(
+          "Could not apply intake motor 2 configs, error code: " + status.toString());
     }
 
-  intakeMotor2.setControl(new Follower(intakeMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+    intakeMotor2.setControl(new Follower(intakeMotor.getDeviceID(), MotorAlignmentValue.Opposed));
 
     status = StatusCode.StatusCodeNotInitialized;
     for (int i = 0; i < 5; ++i) {
@@ -125,13 +126,15 @@ public class IntakeSubsystem extends SubsystemBase {
       if (status.isOK()) break;
     }
     if (!status.isOK()) {
-      System.out.println("Could not apply intake arm motor configs, error code: " + status.toString());
+      System.out.println(
+          "Could not apply intake arm motor configs, error code: " + status.toString());
     }
 
     // On real hardware, seed extension encoder to known retracted position at boot.
     if (Robot.isReal()) {
-      intakeArmMotor.setPosition(IntakeConstants.extensionMetersToMotorRotations(
-      IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
+      intakeArmMotor.setPosition(
+          IntakeConstants.extensionMetersToMotorRotations(
+              IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
     }
     intakeHomed = true;
 
@@ -153,32 +156,35 @@ public class IntakeSubsystem extends SubsystemBase {
 
     intakeRollerSysIdControl = new VoltageOut(0).withEnableFOC(false);
     intakeArmSysIdControl = new VoltageOut(0).withEnableFOC(false);
-    intakeRollerSysIdRoutine = createSysIdRoutine("intake/Roller", intakeMotor, intakeRollerSysIdControl);
+    intakeRollerSysIdRoutine =
+        createSysIdRoutine("intake/Roller", intakeMotor, intakeRollerSysIdControl);
     intakeArmSysIdRoutine = createSysIdRoutine("intake/Arm", intakeArmMotor, intakeArmSysIdControl);
   }
 
-  private SysIdRoutine createSysIdRoutine(String logPrefix, TalonFX motor, VoltageOut voltageControl) {
+  private SysIdRoutine createSysIdRoutine(
+      String logPrefix, TalonFX motor, VoltageOut voltageControl) {
     return new SysIdRoutine(
         new SysIdRoutine.Config(
             null,
             Volts.of(4),
             null,
-            state -> SignalLogger.writeString(logPrefix + "_State", state.toString())
-        ),
+            state -> SignalLogger.writeString(logPrefix + "_State", state.toString())),
         new SysIdRoutine.Mechanism(
             output -> {
               motor.setControl(voltageControl.withOutput(output.in(Volts)));
-              SignalLogger.writeDouble(logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
-              SignalLogger.writeDouble(logPrefix + "_Position", motor.getPosition().getValueAsDouble());
-              SignalLogger.writeDouble(logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
+              SignalLogger.writeDouble(
+                  logPrefix + "_Voltage", motor.getMotorVoltage().getValueAsDouble());
+              SignalLogger.writeDouble(
+                  logPrefix + "_Position", motor.getPosition().getValueAsDouble());
+              SignalLogger.writeDouble(
+                  logPrefix + "_Velocity", motor.getVelocity().getValueAsDouble());
             },
-            log -> log.motor(logPrefix)
-              .voltage(Volts.of(motor.getMotorVoltage().getValueAsDouble()))
-              .angularPosition(Rotations.of(motor.getPosition().getValueAsDouble()))
-              .angularVelocity(RotationsPerSecond.of(motor.getVelocity().getValueAsDouble())),
-            this
-        )
-    );
+            log ->
+                log.motor(logPrefix)
+                    .voltage(Volts.of(motor.getMotorVoltage().getValueAsDouble()))
+                    .angularPosition(Rotations.of(motor.getPosition().getValueAsDouble()))
+                    .angularVelocity(RotationsPerSecond.of(motor.getVelocity().getValueAsDouble())),
+            this));
   }
 
   public Command intakeRollerSysIdQuasistatic(SysIdRoutine.Direction direction) {
@@ -206,9 +212,9 @@ public class IntakeSubsystem extends SubsystemBase {
   private boolean isIntakeArmNearSysIdLimit(SysIdRoutine.Direction direction) {
     double extensionMeters = getIntakeExtensionMeters();
     double minSafeExtension =
-    IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS + INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
+        IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS + INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
     double maxSafeExtension =
-    IntakeConstants.INTAKE_EXTENSION_MAX_METERS - INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
+        IntakeConstants.INTAKE_EXTENSION_MAX_METERS - INTAKE_ARM_SYSID_LIMIT_MARGIN_METERS;
 
     return direction == SysIdRoutine.Direction.kForward
         ? extensionMeters >= maxSafeExtension
@@ -224,8 +230,7 @@ public class IntakeSubsystem extends SubsystemBase {
   public void setIntakeSpeed(double velocity) {
     // Convert mechanism rps to motor-side rps through gear reduction.
     intakeMotor.setControl(
-      intakeVelocityControl.withVelocity(velocity * IntakeConstants.INTAKE_GEAR_REDUCTION)
-    );
+        intakeVelocityControl.withVelocity(velocity * IntakeConstants.INTAKE_GEAR_REDUCTION));
   }
 
   // --- Linear extension control ---
@@ -236,10 +241,10 @@ public class IntakeSubsystem extends SubsystemBase {
     }
 
     // Clamp requested extension to physical limits before commanding closed-loop position.
-    double clampedExtension = Math.max(
-      IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS,
-      Math.min(extensionMeters, IntakeConstants.INTAKE_EXTENSION_MAX_METERS)
-    );
+    double clampedExtension =
+        Math.max(
+            IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS,
+            Math.min(extensionMeters, IntakeConstants.INTAKE_EXTENSION_MAX_METERS));
 
     double motorRotations = IntakeConstants.extensionMetersToMotorRotations(clampedExtension);
     intakeArmMotor.setControl(intakeArmPositionControl.withPosition(motorRotations));
@@ -265,47 +270,73 @@ public class IntakeSubsystem extends SubsystemBase {
   /** Re-seed extension sensor as fully retracted; call only when physically retracted. */
   public void homeIntakeAtRetractedPosition() {
     intakeArmMotor.setPosition(
-      IntakeConstants.extensionMetersToMotorRotations(IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
+        IntakeConstants.extensionMetersToMotorRotations(
+            IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
     intakeHomed = true;
   }
 
   public void publishTelemetry() {
     double extensionMeters = getIntakeExtensionMeters();
 
-    SmartDashboard.putNumber("Intake/RollerVelocityRps", TelemetryConstants.roundTelemetry(intakeVelocitySignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/RollerCurrentA", TelemetryConstants.roundTelemetry(intakeCurrentSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/RollerVoltageV", TelemetryConstants.roundTelemetry(intakeVoltageSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/Roller2VelocityRps", TelemetryConstants.roundTelemetry(intake2VelocitySignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/Roller2CurrentA", TelemetryConstants.roundTelemetry(intake2CurrentSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/Roller2VoltageV", TelemetryConstants.roundTelemetry(intake2VoltageSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/RollerVelocityRps",
+        TelemetryConstants.roundTelemetry(intakeVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/RollerCurrentA",
+        TelemetryConstants.roundTelemetry(intakeCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/RollerVoltageV",
+        TelemetryConstants.roundTelemetry(intakeVoltageSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/Roller2VelocityRps",
+        TelemetryConstants.roundTelemetry(intake2VelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/Roller2CurrentA",
+        TelemetryConstants.roundTelemetry(intake2CurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/Roller2VoltageV",
+        TelemetryConstants.roundTelemetry(intake2VoltageSignal.getValueAsDouble()));
 
-    SmartDashboard.putNumber("Intake/ExtensionMotorPositionRot", TelemetryConstants.roundTelemetry(intakeArmPositionSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/ExtensionMotorVelocityRps", TelemetryConstants.roundTelemetry(intakeArmVelocitySignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/ExtensionMotorCurrentA", TelemetryConstants.roundTelemetry(intakeArmCurrentSignal.getValueAsDouble()));
-    SmartDashboard.putNumber("Intake/ExtensionMotorVoltageV", TelemetryConstants.roundTelemetry(intakeArmVoltageSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/ExtensionMotorPositionRot",
+        TelemetryConstants.roundTelemetry(intakeArmPositionSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/ExtensionMotorVelocityRps",
+        TelemetryConstants.roundTelemetry(intakeArmVelocitySignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/ExtensionMotorCurrentA",
+        TelemetryConstants.roundTelemetry(intakeArmCurrentSignal.getValueAsDouble()));
+    SmartDashboard.putNumber(
+        "Intake/ExtensionMotorVoltageV",
+        TelemetryConstants.roundTelemetry(intakeArmVoltageSignal.getValueAsDouble()));
 
-    SmartDashboard.putNumber("Intake/ExtensionAmountMeters", TelemetryConstants.roundTelemetry(extensionMeters));
-    SmartDashboard.putNumber("Intake/ExtensionAmountMillimeters", TelemetryConstants.roundTelemetry(extensionMeters * 1000.0));
+    SmartDashboard.putNumber(
+        "Intake/ExtensionAmountMeters", TelemetryConstants.roundTelemetry(extensionMeters));
+    SmartDashboard.putNumber(
+        "Intake/ExtensionAmountMillimeters",
+        TelemetryConstants.roundTelemetry(extensionMeters * 1000.0));
     SmartDashboard.putBoolean("Intake/Homed", intakeHomed);
     if (isSimulationInitialized && intakeArmSim != null) {
-      SmartDashboard.putNumber("Intake/SimExtensionMeters", TelemetryConstants.roundTelemetry(intakeArmSim.getPositionMeters()));
+      SmartDashboard.putNumber(
+          "Intake/SimExtensionMeters",
+          TelemetryConstants.roundTelemetry(intakeArmSim.getPositionMeters()));
     }
   }
 
   private void refreshStatusSignals() {
     BaseStatusSignal.refreshAll(
         intakeVelocitySignal,
-        //intakeCurrentSignal,
-        //intakeVoltageSignal,
+        // intakeCurrentSignal,
+        // intakeVoltageSignal,
         intake2VelocitySignal,
-        //intake2CurrentSignal,
-        //intake2VoltageSignal,
+        // intake2CurrentSignal,
+        // intake2VoltageSignal,
         intakeArmPositionSignal
-        //,
-        //intakeArmVelocitySignal,
-        //intakeArmCurrentSignal,
-        //intakeArmVoltageSignal
-      );
+        // ,
+        // intakeArmVelocitySignal,
+        // intakeArmCurrentSignal,
+        // intakeArmVoltageSignal
+        );
   }
 
   // --- SIMULATION ---
@@ -332,30 +363,32 @@ public class IntakeSubsystem extends SubsystemBase {
 
       // Initialize roller simulation.
       intakeDcMotor = DCMotor.getKrakenX60(1);
-      intakeSystem = LinearSystemId.createDCMotorSystem(
-          intakeDcMotor,
-          IntakeConstants.INTAKE_MOMENT_OF_INERTIA.in(KilogramSquareMeters),
-          IntakeConstants.INTAKE_GEAR_REDUCTION);
+      intakeSystem =
+          LinearSystemId.createDCMotorSystem(
+              intakeDcMotor,
+              IntakeConstants.INTAKE_MOMENT_OF_INERTIA.in(KilogramSquareMeters),
+              IntakeConstants.INTAKE_GEAR_REDUCTION);
       intakeSim = new DCMotorSim(intakeSystem, intakeDcMotor);
       intakeMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
       intakeMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
-  intakeMotor2.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
-  intakeMotor2.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
+      intakeMotor2.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
+      intakeMotor2.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
 
-  // Initialize extension-arm simulation.
-  intakeArmDcMotor = DCMotor.getKrakenX60(1);
-  intakeArmSim = new ElevatorSim(
-          intakeArmDcMotor,
-          IntakeConstants.INTAKE_ARM_GEAR_REDUCTION,
-          IntakeConstants.INTAKE_ARM_MASS.in(edu.wpi.first.units.Units.Kilograms),
-          IntakeConstants.INTAKE_SIM_DRUM_RADIUS_METERS,
-          IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
-          IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters),
-          false,
-          IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
-          0.0,
-          0.0);
-  intakeArmMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
+      // Initialize extension-arm simulation.
+      intakeArmDcMotor = DCMotor.getKrakenX60(1);
+      intakeArmSim =
+          new ElevatorSim(
+              intakeArmDcMotor,
+              IntakeConstants.INTAKE_ARM_GEAR_REDUCTION,
+              IntakeConstants.INTAKE_ARM_MASS.in(edu.wpi.first.units.Units.Kilograms),
+              IntakeConstants.INTAKE_SIM_DRUM_RADIUS_METERS,
+              IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
+              IntakeConstants.INTAKE_EXTENSION_MAX.in(Meters),
+              false,
+              IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
+              0.0,
+              0.0);
+      intakeArmMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
       intakeArmMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
     } else {
       intakeMotorSimState = intakeMotor.getSimState();
@@ -366,7 +399,7 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeMotor2SimState.setSupplyVoltage(RobotController.getBatteryVoltage());
       intakeArmMotorSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
 
-  // Step roller simulation and write back rotor position/velocity.
+      // Step roller simulation and write back rotor position/velocity.
       intakeSim.setInputVoltage(intakeMotorSimState.getMotorVoltage());
       intakeSim.update(0.002);
 
@@ -375,25 +408,24 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeMotorSimState.setRotorVelocity(
           intakeSim.getAngularVelocity().times(IntakeConstants.INTAKE_GEAR_REDUCTION));
 
-    intakeMotor2SimState.setRawRotorPosition(
-      intakeSim.getAngularPosition().times(IntakeConstants.INTAKE_GEAR_REDUCTION));
-    intakeMotor2SimState.setRotorVelocity(
-      intakeSim.getAngularVelocity().times(IntakeConstants.INTAKE_GEAR_REDUCTION));
+      intakeMotor2SimState.setRawRotorPosition(
+          intakeSim.getAngularPosition().times(IntakeConstants.INTAKE_GEAR_REDUCTION));
+      intakeMotor2SimState.setRotorVelocity(
+          intakeSim.getAngularVelocity().times(IntakeConstants.INTAKE_GEAR_REDUCTION));
 
-  // Step extension simulation and write back arm rotor state.
+      // Step extension simulation and write back arm rotor state.
       intakeArmSim.setInput(intakeArmMotorSimState.getMotorVoltage());
       intakeArmSim.update(0.002);
 
-  extensionMeters = intakeArmSim.getPositionMeters();
-  extensionMetersPerSecond = intakeArmSim.getVelocityMetersPerSecond();
+      extensionMeters = intakeArmSim.getPositionMeters();
+      extensionMetersPerSecond = intakeArmSim.getVelocityMetersPerSecond();
 
-  armMotorRotations = IntakeConstants.extensionMetersToMotorRotations(extensionMeters);
-  armMotorRps = IntakeConstants.extensionMetersToMotorRotations(extensionMetersPerSecond);
+      armMotorRotations = IntakeConstants.extensionMetersToMotorRotations(extensionMeters);
+      armMotorRps = IntakeConstants.extensionMetersToMotorRotations(extensionMetersPerSecond);
 
       intakeArmMotorSimState.setRawRotorPosition(
-      edu.wpi.first.units.Units.Rotations.of(armMotorRotations));
-      intakeArmMotorSimState.setRotorVelocity(
-      RotationsPerSecond.of(armMotorRps));
+          edu.wpi.first.units.Units.Rotations.of(armMotorRotations));
+      intakeArmMotorSimState.setRotorVelocity(RotationsPerSecond.of(armMotorRps));
     }
   }
 
@@ -426,7 +458,6 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeGoalVelocity = IntakeConstants.INTAKE_INTAKING_VELOCITY_RPS;
     setIntakeExtensionMeters(intakeGoalExtensionMeters);
     setIntakeSpeed(intakeGoalVelocity);
-    
   }
 
   public void intakeWithOffset() {
@@ -464,11 +495,11 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   /**
-   * Drive intake arm in reverse until it stalls on the retracted hardstop,
-   * then reseed encoder to retracted zero.
+   * Drive intake arm in reverse until it stalls on the retracted hardstop, then reseed encoder to
+   * retracted zero.
    *
-   * <p>Starts the non-blocking process. Call {@link #updateIntakeHardstopZeroing()}
-   * repeatedly (e.g., from a command execute) until complete.
+   * <p>Starts the non-blocking process. Call {@link #updateIntakeHardstopZeroing()} repeatedly
+   * (e.g., from a command execute) until complete.
    */
   public void zeroIntakeAtHardstop() {
     startIntakeHardstopZeroing();

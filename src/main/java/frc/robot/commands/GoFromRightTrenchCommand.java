@@ -4,14 +4,9 @@
 
 package frc.robot.commands;
 
-import java.io.IOException;
-
-import org.json.simple.parser.ParseException;
-
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.util.FileVersionException;
-
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -19,10 +14,10 @@ import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import frc.robot.TheMachine;
 import frc.robot.constants.DriveConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import java.io.IOException;
+import org.json.simple.parser.ParseException;
 
-/**
- * Leaves shooting zone via right trench path while enabling intake behavior.
- */
+/** Leaves shooting zone via right trench path while enabling intake behavior. */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class GoFromRightTrenchCommand extends ParallelCommandGroup {
 
@@ -33,12 +28,14 @@ public class GoFromRightTrenchCommand extends ParallelCommandGroup {
       PathPlannerPath path = PathPlannerPath.fromPathFile("GoFromRightTrench");
 
       // Path files are authored in blue-frame coordinates; flip for red alliance.
-      //if(!Container.isBlue) path = path.flipPath();
+      // if(!Container.isBlue) path = path.flipPath();
 
-      builtCommand = AutoBuilder.pathfindThenFollowPath(path, DriveConstants.PATH_CONSTRAINTS_FOLLOW_PATH);
+      builtCommand =
+          AutoBuilder.pathfindThenFollowPath(path, DriveConstants.PATH_CONSTRAINTS_FOLLOW_PATH);
     } catch (IOException | ParseException | FileVersionException ex) {
       DriverStation.reportError("Failed to load path 'GoFromRightTrench'", ex.getStackTrace());
-      builtCommand = new InstantCommand(() -> {}); // Fallback to a no-op command if path loading fails
+      builtCommand =
+          new InstantCommand(() -> {}); // Fallback to a no-op command if path loading fails
     }
 
     InstantCommand theMachineCommand = new InstantCommand(() -> theMachine.intake());

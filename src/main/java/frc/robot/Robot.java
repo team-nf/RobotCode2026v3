@@ -3,7 +3,6 @@ package frc.robot;
 import com.pathplanner.lib.commands.PathfindingCommand;
 import com.pathplanner.lib.pathfinding.LocalADStar;
 import com.pathplanner.lib.pathfinding.Pathfinding;
-
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -42,7 +41,6 @@ public class Robot extends TimedRobot {
 
     // Cache alliance once on startup; refreshed again on each mode transition.
     AllianceUtil.refreshAllianceFromDriverStation();
-
   }
 
   @Override
@@ -107,12 +105,13 @@ public class Robot extends TimedRobot {
   @Override
   public void simulationInit() {
     // Separate fixed-rate sim loop for contact/collision handling.
-    swerveSimNotrifier = new Notifier(() -> {
-      SwerveFieldContactSim.getInstance().handleSwerveSimFieldCollisions();
-    });
+    swerveSimNotrifier =
+        new Notifier(
+            () -> {
+              SwerveFieldContactSim.getInstance().handleSwerveSimFieldCollisions();
+            });
 
     swerveSimNotrifier.startPeriodic(SwerveFieldContactSim.getInstance().simLoopTimeSec);
-
   }
 
   @Override
@@ -121,6 +120,5 @@ public class Robot extends TimedRobot {
     FuelSim.getInstance().updateSim();
     HopperSim.getInstance().updateSim();
     ShooterSim.getInstance().updateSim();
-
   }
 }

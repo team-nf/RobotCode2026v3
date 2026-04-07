@@ -37,27 +37,22 @@ public class TestShootCommand extends Command {
     shooterFlywheelRpsEntry.setDefault(0.0);
     shooterHoodRotEntry.setDefault(0.0);
 
-
     // This command owns all machine subsystems while active.
     addRequirements(theMachine.getSubsystems());
   }
-
 
   @Override
   public void execute() {
     // Read latest NT values every loop so tuning updates apply immediately.
     theMachine.shootTest(
-  
-      shooterFlywheelRpsEntry.get(0.0),
-      shooterHoodRotEntry.get(0.0),
-      theMachine.getTurretAngleToHub()
-  );
+        shooterFlywheelRpsEntry.get(0.0),
+        shooterHoodRotEntry.get(0.0),
+        theMachine.getTurretAngleToHub());
 
     double[] shooterValuesForHub = theMachine.getShooterValuesForHub();
 
     SmartDashboard.putNumber("Test/ShooterCalculatedHoodAngle", shooterValuesForHub[1]);
     SmartDashboard.putNumber("Test/ShooterCalculatedRPS", shooterValuesForHub[0]);
-
   }
 
   @Override

@@ -64,11 +64,11 @@ public class TestMachineCommand extends Command {
   @Override
   public void execute() {
     // Read latest NT values every loop so tuning updates apply immediately.
-  double legacyFeederRps = feederRpsEntry.get(0.0);
+    double legacyFeederRps = feederRpsEntry.get(0.0);
     theMachine.testWithTurretToHubAndHoodCalculated(
-    shooterFlywheelRpsEntry.get(0.0),
-    feederBeltRpsEntry.get(legacyFeederRps),
-    feederFeedRpsEntry.get(legacyFeederRps),
+        shooterFlywheelRpsEntry.get(0.0),
+        feederBeltRpsEntry.get(legacyFeederRps),
+        feederFeedRpsEntry.get(legacyFeederRps),
         hopperRpsEntry.get(0.0),
         intakeRpsEntry.get(0.0),
         intakeExtensionMetersEntry.get(0.0));

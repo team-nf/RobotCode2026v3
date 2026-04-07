@@ -15,7 +15,6 @@ public class IntakeCommand extends Command {
   public IntakeCommand(TheMachine theMachine) {
     this.theMachine = theMachine;
     addRequirements(theMachine.getSubsystems());
-
   }
 
   @Override
@@ -25,8 +24,7 @@ public class IntakeCommand extends Command {
   }
 
   @Override
-  public void execute() {
-  }
+  public void execute() {}
 
   @Override
   public void end(boolean interrupted) {}
