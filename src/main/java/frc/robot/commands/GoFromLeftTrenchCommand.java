@@ -19,7 +19,6 @@ import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import frc.robot.TheMachine;
 import frc.robot.constants.DriveConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import frc.robot.utils.Container;
 
 /**
  * Leaves shooting zone via left trench path while putting the machine in intake mode.

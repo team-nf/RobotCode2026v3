@@ -10,7 +10,6 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.Robot;
 import frc.robot.constants.ShooterConstants;
-import frc.robot.constants.SimConstants;
 import frc.robot.constants.TheMachineConstants;
 
 public final class ShooterCalculator {
@@ -24,6 +23,29 @@ public final class ShooterCalculator {
     private static final double MIN_HOOD_DEG = ShooterConstants.MIN_HOOD_ANGLE.in(Degrees);
     private static final double MAX_HOOD_DEG = ShooterConstants.MAX_HOOD_ANGLE.in(Degrees);
     private static final double PASS_HOOD_DEG = ShooterConstants.PASS_HOOD_ANGLE.in(Degrees);
+
+    // Lookup tables sampled every 0.5 meters from 0.5m to 7.0m.
+    // Index 0 -> 0.5m, index 1 -> 1.0m, ..., index 13 -> 7.0m.
+    private static final double LOOKUP_MIN_DISTANCE_METERS = 0.5;
+    private static final double LOOKUP_STEP_METERS = 0.5;
+    private static final double LOOKUP_MAX_DISTANCE_METERS = 6.5;
+
+    // Columns: [0] = shooter RPS, [1] = hood angle deg
+    private static final double[][] SHOOTER_LOOKUP_TABLE = {
+        {38, 4}, // 0.5 meters
+        {29, 4.5}, // 1.0 meters
+        {30.5, 5}, // 1.5 meters
+        {31.6, 5.2}, // 2.0 meters
+        {34, 5.4}, // 2.5 meters
+        {35.8, 5.6}, // 3.0 meters
+        {38, 8}, // 3.5 meters
+        {39, 9}, // 4.0 meters
+        {41, 10}, // 4.5 meters
+        {42.6, 12}, // 5.0 meters
+        {45, 18}, // 5.5 meters
+        {47.7, 20.0}, // 6.0 meters
+        {50.5, 20} // 6.5 meters
+    };
 
     public static Translation2d getHubTranslation() {
         return AllianceUtil.getHubAimPose().getTranslation();
@@ -81,6 +103,11 @@ public final class ShooterCalculator {
     private static double tempWheelSpeed;
     private static double tempHoodAngleDeg;
     private static double tempY;
+    private static double tempClampedDistance;
+    private static double tempLookupIndex;
+    private static int tempLowIndex;
+    private static int tempHighIndex;
+    private static double tempInterpolationT;
 
     private static final double HOOD_A = 1.79;
     private static final double HOOD_B = 14.43;
@@ -106,7 +133,7 @@ public final class ShooterCalculator {
     private static final double FLYWHEEL_SIM_CLOSE_RANGE_BREAKPOINT_METERS = 1.0;
     private static final double FLYWHEEL_SIM_CLOSE_RANGE_RPS = 17.5;
 
-    private static final double PASS_RPS_A = 250.0;
+    private static final double PASS_RPS_A = 350.0;
     private static final double PASS_RPS_B = 1500.0;
 
     private static final double FLIGHT_TIME_A = -0.0374327;
@@ -152,10 +179,12 @@ public final class ShooterCalculator {
         tempDistance = distanceMeters;
 
         if (Robot.isReal()) {
-            tempWheelSpeed = flywheelRPSFormula(tempDistance) / ShooterConstants.SHOOTER_VELOCITY_TRANSFER_COEFFICIENT;
+            tempWheelSpeed = getShooterRpsFromLookupTable(tempDistance);
+            tempHoodAngleDeg = getShooterHoodDegFromLookupTable(tempDistance);
         }
         else {
-            tempWheelSpeed = flywheelRPSFormulaSIM(tempDistance) / SimConstants.SIMULATION_VELOCITY_TRANSFER_COEFFICIENT;
+            tempWheelSpeed = flywheelRPSFormulaSIM(tempDistance);
+            tempHoodAngleDeg = hoodAngleFormula(tempDistance);
         }
 
         tempWheelSpeed = Math.max(
@@ -163,9 +192,8 @@ public final class ShooterCalculator {
             Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS)
         );
 
-        tempHoodAngleDeg = hoodAngleFormula(tempDistance);
         tempHoodAngleDeg = Math.max(MIN_HOOD_DEG, Math.min(tempHoodAngleDeg, MAX_HOOD_DEG));
-        shootingParams[0] = tempWheelSpeed;
+        shootingParams[0] = tempWheelSpeed * 0.945;
         shootingParams[1] = tempHoodAngleDeg;
         return shootingParams;
     }
@@ -198,6 +226,38 @@ public final class ShooterCalculator {
 
     public static double calculatePassHoodAngle() {
         return PASS_HOOD_DEG;
+    }
+
+    private static double getLookupValue(double distanceMeters, int valueColumn) {
+        // Clamp to lookup domain.
+        if (distanceMeters <= LOOKUP_MIN_DISTANCE_METERS) {
+            return SHOOTER_LOOKUP_TABLE[0][valueColumn];
+        }
+        if (distanceMeters >= LOOKUP_MAX_DISTANCE_METERS) {
+            return SHOOTER_LOOKUP_TABLE[SHOOTER_LOOKUP_TABLE.length - 1][valueColumn];
+        }
+
+        // Fractional index in 0.5m bins, then linear interpolation between bins.
+        tempClampedDistance = Math.max(LOOKUP_MIN_DISTANCE_METERS,
+            Math.min(distanceMeters, LOOKUP_MAX_DISTANCE_METERS));
+        tempLookupIndex = (tempClampedDistance - LOOKUP_MIN_DISTANCE_METERS) / LOOKUP_STEP_METERS;
+        tempLowIndex = (int) Math.floor(tempLookupIndex);
+        tempHighIndex = Math.min(tempLowIndex + 1, SHOOTER_LOOKUP_TABLE.length - 1);
+        tempInterpolationT = tempLookupIndex - tempLowIndex;
+
+        return SHOOTER_LOOKUP_TABLE[tempLowIndex][valueColumn]
+            + (SHOOTER_LOOKUP_TABLE[tempHighIndex][valueColumn] - SHOOTER_LOOKUP_TABLE[tempLowIndex][valueColumn]) * tempInterpolationT;
+    }
+
+    // Name intentionally follows requested spelling.
+    public static double getShooterRpsFromLookupTable(double distanceMeters) {
+        tempWheelSpeed = getLookupValue(distanceMeters, 0);
+        return Math.max(MIN_FLYWHEEL_RPS, Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS));
+    }
+
+    public static double getShooterHoodDegFromLookupTable(double distanceMeters) {
+        tempHoodAngleDeg = getLookupValue(distanceMeters, 1);
+        return Math.max(MIN_HOOD_DEG, Math.min(tempHoodAngleDeg, MAX_HOOD_DEG));
     }
 
     public static double hoodAngleFormula(double x) {

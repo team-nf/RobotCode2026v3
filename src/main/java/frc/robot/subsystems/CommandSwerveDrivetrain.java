@@ -508,13 +508,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // Keep Limelight orientation aligned with drivetrain heading.
         double robotYaw = getHeading();
         LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-        LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         imuData = LimelightHelpers.getIMUData("limelight-turret");
 
     // Gather both camera estimates (turret camera + fixed camera).
         LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-turret");
-        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-4-1");
+        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-normal");
         
         boolean doRejectUpdate = false;
         boolean doRejectTurret = false;
@@ -580,11 +580,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // Keep Limelight orientation aligned with drivetrain heading.
     double robotYaw = getHeading();
     LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-    LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+    LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
     // Gather both camera estimates (legacy solve path).
     LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
-    LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-4-1");
+    LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-normal");
     
     boolean doRejectUpdate = false;
     boolean doRejectTurret = false;
@@ -652,7 +652,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // Prefer fixed camera reset; fall back to turret camera if needed.
         double robotYaw = 0;
 
-        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-4-1");
+        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-normal");
 
         if(limelightMeasurementFixed != null && limelightMeasurementFixed.tagCount > 0)
         {
@@ -678,8 +678,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         LimelightHelpers.SetIMUMode("limelight-turret", 1);
   
         
-        LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-        LimelightHelpers.SetIMUMode("limelight-4-1", 1);
+        LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetIMUMode("limelight-normal", 1);
     }
 
     private boolean isMode1Set = false;
@@ -707,8 +707,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             LimelightHelpers.SetIMUMode("limelight-turret", 0);
     
             
-            LimelightHelpers.SetRobotOrientation("limelight-4-1", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-            LimelightHelpers.SetIMUMode("limelight-4-1", 0);
+            LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+            LimelightHelpers.SetIMUMode("limelight-normal", 0);
             isLLReady = true;
         }
 

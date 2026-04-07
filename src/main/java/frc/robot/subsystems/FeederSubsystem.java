@@ -195,6 +195,16 @@ public class FeederSubsystem extends SubsystemBase {
     return feederFeedVelocityAverageRps;
   }
 
+  /** Get the current feeder belt goal velocity in RPS. */
+  public double getFeederBeltGoalVelocityRps() {
+    return feederBeltGoalVelocity;
+  }
+
+  /** Get the current feeder feed wheel goal velocity in RPS. */
+  public double getFeederFeedGoalVelocityRps() {
+    return feederFeedGoalVelocity;
+  }
+
   double newSample;
   private void updateFeederFeedVelocityAverage() {
     newSample = feederFeedVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_GEAR_REDUCTION;

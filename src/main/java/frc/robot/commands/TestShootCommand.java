@@ -42,6 +42,7 @@ public class TestShootCommand extends Command {
     addRequirements(theMachine.getSubsystems());
   }
 
+
   @Override
   public void execute() {
     // Read latest NT values every loop so tuning updates apply immediately.
@@ -52,7 +53,11 @@ public class TestShootCommand extends Command {
       theMachine.getTurretAngleToHub()
   );
 
-    SmartDashboard.putNumber("Test/ShooterHoodAngle", theMachine.getHoodAngleForHub());
+    double[] shooterValuesForHub = theMachine.getShooterValuesForHub();
+
+    SmartDashboard.putNumber("Test/ShooterCalculatedHoodAngle", shooterValuesForHub[1]);
+    SmartDashboard.putNumber("Test/ShooterCalculatedRPS", shooterValuesForHub[0]);
+
   }
 
   @Override

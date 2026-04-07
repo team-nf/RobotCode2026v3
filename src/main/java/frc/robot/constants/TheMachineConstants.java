@@ -20,4 +20,5 @@ public class TheMachineConstants {
     public static Pose3d TURRET_LL_POSE = new Pose3d(0.1783, 0.0, 0.0765, new Rotation3d(0, Math.toRadians(20), 0));
 
     public static int DRIVER_CONTROLLER_PORT_ID = 0;
+    public static int EMERGENCY_CONTROLLER_PORT_ID = 1;
 }

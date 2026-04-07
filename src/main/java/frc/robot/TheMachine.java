@@ -113,12 +113,29 @@ public class TheMachine {
         return goalTurretAngleForHub;
     }
 
+    private final double[] hubShootValues = new double[2]; // [0]=flywheelRps, [1]=hoodAngleDeg
 
-    private double distanceToHub;
+    /**
+     * Returns calculated shooter setpoints for hub targeting.
+     * Index 0 = flywheel RPS, index 1 = hood angle degrees.
+     */
+    public double[] getShooterValuesForHub()
+    {
+        goalHubPose = AllianceUtil.getHubAimPose();
+        robotPose2d = robotPose2dSupplier.get();
+        robotHeadingRad = robotPose2d.getRotation().getRadians();
+        shooterPoseX = ShooterCalculator.getShooterXFromRobotState(robotPose2d.getX(), robotHeadingRad);
+        shooterPoseY = ShooterCalculator.getShooterYFromRobotState(robotPose2d.getY(), robotHeadingRad);
+
+        double[] shootingParams = ShooterCalculator.calculateShootingParameters(0.0, 0.0, shooterPoseX, shooterPoseY, 0.0);
+        hubShootValues[0] = shootingParams[0];
+        hubShootValues[1] = shootingParams[1];
+        return hubShootValues;
+    }
+
     public double getHoodAngleForHub()
     {
-        distanceToHub = Math.hypot(goalHubPose.getX() - shooterPoseX, goalHubPose.getY() - shooterPoseY);
-        return ShooterCalculator.hoodAngleFormula(distanceToHub);
+        return getShooterValuesForHub()[1];
     }
 
     /** Reset mechanisms to a known zero-like safe state. */
@@ -289,9 +306,15 @@ public class TheMachine {
 
     public void shootTest(double shooterFlywheelRps, double shooterHoodRot, double shooterTurretDeg) {
         shooterSubsystem.shoot(shooterFlywheelRps, shooterHoodRot, shooterTurretDeg);
-        feederSubsystem.feed();
-        hopperSubsystem.feed();
-        intakeSubsystem.feed();
+        if (shooterSubsystem.isReadyToShoot() || Robot.isSimulation()) {
+            feederSubsystem.feed();
+            hopperSubsystem.feed();
+            intakeSubsystem.feed();
+        } else {
+            feederSubsystem.feedGetReady();
+            hopperSubsystem.idle();
+            intakeSubsystem.feed();
+        }
         state = TheMachineState.TEST;
     }
 
@@ -317,6 +340,14 @@ public class TheMachine {
         return shooterSubsystem.isReadyToPass();
     }
 
+    public boolean isIntakeHomed() {
+        return intakeSubsystem.isIntakeHomed();
+    }
+
+    public boolean isHomed() {
+        return isIntakeHomed();
+    }
+
     public boolean isAbleToIntake() {
         return state == TheMachineState.INTAKE 
         || state == TheMachineState.GET_READY_PASS || state == TheMachineState.PASS
@@ -339,8 +370,8 @@ public class TheMachine {
         double intakeExtensionX = intakeExtensionMeters * Math.cos(intakeExtensionAngleRad);
         double intakeExtensionZ = intakeExtensionMeters * Math.sin(intakeExtensionAngleRad);
 
-    SmartDashboard.putNumber("IntakeExtensionMeters", TelemetryConstants.roundTelemetry(intakeExtensionMeters));
-    SmartDashboard.putNumber("IntakeExtensionAngleDeg", TelemetryConstants.roundTelemetry(TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES));
+        SmartDashboard.putNumber("IntakeExtensionMeters", TelemetryConstants.roundTelemetry(intakeExtensionMeters));
+        SmartDashboard.putNumber("IntakeExtensionAngleDeg", TelemetryConstants.roundTelemetry(TheMachineConstants.INTAKE_EXTENSION_ANGLE_DEGREES));
 
         Pose3d intakePose = TheMachineConstants.INTAKE_RETRACTED_POSE
             .plus(new Transform3d(intakeExtensionX, 0, intakeExtensionZ, new Rotation3d(0, 0, 0)));
@@ -387,6 +418,8 @@ public class TheMachine {
         SmartDashboard.putString("TheMachine/State", state.toString());
         SmartDashboard.putString("TheMachine/LedState", currentLedState.toString());
         SmartDashboard.putBoolean("TheMachine/ManualOverrideEnabled", shooterSubsystem.isManualOverrideEnabled());
+        SmartDashboard.putBoolean("TheMachine/IntakeHomed", isIntakeHomed());
+        SmartDashboard.putBoolean("TheMachine/Homed", isHomed());
     }
 
     private void setLedState(LedState desiredLedState) {

@@ -29,6 +29,7 @@ import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -52,6 +53,10 @@ public class IntakeSubsystem extends SubsystemBase {
     IntakeConstants.INTAKE_EXTENSION_DEPLOYED_METERS - IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
   private static final double INTAKE_RETRACTED_THRESHOLD_METERS =
     IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS + IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
+  private static final double INTAKE_ARM_ZEROING_REVERSE_OUTPUT = -0.12;
+  private static final double INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS = 0.05;
+  private static final double INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC = 0.20;
+  private static final double INTAKE_ARM_ZEROING_TIMEOUT_SEC = 2.0;
 
   private TalonFX intakeMotor;
   private TalonFX intakeMotor2;
@@ -75,6 +80,12 @@ public class IntakeSubsystem extends SubsystemBase {
   private double intakeGoalExtensionMeters;
   private double intakeTestRPM;
   private double intakeTestExtensionMeters;
+  private boolean intakeHomed = false;
+  private boolean intakeHardstopZeroingActive = false;
+  private boolean intakeHardstopZeroingComplete = false;
+  private boolean intakeHardstopZeroingSucceeded = false;
+  private double intakeHardstopZeroingStartSec = 0.0;
+  private double intakeHardstopStallStartSec = -1.0;
 
   private final VoltageOut intakeRollerSysIdControl;
   private final VoltageOut intakeArmSysIdControl;
@@ -122,6 +133,7 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeArmMotor.setPosition(IntakeConstants.extensionMetersToMotorRotations(
       IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
     }
+    intakeHomed = true;
 
     intakeVelocityControl = IntakeConstants.INTAKE_VELOCITY_CONTROL.clone();
     intakeArmPositionControl = IntakeConstants.INTAKE_ARM_POSITION_CONTROL.clone();
@@ -219,6 +231,10 @@ public class IntakeSubsystem extends SubsystemBase {
   // --- Linear extension control ---
 
   public void setIntakeExtensionMeters(double extensionMeters) {
+    if (!isIntakeHomed()) {
+      return;
+    }
+
     // Clamp requested extension to physical limits before commanding closed-loop position.
     double clampedExtension = Math.max(
       IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS,
@@ -242,6 +258,17 @@ public class IntakeSubsystem extends SubsystemBase {
     return getIntakeExtensionMeters() <= INTAKE_RETRACTED_THRESHOLD_METERS;
   }
 
+  public boolean isIntakeHomed() {
+    return intakeHomed;
+  }
+
+  /** Re-seed extension sensor as fully retracted; call only when physically retracted. */
+  public void homeIntakeAtRetractedPosition() {
+    intakeArmMotor.setPosition(
+      IntakeConstants.extensionMetersToMotorRotations(IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
+    intakeHomed = true;
+  }
+
   public void publishTelemetry() {
     double extensionMeters = getIntakeExtensionMeters();
 
@@ -259,6 +286,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     SmartDashboard.putNumber("Intake/ExtensionAmountMeters", TelemetryConstants.roundTelemetry(extensionMeters));
     SmartDashboard.putNumber("Intake/ExtensionAmountMillimeters", TelemetryConstants.roundTelemetry(extensionMeters * 1000.0));
+    SmartDashboard.putBoolean("Intake/Homed", intakeHomed);
     if (isSimulationInitialized && intakeArmSim != null) {
       SmartDashboard.putNumber("Intake/SimExtensionMeters", TelemetryConstants.roundTelemetry(intakeArmSim.getPositionMeters()));
     }
@@ -435,6 +463,91 @@ public class IntakeSubsystem extends SubsystemBase {
     setIntakeSpeed(intakeGoalVelocity);
   }
 
+  /**
+   * Drive intake arm in reverse until it stalls on the retracted hardstop,
+   * then reseed encoder to retracted zero.
+   *
+   * <p>Starts the non-blocking process. Call {@link #updateIntakeHardstopZeroing()}
+   * repeatedly (e.g., from a command execute) until complete.
+   */
+  public void zeroIntakeAtHardstop() {
+    startIntakeHardstopZeroing();
+  }
+
+  public void startIntakeHardstopZeroing() {
+    if (intakeHardstopZeroingActive) {
+      return;
+    }
+
+    intakeHomed = false;
+    intakeHardstopZeroingActive = true;
+    intakeHardstopZeroingComplete = false;
+    intakeHardstopZeroingSucceeded = false;
+    intakeHardstopZeroingStartSec = Timer.getFPGATimestamp();
+    intakeHardstopStallStartSec = -1.0;
+
+    // Stop rollers while zeroing extension.
+    intakeGoalVelocity = 0.0;
+    intakeStop();
+  }
+
+  public void updateIntakeHardstopZeroing() {
+    if (!intakeHardstopZeroingActive || intakeHardstopZeroingComplete) {
+      return;
+    }
+
+    refreshStatusSignals();
+
+    double nowSec = Timer.getFPGATimestamp();
+    double elapsedSec = nowSec - intakeHardstopZeroingStartSec;
+    double armVelAbsRps;
+
+    // Keep retracting toward hardstop.
+    intakeArmMotor.set(INTAKE_ARM_ZEROING_REVERSE_OUTPUT);
+    armVelAbsRps = Math.abs(intakeArmVelocitySignal.getValueAsDouble());
+
+    if (armVelAbsRps <= INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS) {
+      if (intakeHardstopStallStartSec < 0.0) {
+        intakeHardstopStallStartSec = nowSec;
+      }
+
+      if ((nowSec - intakeHardstopStallStartSec) >= INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC) {
+        intakeArmMotor.set(0.0);
+        homeIntakeAtRetractedPosition();
+        intakeHardstopZeroingActive = false;
+        intakeHardstopZeroingComplete = true;
+        intakeHardstopZeroingSucceeded = true;
+      }
+    } else {
+      intakeHardstopStallStartSec = -1.0;
+    }
+
+    if (elapsedSec >= INTAKE_ARM_ZEROING_TIMEOUT_SEC) {
+      intakeArmMotor.set(0.0);
+      intakeHardstopZeroingActive = false;
+      intakeHardstopZeroingComplete = true;
+      intakeHardstopZeroingSucceeded = false;
+      intakeHardstopStallStartSec = -1.0;
+    }
+  }
+
+  public void stopIntakeHardstopZeroing() {
+    intakeArmMotor.set(0.0);
+    intakeHardstopZeroingActive = false;
+  }
+
+  public boolean isIntakeHardstopZeroingComplete() {
+    return intakeHardstopZeroingComplete;
+  }
+
+  public boolean didIntakeHardstopZeroingSucceed() {
+    return intakeHardstopZeroingSucceeded;
+  }
+
+  public boolean isIntakeHardstopZeroingActive() {
+    return intakeHardstopZeroingActive;
+  }
+
   public void test() {
     intakeGoalVelocity = intakeTestRPM;
     intakeGoalExtensionMeters = intakeTestExtensionMeters;
@@ -451,6 +564,14 @@ public class IntakeSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
+    if (intakeArmMotor.hasResetOccurred()) {
+      intakeHomed = false;
+      intakeHardstopZeroingActive = false;
+      intakeHardstopZeroingComplete = false;
+      intakeHardstopZeroingSucceeded = false;
+      intakeHardstopStallStartSec = -1.0;
+    }
+
     refreshStatusSignals();
   }
 }

@@ -31,24 +31,25 @@ public class ShooterConstants {
     public static final int TURRET_THROUGHBORE_DIO_CHANNEL = 0;
 
     // Shooter Math Constants
-    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.91; // in meters (2 inches)
+    public static final double SHOOTER_VELOCITY_TRANSFER_COEFFICIENT = 0.83; // in meters (2 inches)
 
     // Configs
     public static final int NUMBER_OF_FLYWHEEL_MOTORS = 2;
 
-    public static final AngularVelocity FLYWHEEL_ALLOWABLE_ERROR = RotationsPerSecond.of(2.5); // Allowable error in radians per second
+    public static final AngularVelocity FLYWHEEL_ALLOWABLE_ERROR = RotationsPerSecond.of(0.6); // Allowable error in radians per second
+    public static final AngularVelocity FLYWHEEL_ALLOWABLE_ERROR_UNLATCH = RotationsPerSecond.of(5); // Allowable error in radians per second when unlatching
     public static final Angle HOOD_ALLOWABLE_ERROR = Degrees.of(1.5); // Allowable error in radians
     public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(4);
     public static final AngularVelocity TURRET_ALLOWABLE_SPEED_TO_SHOOT = RotationsPerSecond.of(15);
 
-    public static final double TURRET_LOOKAHEAD_SEC = 0.02;
+    public static final double TURRET_LOOKAHEAD_SEC = 0.00;
 
-    public static final double SHOOTER_KS = 0.05;
-    public static final double SHOOTER_KV = 0.115;
-    public static final double SHOOTER_KP = 0.0725;
+    public static final double SHOOTER_KS = 0.16742;
+    public static final double SHOOTER_KV = 0.11791;
+    public static final double SHOOTER_KP = 0.17405;
     public static final double SHOOTER_KI = 0.0;
-    public static final double SHOOTER_KD = 0.001;
-    public static final double SHOOTER_KA = 0.005; 
+    public static final double SHOOTER_KD = 0.00;
+    public static final double SHOOTER_KA = 0.0074598; 
 
     public static final TalonFXConfiguration SHOOTER_CONFIG = new TalonFXConfiguration()
             .withSlot0(new Slot0Configs()
@@ -168,6 +169,9 @@ public class ShooterConstants {
     public static final double TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION = -45.0;
     // Throughbore absolute reading at turret-frame zero (which is robot-frame 180 deg).
     public static final double TURRET_ABSOLUTE_ZERO_ROTATION = 0.327;
+    // Turret index step size used for manual step commands.
+    public static final double TURRET_STEP_DEGREES = 45.0;
+    public static final double TURRET_STEP_EPSILON = 1e-6;
     // Offset used in: turretDeg = throughboreRot * scale + offset.
     public static final double TURRET_ABSOLUTE_OFFSET_DEGREES =
         -TURRET_ABSOLUTE_ZERO_ROTATION * TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION;

@@ -19,7 +19,6 @@ import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import frc.robot.TheMachine;
 import frc.robot.constants.DriveConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import frc.robot.utils.Container;
 
 /**
  * Returns from left trench toward shooting area while shifting machine to neutral idle.

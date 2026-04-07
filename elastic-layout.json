@@ -21,19 +21,6 @@
             }
           },
           {
-            "title": "TheMachineControlState",
-            "x": 384.0,
-            "y": 640.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Large Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/TheMachineControlState",
-              "period": 0.06,
-              "data_type": "string"
-            }
-          },
-          {
             "title": "StartPoseChooser",
             "x": 1152.0,
             "y": 0.0,
@@ -44,20 +31,6 @@
               "topic": "/SmartDashboard/Conf/StartPoseChooser",
               "period": 0.06,
               "sort_options": false
-            }
-          },
-          {
-            "title": "FlywheelState-L",
-            "x": 128.0,
-            "y": 832.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Shooter Control Data/FlywheelState-L",
-              "period": 0.06,
-              "data_type": "string",
-              "show_submit_button": false
             }
           },
           {
@@ -75,68 +48,6 @@
               "false_color": 4294198070,
               "true_icon": "None",
               "false_icon": "None"
-            }
-          },
-          {
-            "title": "IsBlueHubActive",
-            "x": 0.0,
-            "y": 512.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Boolean Box",
-            "properties": {
-              "topic": "/SmartDashboard/Phase/IsBlueHubActive",
-              "period": 0.06,
-              "data_type": "boolean",
-              "true_color": 4282188031,
-              "false_color": 4278190080,
-              "true_icon": "None",
-              "false_icon": "None"
-            }
-          },
-          {
-            "title": "IsRedHubActive",
-            "x": 0.0,
-            "y": 640.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Boolean Box",
-            "properties": {
-              "topic": "/SmartDashboard/Phase/IsRedHubActive",
-              "period": 0.06,
-              "data_type": "boolean",
-              "true_color": 4294901764,
-              "false_color": 4278190080,
-              "true_icon": "None",
-              "false_icon": "None"
-            }
-          },
-          {
-            "title": "InitialStartPose2d",
-            "x": 256.0,
-            "y": 768.0,
-            "width": 640.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Conf/InitialStartPose2d",
-              "period": 0.06,
-              "data_type": "string",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "Robot",
-            "x": 896.0,
-            "y": 768.0,
-            "width": 64.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Conf/Field/Robot",
-              "period": 0.06,
-              "data_type": "double[]",
-              "show_submit_button": false
             }
           },
           {
@@ -158,34 +69,6 @@
               "robot_color": 4294198070,
               "trajectory_color": 4294967295,
               "show_robot_outside_widget": true
-            }
-          },
-          {
-            "title": "Yaw",
-            "x": 128.0,
-            "y": 512.0,
-            "width": 192.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Yaw",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "RawYaw",
-            "x": 128.0,
-            "y": 640.0,
-            "width": 192.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/RawYaw",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
             }
           },
           {
@@ -213,62 +96,6 @@
               "topic": "Conf/TheMachine/ManualOverrideEnabled",
               "period": 0.06,
               "data_type": "boolean"
-            }
-          },
-          {
-            "title": "FeederRps",
-            "x": 1088.0,
-            "y": 768.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/Conf/TestMachine/FeederRps",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "HopperRps",
-            "x": 960.0,
-            "y": 768.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/Conf/TestMachine/HopperRps",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "Throughbore",
-            "x": 1344.0,
-            "y": 768.0,
-            "width": 192.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Throughbore",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "TurretLLHeading",
-            "x": 1216.0,
-            "y": 768.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/TurretLLHeading",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
             }
           },
           {
@@ -335,6 +162,19 @@
               "false_color": 4278190080,
               "true_icon": "None",
               "false_icon": "None"
+            }
+          },
+          {
+            "title": "EnableTelemetry",
+            "x": 0.0,
+            "y": 512.0,
+            "width": 384.0,
+            "height": 128.0,
+            "type": "Toggle Button",
+            "properties": {
+              "topic": "Conf/EnableTelemetry",
+              "period": 0.06,
+              "data_type": "boolean"
             }
           }
         ]
@@ -1974,9 +1814,9 @@
         "containers": [
           {
             "title": "DistanceToHub",
-            "x": 640.0,
+            "x": 960.0,
             "y": 0.0,
-            "width": 640.0,
+            "width": 448.0,
             "height": 128.0,
             "type": "Text Display",
             "properties": {
@@ -2003,22 +1843,24 @@
           {
             "title": "FlywheelRPS",
             "x": 256.0,
-            "y": 0.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
+            "y": 640.0,
+            "width": 512.0,
+            "height": 256.0,
+            "type": "Graph",
             "properties": {
               "topic": "/SmartDashboard/Shooter/FlywheelRPS",
-              "period": 0.06,
+              "period": 0.033,
               "data_type": "double",
-              "show_submit_button": false
+              "time_displayed": 5.0,
+              "color": 4278238420,
+              "line_width": 2.0
             }
           },
           {
             "title": "HoodAngleDeg",
-            "x": 256.0,
-            "y": 128.0,
-            "width": 128.0,
+            "x": 448.0,
+            "y": 0.0,
+            "width": 256.0,
             "height": 128.0,
             "type": "Text Display",
             "properties": {
@@ -2030,9 +1872,9 @@
           },
           {
             "title": "HoodGoalDeg",
-            "x": 384.0,
+            "x": 448.0,
             "y": 128.0,
-            "width": 128.0,
+            "width": 192.0,
             "height": 128.0,
             "type": "Text Display",
             "properties": {
@@ -2044,16 +1886,18 @@
           },
           {
             "title": "FlywheelRpmError",
-            "x": 384.0,
-            "y": 0.0,
-            "width": 192.0,
-            "height": 128.0,
-            "type": "Text Display",
+            "x": 832.0,
+            "y": 640.0,
+            "width": 512.0,
+            "height": 256.0,
+            "type": "Graph",
             "properties": {
               "topic": "/SmartDashboard/Shooter/FlywheelRpmError",
-              "period": 0.06,
+              "period": 0.033,
               "data_type": "double",
-              "show_submit_button": false
+              "time_displayed": 5.0,
+              "color": 4278238420,
+              "line_width": 2.0
             }
           },
           {
@@ -2065,20 +1909,6 @@
             "type": "Text Display",
             "properties": {
               "topic": "/SmartDashboard/Shooter/TurretAngleDeg",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "FeederRps",
-            "x": 0.0,
-            "y": 256.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/Conf/TestMachine/FeederRps",
               "period": 0.06,
               "data_type": "double",
               "show_submit_button": false
@@ -2113,24 +1943,10 @@
             }
           },
           {
-            "title": "HopperRps",
-            "x": 0.0,
-            "y": 512.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/Conf/TestMachine/HopperRps",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
             "title": "BeltMotorVelocityRps",
-            "x": 256.0,
+            "x": 0.0,
             "y": 256.0,
-            "width": 128.0,
+            "width": 256.0,
             "height": 128.0,
             "type": "Text Display",
             "properties": {
@@ -2143,7 +1959,7 @@
           {
             "title": "FeedMotorVelocityRps",
             "x": 256.0,
-            "y": 384.0,
+            "y": 256.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Text Display",
@@ -2157,8 +1973,8 @@
           {
             "title": "FeedMotorVelocityErrorRps",
             "x": 384.0,
-            "y": 384.0,
-            "width": 128.0,
+            "y": 256.0,
+            "width": 256.0,
             "height": 128.0,
             "type": "Text Display",
             "properties": {
@@ -2184,9 +2000,9 @@
           },
           {
             "title": "Field",
-            "x": 512.0,
+            "x": 640.0,
             "y": 128.0,
-            "width": 1152.0,
+            "width": 1024.0,
             "height": 512.0,
             "type": "Field",
             "properties": {
@@ -2201,6 +2017,62 @@
               "robot_color": 4294198070,
               "trajectory_color": 4294967295,
               "show_robot_outside_widget": true
+            }
+          },
+          {
+            "title": "FlywheelRPS",
+            "x": 832.0,
+            "y": 0.0,
+            "width": 128.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Shooter/FlywheelRPS",
+              "period": 0.06,
+              "data_type": "double",
+              "show_submit_button": false
+            }
+          },
+          {
+            "title": "FlywheelRpmError",
+            "x": 704.0,
+            "y": 0.0,
+            "width": 128.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Shooter/FlywheelRpmError",
+              "period": 0.06,
+              "data_type": "double",
+              "show_submit_button": false
+            }
+          },
+          {
+            "title": "ShooterCalculatedHoodAngle",
+            "x": 256.0,
+            "y": 128.0,
+            "width": 192.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Test/ShooterCalculatedHoodAngle",
+              "period": 0.06,
+              "data_type": "double",
+              "show_submit_button": false
+            }
+          },
+          {
+            "title": "ShooterCalculatedRPS",
+            "x": 256.0,
+            "y": 0.0,
+            "width": 192.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Test/ShooterCalculatedRPS",
+              "period": 0.06,
+              "data_type": "double",
+              "show_submit_button": false
             }
           }
         ]

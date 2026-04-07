@@ -311,6 +311,23 @@ public class ShooterSubsystem extends SubsystemBase {
     return turretFrameToRobotFrameDeg(tempWrappedTargetDeg);
     }
 
+    public double moveTurretWithoutHome(double requestedAngleDegrees) {
+        tempCurrentAngleDeg = getTurretAngleDegrees();
+        tempAngleErrorDeg = normalizeToMinus180To180(requestedAngleDegrees - tempCurrentAngleDeg);
+
+        // When not homed, preserve current internal turret-frame reference and move by delta.
+        tempWrappedTargetDeg = clampTurretRange(getTurretAngleDegreesRaw() + tempAngleErrorDeg);
+        tempMotorPosition = tempWrappedTargetDeg / 360.0 * ShooterConstants.TURRET_GEAR_REDUCTION;
+
+        turretMotor.setControl(
+            turretPositionControl
+                .withSlot(ShooterConstants.TURRET_GENTLE_SLOT)
+                .withPosition(tempMotorPosition)
+        );
+
+        return turretFrameToRobotFrameDeg(tempWrappedTargetDeg);
+    }
+
     private double normalizeToMinus180To180(double angleDeg) {
         tempWrappedNormDeg = angleDeg % 360.0;
         if (tempWrappedNormDeg > 180.0) {
@@ -375,6 +392,10 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public void syncTurretMotorToAbsoluteEncoder() {
+        if (!turretAbsoluteEncoder.isConnected()) {
+            return;
+        }
+
         // Read through-bore absolute encoder and seed integrated motor position to match.
         tempAbsoluteEncoderRot = turretAbsoluteEncoder.get();
         // Absolute encoder is interpreted in turret frame (mechanism-local angle).
@@ -478,6 +499,16 @@ public class ShooterSubsystem extends SubsystemBase {
         return flywheelGoalVelocity;
     }
 
+    /** Get the current hood goal angle in degrees. */
+    public double getHoodGoalAngleDegrees() {
+        return hoodGoalAngle;
+    }
+
+    /** Get the current turret goal angle in degrees (robot frame). */
+    public double getTurretGoalAngleDegrees() {
+        return turretGoalAngleDegrees;
+    }
+
     public double getFlywheel1SpeedAbs() {
         return Math.abs(getFlywheel1Velocity());
     }
@@ -501,6 +532,59 @@ public class ShooterSubsystem extends SubsystemBase {
         return Math.toRadians(getTurretAngleDegrees());
     }
 
+    public double getTurretAnalogRotation() {
+        return turretAbsoluteEncoder.get();
+    }
+
+    private double stepIndexToRobotFrameDegrees(double stepIndex) {
+        // At analog reference rotation, turret is treated as robot-frame 180 deg.
+        return normalizeToMinus180To180(
+            ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG - (stepIndex * ShooterConstants.TURRET_STEP_DEGREES));
+    }
+
+    /**
+     * Resolve analog reading to the 45-degree window anchor (0.327-equivalent) nearest
+     * the provided reference angle.
+     */
+    private double getWindowAnchorAngleDegreesNear(double referenceRobotFrameDeg) {
+        tempAbsoluteEncoderRot = getTurretAnalogRotation();
+        double fractionalStepIndex = tempAbsoluteEncoderRot - ShooterConstants.TURRET_ABSOLUTE_ZERO_ROTATION;
+        double baseAnchorAngleDeg = stepIndexToRobotFrameDegrees(fractionalStepIndex);
+        double nearestWindowCount = Math.round(
+            (referenceRobotFrameDeg - baseAnchorAngleDeg) / ShooterConstants.TURRET_STEP_DEGREES);
+
+        return normalizeToMinus180To180(
+            baseAnchorAngleDeg + nearestWindowCount * ShooterConstants.TURRET_STEP_DEGREES);
+    }
+
+    /**
+     * Returns the nearest 45-deg step to the LEFT (positive robot-frame angle direction)
+     * using analog sensor anchor rotation at turret absolute zero calibration.
+     */
+    public double getClosestLeftStepAngleDegreesFromAnalog() {
+        double currentWindowAnchorDeg = getWindowAnchorAngleDegreesNear(getTurretAngleDegrees());
+        double currentWindowIndex = 
+            (ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG - currentWindowAnchorDeg)
+                / ShooterConstants.TURRET_STEP_DEGREES;
+        double currentWindowIndexRounded = Math.rint(currentWindowIndex);
+        double leftWindowIndex = currentWindowIndexRounded - 1.0;
+        return stepIndexToRobotFrameDegrees(leftWindowIndex);
+    }
+
+    /**
+     * Returns the nearest 45-deg step to the RIGHT (negative robot-frame angle direction)
+     * using analog sensor anchor rotation at turret absolute zero calibration.
+     */
+    public double getClosestRightStepAngleDegreesFromAnalog() {
+        double currentWindowAnchorDeg = getWindowAnchorAngleDegreesNear(getTurretAngleDegrees());
+        double currentWindowIndex =
+            (ShooterConstants.TURRET_ZERO_IN_ROBOT_FRAME_DEG - currentWindowAnchorDeg)
+                / ShooterConstants.TURRET_STEP_DEGREES;
+        double currentWindowIndexRounded = Math.rint(currentWindowIndex);
+        double rightWindowIndex = currentWindowIndexRounded + 1.0;
+        return stepIndexToRobotFrameDegrees(rightWindowIndex);
+    }
+
     public double getHoodAngleDegrees() {
         return getHoodPosition() * 360.0;
     }
@@ -510,7 +594,7 @@ public class ShooterSubsystem extends SubsystemBase {
     private static final double HOOD_ERROR_DEG = ShooterConstants.HOOD_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
     private static final double TURRET_ERROR_DEG = ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
     private static final double FLYWHEEL_LATCH_ENGAGE_ERROR_RPS = FLYWHEEL_ERROR_RPS;
-    private static final double FLYWHEEL_LATCH_DISENGAGE_ERROR_RPS = FLYWHEEL_ERROR_RPS * 2.5;
+    private static final double FLYWHEEL_LATCH_DISENGAGE_ERROR_RPS = ShooterConstants.FLYWHEEL_ALLOWABLE_ERROR_UNLATCH.in(RotationsPerSecond);
     private static final double TURRET_LATCH_ENGAGE_ERROR_DEG = TURRET_ERROR_DEG;
     private static final double TURRET_LATCH_DISENGAGE_ERROR_DEG = TURRET_ERROR_DEG * 2.0;
     private static final double TURRET_LATCH_ENGAGE_SPEED_RPS = ShooterConstants.TURRET_ALLOWABLE_SPEED_TO_SHOOT.in(RotationsPerSecond);
@@ -643,6 +727,7 @@ public class ShooterSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Shooter/TurretMotorVoltageV", TelemetryConstants.roundTelemetry(turretVoltageSignal.getValueAsDouble()));
 
     SmartDashboard.putNumber("Shooter/FlywheelRPS", TelemetryConstants.roundTelemetry(tempFlywheelRps));
+    SmartDashboard.putNumber("Shooter/FlywheelGoalRPS", TelemetryConstants.roundTelemetry(flywheelGoalVelocity));
     SmartDashboard.putNumber("Shooter/HoodAngleRot", TelemetryConstants.roundTelemetry(getHoodPosition()));
     SmartDashboard.putNumber("Shooter/HoodAngleDeg", TelemetryConstants.roundTelemetry(tempHoodAngleDeg));
     SmartDashboard.putNumber("Shooter/HoodGoalDeg", TelemetryConstants.roundTelemetry(hoodGoalAngle));
@@ -656,6 +741,7 @@ public class ShooterSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Shooter/TurretReady", isTurretAtAngle());
         SmartDashboard.putBoolean("Shooter/FlywheelReadyLatch", flywheelReadyLatchEnabled);
         SmartDashboard.putBoolean("Shooter/TurretReadyLatch", turretReadyLatchEnabled);
+    SmartDashboard.putBoolean("Shooter/TurretAbsConnected", turretAbsoluteEncoder.isConnected());
         SmartDashboard.putBoolean("Shooter/Ready", isReadyToShoot());
         SmartDashboard.putBoolean("Shooter/PassReady", isReadyToPass());
         SmartDashboard.putBoolean("Shooter/ManualOverrideEnabled", manualOverrideEnabled);
@@ -799,6 +885,12 @@ public class ShooterSubsystem extends SubsystemBase {
     public void periodic() {
         // Refresh cached signals once per loop before any dependent reads.
         refreshStatusSignals();
+
+        // If motor controller reset occurred, clear homed state and resync from absolute encoder.
+        if (turretMotor.hasResetOccurred()) {
+            resetReadyLatches();
+            syncTurretMotorToAbsoluteEncoder();
+        }
 
         // Recompute turret-mounted Limelight pose as turret rotates around shooter axis.
         // getTurretAngleRadians() is opposite of the robot-space convention expected by this

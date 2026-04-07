@@ -12,11 +12,14 @@ import frc.robot.commands.GoToMidCommand;
 import frc.robot.commands.IdleDeployedCommand;
 import frc.robot.commands.IdleRetractedCommand;
 import frc.robot.commands.IntakeCommand;
+import frc.robot.commands.ResetTurretFromKnownPositionCommand;
 import frc.robot.commands.ReturnFromLeftTrenchCommand;
 import frc.robot.commands.ReturnFromRightTrenchCommand;
 import frc.robot.commands.SwerveTeleopCommand;
-import frc.robot.commands.TestMachineCommand;
 import frc.robot.commands.TestShootCommand;
+import frc.robot.commands.TurretStepClosestLeftCommand;
+import frc.robot.commands.TurretStepClosestRightCommand;
+import frc.robot.commands.ZeroIntakeAtHardstopCommand;
 import frc.robot.commands.AutoCommands.AimAndPassAutoCommand;
 import frc.robot.commands.AutoCommands.AimAndShootAutoCommand;
 import frc.robot.constants.Dimensions;
@@ -63,6 +66,7 @@ public class RobotContainer {
 
   private final SendableChooser<Command> autoChooser;
   private final CommandXboxController m_driverController;
+  private final CommandXboxController m_emergencyController;
 
   private final CommandSwerveDrivetrain m_drivetrainSubsystem;
   private final ShooterSubsystem m_shooterSubsystem;
@@ -78,8 +82,11 @@ public class RobotContainer {
   private final IdleRetractedCommand m_idleRetractedCommand;
   private final IdleDeployedCommand m_idleDeployedCommand;
   private final IntakeCommand m_intakeCommand;
-  private final TestMachineCommand m_testMachineCommand;
   private final TestShootCommand m_testShootCommand;
+  private final TurretStepClosestLeftCommand m_turretStepClosestLeftCommand;
+  private final TurretStepClosestRightCommand m_turretStepClosestRightCommand;
+  private final ResetTurretFromKnownPositionCommand m_resetTurretFromKnownPositionCommand;
+  private final ZeroIntakeAtHardstopCommand m_zeroIntakeAtHardstopCommand;
   private final Command m_leftBumperTrenchCommand;
   private final BooleanEntry telemetryEnabledEntry = NetworkTableInstance.getDefault()
       .getBooleanTopic("Conf/EnableTelemetry")
@@ -97,6 +104,8 @@ public class RobotContainer {
 
     m_driverController =
         new CommandXboxController(TheMachineConstants.DRIVER_CONTROLLER_PORT_ID);
+  m_emergencyController =
+    new CommandXboxController(TheMachineConstants.EMERGENCY_CONTROLLER_PORT_ID);
 
     m_drivetrainSubsystem = TunerConstants.createDrivetrain();
 
@@ -113,8 +122,11 @@ public class RobotContainer {
     m_idleRetractedCommand = new IdleRetractedCommand(m_theMachine);
     m_idleDeployedCommand = new IdleDeployedCommand(m_theMachine);
     m_intakeCommand = new IntakeCommand(m_theMachine);
-    m_testMachineCommand = new TestMachineCommand(m_theMachine);
     m_testShootCommand = new TestShootCommand(m_theMachine);
+  m_turretStepClosestLeftCommand = new TurretStepClosestLeftCommand(m_shooterSubsystem);
+  m_turretStepClosestRightCommand = new TurretStepClosestRightCommand(m_shooterSubsystem);
+  m_resetTurretFromKnownPositionCommand = new ResetTurretFromKnownPositionCommand(m_shooterSubsystem);
+  m_zeroIntakeAtHardstopCommand = new ZeroIntakeAtHardstopCommand(m_intakeSubsystem);
 
     m_leftBumperTrenchCommand = new ConditionalCommand(
       new ConditionalCommand(new GoFromLeftTrenchCommand(m_drivetrainSubsystem, m_theMachine),
@@ -183,12 +195,22 @@ public class RobotContainer {
     m_driverController.y().whileTrue(new GoToMidCommand(m_drivetrainSubsystem, m_theMachine)).onFalse(m_idleRetractedCommand);
 
     // A -> run NetworkTables-driven machine test mode while held.
-    m_driverController.a().whileTrue(m_testMachineCommand).onFalse(m_idleRetractedCommand);
+    m_driverController.a().whileTrue(m_testShootCommand).onFalse(m_idleDeployedCommand);
 
   // Left bumper behavior depends on current zone:
     // - From shooting zone, go out to trench pickup path (left/right based on side)
     // - Outside shooting zone, return from trench back toward shooting area
     m_driverController.leftBumper().whileTrue(m_leftBumperTrenchCommand);
+
+  // Emergency controller turret recovery controls.
+  // X: step turret to closest LEFT 45-deg window anchor.
+  // B: step turret to closest RIGHT 45-deg window anchor.
+  // Y: reset turret integrated position from known absolute sensor position.
+  // A: run intake hardstop zeroing.
+  m_emergencyController.x().onTrue(m_turretStepClosestLeftCommand);
+  m_emergencyController.b().onTrue(m_turretStepClosestRightCommand);
+  m_emergencyController.y().onTrue(m_resetTurretFromKnownPositionCommand);
+  m_emergencyController.a().onTrue(m_zeroIntakeAtHardstopCommand);
 
     // Named commands are used by PathPlanner autos.
     // Keep names stable once autos are authored to avoid broken references.
@@ -197,7 +219,6 @@ public class RobotContainer {
     NamedCommands.registerCommand("IntakeNC", new IntakeCommand(m_theMachine));
     NamedCommands.registerCommand("AimAndPassNC", new AimAndPassAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
     NamedCommands.registerCommand("AimAndShootNC", new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine));
-    NamedCommands.registerCommand("TestMachineNC", new TestMachineCommand(m_theMachine));
     NamedCommands.registerCommand("WaitForHoodToBeClosedNC", new WaitUntilCommand(m_shooterSubsystem::isHoodClosed));
     NamedCommands.registerCommand("AutoShootSequenceNC", 
       new SequentialCommandGroup(
@@ -253,6 +274,18 @@ public class RobotContainer {
     }
 
     m_theMachine.publishTelemetry();
+
+  SmartDashboard.putNumber("Telemetry/ShooterGoalFlywheelRps",
+    TelemetryConstants.roundTelemetry(m_shooterSubsystem.getFlywheelGoalVelocityRps()));
+  SmartDashboard.putNumber("Telemetry/ShooterGoalHoodDeg",
+    TelemetryConstants.roundTelemetry(m_shooterSubsystem.getHoodGoalAngleDegrees()));
+  SmartDashboard.putNumber("Telemetry/ShooterGoalTurretDeg",
+    TelemetryConstants.roundTelemetry(m_shooterSubsystem.getTurretGoalAngleDegrees()));
+
+  SmartDashboard.putNumber("Telemetry/FeederGoalBeltRps",
+    TelemetryConstants.roundTelemetry(m_feederSubsystem.getFeederBeltGoalVelocityRps()));
+  SmartDashboard.putNumber("Telemetry/FeederGoalFeedRps",
+    TelemetryConstants.roundTelemetry(m_feederSubsystem.getFeederFeedGoalVelocityRps()));
 
     SmartDashboard.putNumber("DistanceToHub", TelemetryConstants.roundTelemetry(m_drivetrainSubsystem.getDistanceToHub()));
 
