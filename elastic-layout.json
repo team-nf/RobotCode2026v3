@@ -168,13 +168,44 @@
             "title": "EnableTelemetry",
             "x": 0.0,
             "y": 512.0,
-            "width": 384.0,
+            "width": 256.0,
             "height": 128.0,
             "type": "Toggle Button",
             "properties": {
               "topic": "Conf/EnableTelemetry",
               "period": 0.06,
               "data_type": "boolean"
+            }
+          },
+          {
+            "title": "IsBlue",
+            "x": 256.0,
+            "y": 512.0,
+            "width": 128.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Conf/IsBlue",
+              "period": 0.06,
+              "data_type": "boolean",
+              "true_color": 4283215696,
+              "false_color": 4294198070,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Throughbore",
+            "x": 320.0,
+            "y": 640.0,
+            "width": 192.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Throughbore",
+              "period": 0.06,
+              "data_type": "double",
+              "show_submit_button": false
             }
           }
         ]
@@ -1810,7 +1841,150 @@
     {
       "name": "Test",
       "grid_layout": {
-        "layouts": [],
+        "layouts": [
+          {
+            "title": "AimShoot",
+            "x": 640.0,
+            "y": 128.0,
+            "width": 320.0,
+            "height": 512.0,
+            "type": "List Layout",
+            "properties": {
+              "label_position": "TOP"
+            },
+            "children": [
+              {
+                "title": "AngleErrorDeg",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/AngleErrorDeg",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              },
+              {
+                "title": "DistanceToHubM",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/DistanceToHubM",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              },
+              {
+                "title": "FilteredSpeedX",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/FilteredSpeedX",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              },
+              {
+                "title": "FilteredSpeedY",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/FilteredSpeedY",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              },
+              {
+                "title": "FlightTimeSec",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/FlightTimeSec",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              },
+              {
+                "title": "HoodGoalDeg",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/HoodGoalDeg",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              },
+              {
+                "title": "ShooterGoalRps",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/ShooterGoalRps",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              },
+              {
+                "title": "ShouldShoot",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Boolean Box",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/ShouldShoot",
+                  "period": 0.06,
+                  "data_type": "boolean",
+                  "true_color": 4283215696,
+                  "false_color": 4294198070,
+                  "true_icon": "None",
+                  "false_icon": "None"
+                }
+              },
+              {
+                "title": "TurretGoalDeg",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 128.0,
+                "height": 128.0,
+                "type": "Text Display",
+                "properties": {
+                  "topic": "/SmartDashboard/AimShoot/TurretGoalDeg",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "show_submit_button": false
+                }
+              }
+            ]
+          }
+        ],
         "containers": [
           {
             "title": "DistanceToHub",
@@ -1858,16 +2032,18 @@
           },
           {
             "title": "HoodAngleDeg",
-            "x": 448.0,
-            "y": 0.0,
+            "x": 0.0,
+            "y": 640.0,
             "width": 256.0,
-            "height": 128.0,
-            "type": "Text Display",
+            "height": 256.0,
+            "type": "Graph",
             "properties": {
               "topic": "/SmartDashboard/Shooter/HoodAngleDeg",
-              "period": 0.06,
+              "period": 0.033,
               "data_type": "double",
-              "show_submit_button": false
+              "time_displayed": 5.0,
+              "color": 4278238420,
+              "line_width": 2.0
             }
           },
           {
@@ -1925,7 +2101,7 @@
               "topic": "/Conf/TestMachine/ShooterFlywheelRps",
               "period": 0.06,
               "data_type": "double",
-              "show_submit_button": false
+              "show_submit_button": true
             }
           },
           {
@@ -1939,7 +2115,7 @@
               "topic": "/Conf/TestMachine/ShooterHoodRot",
               "period": 0.06,
               "data_type": "double",
-              "show_submit_button": false
+              "show_submit_button": true
             }
           },
           {
@@ -1973,15 +2149,17 @@
           {
             "title": "FeedMotorVelocityErrorRps",
             "x": 384.0,
-            "y": 256.0,
+            "y": 448.0,
             "width": 256.0,
-            "height": 128.0,
-            "type": "Text Display",
+            "height": 192.0,
+            "type": "Graph",
             "properties": {
               "topic": "/SmartDashboard/Feeder/FeedMotorVelocityErrorRps",
-              "period": 0.06,
+              "period": 0.033,
               "data_type": "double",
-              "show_submit_button": false
+              "time_displayed": 5.0,
+              "color": 4278238420,
+              "line_width": 2.0
             }
           },
           {
@@ -2000,9 +2178,9 @@
           },
           {
             "title": "Field",
-            "x": 640.0,
+            "x": 960.0,
             "y": 128.0,
-            "width": 1024.0,
+            "width": 704.0,
             "height": 512.0,
             "type": "Field",
             "properties": {

@@ -71,10 +71,10 @@ public class AimAndShootAutoCommand extends Command {
   @Override
   public void initialize() {
     // Clear moving average buffers
-    for (int i = 0; i < FILTER_SIZE; i++) {
-      speedXBuffer[i] = 0.0;
-      speedYBuffer[i] = 0.0;
-      angleErrorBuffer[i] = 0.0;
+    for (tempLoopIndex = 0; tempLoopIndex < FILTER_SIZE; tempLoopIndex++) {
+      speedXBuffer[tempLoopIndex] = 0.0;
+      speedYBuffer[tempLoopIndex] = 0.0;
+      angleErrorBuffer[tempLoopIndex] = 0.0;
     }
     bufferIndex = 0;
     validSampleCount = 0;
@@ -117,6 +117,7 @@ public class AimAndShootAutoCommand extends Command {
   double headingCos = 0.0;
   double sumSin = 0.0;
   double sumCos = 0.0;
+  int tempLoopIndex = 0;
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
@@ -155,9 +156,9 @@ public class AimAndShootAutoCommand extends Command {
     }
 
     // Calculate filtered (smoothed) values
-    for (int i = 0; i < validSampleCount; i++) {
-      filteredSpeedX += speedXBuffer[i];
-      filteredSpeedY += speedYBuffer[i];
+    for (tempLoopIndex = 0; tempLoopIndex < validSampleCount; tempLoopIndex++) {
+      filteredSpeedX += speedXBuffer[tempLoopIndex];
+      filteredSpeedY += speedYBuffer[tempLoopIndex];
     }
 
     filteredSpeedX /= validSampleCount;
@@ -181,9 +182,9 @@ public class AimAndShootAutoCommand extends Command {
 
     sumSin = 0.0;
     sumCos = 0.0;
-    for (int i = 0; i < validSampleCount; i++) {
-      sumSin += Math.sin(angleErrorBuffer[i]);
-      sumCos += Math.cos(angleErrorBuffer[i]);
+    for (tempLoopIndex = 0; tempLoopIndex < validSampleCount; tempLoopIndex++) {
+      sumSin += Math.sin(angleErrorBuffer[tempLoopIndex]);
+      sumCos += Math.cos(angleErrorBuffer[tempLoopIndex]);
     }
     filteredAngleError = Math.atan2(sumSin, sumCos);
 

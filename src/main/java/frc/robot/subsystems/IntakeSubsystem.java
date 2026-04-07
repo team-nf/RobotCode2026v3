@@ -564,14 +564,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    if (intakeArmMotor.hasResetOccurred()) {
-      intakeHomed = false;
-      intakeHardstopZeroingActive = false;
-      intakeHardstopZeroingComplete = false;
-      intakeHardstopZeroingSucceeded = false;
-      intakeHardstopStallStartSec = -1.0;
-    }
-
     refreshStatusSignals();
   }
 }

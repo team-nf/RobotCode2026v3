@@ -886,12 +886,6 @@ public class ShooterSubsystem extends SubsystemBase {
         // Refresh cached signals once per loop before any dependent reads.
         refreshStatusSignals();
 
-        // If motor controller reset occurred, clear homed state and resync from absolute encoder.
-        if (turretMotor.hasResetOccurred()) {
-            resetReadyLatches();
-            syncTurretMotorToAbsoluteEncoder();
-        }
-
         // Recompute turret-mounted Limelight pose as turret rotates around shooter axis.
         // getTurretAngleRadians() is opposite of the robot-space convention expected by this
         // transform, so negate it to keep camera pose movement aligned with turret direction.

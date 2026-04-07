@@ -504,73 +504,81 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
 
     LimelightHelpers.IMUData imuData;
+    private static final Matrix<N3, N1> MT2_VISION_STD_DEVS = VecBuilder.fill(.6, .6, 9999999);
+    private static final Matrix<N3, N1> MT1_VISION_STD_DEVS = VecBuilder.fill(.5, .5, 9999999);
+    private double tempRobotYaw = 0.0;
+    private LimelightHelpers.PoseEstimate tempLimelightMeasurementTurret;
+    private LimelightHelpers.PoseEstimate tempLimelightMeasurementFixed;
+    private boolean tempDoRejectUpdate = false;
+    private boolean tempDoRejectTurret = false;
+    private boolean tempDoRejectFixed = false;
     public void addVisionMeasurementMT2() {
         // Keep Limelight orientation aligned with drivetrain heading.
-        double robotYaw = getHeading();
-        LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-        LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        tempRobotYaw = getHeading();
+        LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetRobotOrientation("limelight-normal", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         imuData = LimelightHelpers.getIMUData("limelight-turret");
 
     // Gather both camera estimates (turret camera + fixed camera).
-        LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-turret");
-        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-normal");
-        
-        boolean doRejectUpdate = false;
-        boolean doRejectTurret = false;
-        boolean doRejectFixed = false;
+    tempLimelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-turret");
+    tempLimelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-normal");
+
+    tempDoRejectUpdate = false;
+    tempDoRejectTurret = false;
+    tempDoRejectFixed = false;
 
 
         
         if(Math.abs(getGyroRate()) > 360)
         {
-            doRejectUpdate = true;
+            tempDoRejectUpdate = true;
         }
 
 
         //if(drivetrain.swerveDataSupplier().get().swerveControlState == SwerveState.AIMING) doRejectUpdate = true;
 
-        if(limelightMeasurementTurret != null)
+        if(tempLimelightMeasurementTurret != null)
         {
-        if(limelightMeasurementTurret.tagCount == 0)
+        if(tempLimelightMeasurementTurret.tagCount == 0)
             {
-                doRejectTurret = true;
+                tempDoRejectTurret = true;
             }
         if(Math.abs(imuData.accelZ) > 120.0)
             {
-                doRejectTurret = true;
+                tempDoRejectTurret = true;
             }
         }
-        else doRejectTurret = true;
+        else tempDoRejectTurret = true;
 
-        if(limelightMeasurementFixed != null)
+        if(tempLimelightMeasurementFixed != null)
         {
-        if(limelightMeasurementFixed.tagCount == 0)
+        if(tempLimelightMeasurementFixed.tagCount == 0)
             {
-                doRejectFixed = true;
+                tempDoRejectFixed = true;
             }
         }
-        else doRejectFixed = true;
+        else tempDoRejectFixed = true;
 
 
     // Apply accepted measurements with conservative heading trust.
-    if(!doRejectUpdate)
+    if(!tempDoRejectUpdate)
         {
-            if(!doRejectTurret && llTurretEnabledEntry.get(true))
+            if(!tempDoRejectTurret && llTurretEnabledEntry.get(true))
             {
-                setVisionMeasurementStdDevs(VecBuilder.fill(.6,.6,9999999));
+                setVisionMeasurementStdDevs(MT2_VISION_STD_DEVS);
                 addVisionMeasurement(
-                limelightMeasurementTurret.pose,
-                limelightMeasurementTurret.timestampSeconds
+                tempLimelightMeasurementTurret.pose,
+                tempLimelightMeasurementTurret.timestampSeconds
                 );
             }
 
-            if(!doRejectFixed && llFixedEnabledEntry.get(true))
+            if(!tempDoRejectFixed && llFixedEnabledEntry.get(true))
             {
-                setVisionMeasurementStdDevs(VecBuilder.fill(.6,.6,9999999));
+                setVisionMeasurementStdDevs(MT2_VISION_STD_DEVS);
                 addVisionMeasurement(
-                limelightMeasurementFixed.pose,
-                limelightMeasurementFixed.timestampSeconds
+                tempLimelightMeasurementFixed.pose,
+                tempLimelightMeasurementFixed.timestampSeconds
                 );
             }
         }
@@ -578,70 +586,70 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     public void addVisionMeasurementMT1() {
         // Keep Limelight orientation aligned with drivetrain heading.
-    double robotYaw = getHeading();
-    LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
-    LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+    tempRobotYaw = getHeading();
+    LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+    LimelightHelpers.SetRobotOrientation("limelight-normal", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
 
     // Gather both camera estimates (legacy solve path).
-    LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
-    LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-normal");
-    
-    boolean doRejectUpdate = false;
-    boolean doRejectTurret = false;
-    boolean doRejectFixed = false;
+    tempLimelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
+    tempLimelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-normal");
+
+    tempDoRejectUpdate = false;
+    tempDoRejectTurret = false;
+    tempDoRejectFixed = false;
 
     
     if(Math.abs(getGyroRate()) > 360)
     {
-        doRejectUpdate = true;
+        tempDoRejectUpdate = true;
     }
 
-    if(limelightMeasurementTurret != null)
+    if(tempLimelightMeasurementTurret != null)
     {
-        if(limelightMeasurementTurret.tagCount < 1)
+        if(tempLimelightMeasurementTurret.tagCount < 1)
             {
-                doRejectTurret = true;
+                tempDoRejectTurret = true;
             }
 
-        if(limelightMeasurementTurret.avgTagDist > 3.5)
+        if(tempLimelightMeasurementTurret.avgTagDist > 3.5)
             {
-                doRejectTurret = true;
+                tempDoRejectTurret = true;
             }
     }
-    else doRejectTurret = true;
+    else tempDoRejectTurret = true;
 
-    if(limelightMeasurementFixed != null)
+    if(tempLimelightMeasurementFixed != null)
     {
-    if(limelightMeasurementFixed.tagCount < 1)
+    if(tempLimelightMeasurementFixed.tagCount < 1)
         {
-            doRejectFixed = true;
+            tempDoRejectFixed = true;
         }
-        if(limelightMeasurementFixed.avgTagDist > 3.5)
+        if(tempLimelightMeasurementFixed.avgTagDist > 3.5)
             {
-                doRejectFixed = true;
+                tempDoRejectFixed = true;
             }
     }
-    else doRejectFixed = true;
+    else tempDoRejectFixed = true;
 
 
-    if(!doRejectUpdate)
+    if(!tempDoRejectUpdate)
     {
-        if(!doRejectTurret && llTurretEnabledEntry.get(true))
+        if(!tempDoRejectTurret && llTurretEnabledEntry.get(true))
         {
-            setVisionMeasurementStdDevs(VecBuilder.fill(.5,.5,9999999));
+            setVisionMeasurementStdDevs(MT1_VISION_STD_DEVS);
 
             addVisionMeasurement(
-            limelightMeasurementTurret.pose,
-            limelightMeasurementTurret.timestampSeconds
+            tempLimelightMeasurementTurret.pose,
+            tempLimelightMeasurementTurret.timestampSeconds
             );
         }
 
-        if(!doRejectFixed && llFixedEnabledEntry.get(true))
+        if(!tempDoRejectFixed && llFixedEnabledEntry.get(true))
         {
-            setVisionMeasurementStdDevs(VecBuilder.fill(.5,.5,9999999));
+            setVisionMeasurementStdDevs(MT1_VISION_STD_DEVS);
             addVisionMeasurement(
-            limelightMeasurementFixed.pose,
-            limelightMeasurementFixed.timestampSeconds
+            tempLimelightMeasurementFixed.pose,
+            tempLimelightMeasurementFixed.timestampSeconds
             );
         }
     }
@@ -650,35 +658,35 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     public void resetWithMT1()
     {
         // Prefer fixed camera reset; fall back to turret camera if needed.
-        double robotYaw = 0;
+        tempRobotYaw = 0;
 
-        LimelightHelpers.PoseEstimate limelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-normal");
+        tempLimelightMeasurementFixed = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-normal");
 
-        if(limelightMeasurementFixed != null && limelightMeasurementFixed.tagCount > 0)
+        if(tempLimelightMeasurementFixed != null && tempLimelightMeasurementFixed.tagCount > 0)
         {
-            if (limelightMeasurementFixed.avgTagDist < 3.0) {
-                resetPose(limelightMeasurementFixed.pose);
-                robotYaw = limelightMeasurementFixed.pose.getRotation().getDegrees();
+            if (tempLimelightMeasurementFixed.avgTagDist < 3.0) {
+                resetPose(tempLimelightMeasurementFixed.pose);
+                tempRobotYaw = tempLimelightMeasurementFixed.pose.getRotation().getDegrees();
             }
         }
         else
         {
-            LimelightHelpers.PoseEstimate limelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
-            if(limelightMeasurementTurret != null && limelightMeasurementTurret.tagCount > 0)
+            tempLimelightMeasurementTurret = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-turret");
+            if(tempLimelightMeasurementTurret != null && tempLimelightMeasurementTurret.tagCount > 0)
                 {
-                    if (limelightMeasurementTurret.avgTagDist < 3.0) {
-                        resetPose(limelightMeasurementTurret.pose);
-                        robotYaw = limelightMeasurementTurret.pose.getRotation().getDegrees();
+                    if (tempLimelightMeasurementTurret.avgTagDist < 3.0) {
+                        resetPose(tempLimelightMeasurementTurret.pose);
+                        tempRobotYaw = tempLimelightMeasurementTurret.pose.getRotation().getDegrees();
 
                     }
                 }
         }
         
-        LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
         LimelightHelpers.SetIMUMode("limelight-turret", 1);
   
         
-        LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetRobotOrientation("limelight-normal", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
         LimelightHelpers.SetIMUMode("limelight-normal", 1);
     }
 
@@ -700,14 +708,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // On first enable after disabled, switch LL IMU mode for in-match tracking.
         if(!isLLReady && isMode1Set)
         {
-            double robotYaw = getPose().getRotation().getDegrees();
+            tempRobotYaw = getPose().getRotation().getDegrees();
 
 
-            LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+            LimelightHelpers.SetRobotOrientation_NoFlush("limelight-turret", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
             LimelightHelpers.SetIMUMode("limelight-turret", 0);
     
             
-            LimelightHelpers.SetRobotOrientation("limelight-normal", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
+            LimelightHelpers.SetRobotOrientation("limelight-normal", tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
             LimelightHelpers.SetIMUMode("limelight-normal", 0);
             isLLReady = true;
         }
