@@ -33,6 +33,7 @@ import frc.robot.commands.IntakeCommand;
 import frc.robot.commands.ResetTurretFromKnownPositionCommand;
 import frc.robot.commands.ReturnFromLeftTrenchCommand;
 import frc.robot.commands.ReturnFromRightTrenchCommand;
+import frc.robot.commands.ReverseCommand;
 import frc.robot.commands.SwerveTeleopCommand;
 import frc.robot.commands.TestShootCommand;
 import frc.robot.commands.TurretStepClosestLeftCommand;
@@ -80,6 +81,7 @@ public class RobotContainer {
   private final AimAndShootCommand m_aimAndShootCommand;
   private final IdleRetractedCommand m_idleRetractedCommand;
   private final IdleDeployedCommand m_idleDeployedCommand;
+  private final ReverseCommand m_reverseCommand;
   private final IntakeCommand m_intakeCommand;
   private final TestShootCommand m_testShootCommand;
   private final TurretStepClosestLeftCommand m_turretStepClosestLeftCommand;
@@ -87,6 +89,8 @@ public class RobotContainer {
   private final ResetTurretFromKnownPositionCommand m_resetTurretFromKnownPositionCommand;
   private final ZeroIntakeAtHardstopCommand m_zeroIntakeAtHardstopCommand;
   private final Command m_leftBumperTrenchCommand;
+  private final Command m_shootCommand;
+
   private final BooleanEntry telemetryEnabledEntry =
       NetworkTableInstance.getDefault().getBooleanTopic("Conf/EnableTelemetry").getEntry(false);
 
@@ -127,6 +131,7 @@ public class RobotContainer {
     m_idleRetractedCommand = new IdleRetractedCommand(m_theMachine);
     m_idleDeployedCommand = new IdleDeployedCommand(m_theMachine);
     m_intakeCommand = new IntakeCommand(m_theMachine);
+    m_reverseCommand = new ReverseCommand(m_theMachine);
     m_testShootCommand = new TestShootCommand(m_theMachine);
     m_turretStepClosestLeftCommand = new TurretStepClosestLeftCommand(m_shooterSubsystem);
     m_turretStepClosestRightCommand = new TurretStepClosestRightCommand(m_shooterSubsystem);
@@ -145,6 +150,11 @@ public class RobotContainer {
                 new ReturnFromRightTrenchCommand(m_drivetrainSubsystem, m_theMachine),
                 m_drivetrainSubsystem::isRobotOnLeftSide),
             m_drivetrainSubsystem::isRobotOnTheShootingZone);
+    
+    m_shootCommand = new ConditionalCommand(
+                m_aimAndShootCommand,
+                m_aimAndPassCommand,
+                m_drivetrainSubsystem::isRobotOnTheShootingZone);
 
     configureBindings();
 
@@ -187,21 +197,16 @@ public class RobotContainer {
     // On release: return to deployed idle (safe transition).
     m_driverController
         .leftTrigger()
-        .whileTrue(
-            new ConditionalCommand(
-                m_aimAndShootCommand,
-                m_aimAndPassCommand,
-                m_drivetrainSubsystem::isRobotOnTheShootingZone))
+        .whileTrue(m_shootCommand)
         .onFalse(m_idleDeployedCommand);
 
-    // Y -> pathfind to midfield alignment preset. Release returns to stowed idle.
     m_driverController
-        .y()
-        .whileTrue(new GoToMidCommand(m_drivetrainSubsystem, m_theMachine))
-        .onFalse(m_idleRetractedCommand);
+        .a()
+        .whileTrue(m_reverseCommand)
+        .onFalse(m_idleDeployedCommand);
 
-    // A -> run NetworkTables-driven machine test mode while held.
-    m_driverController.a().whileTrue(m_testShootCommand).onFalse(m_idleDeployedCommand);
+    // Y -> run NetworkTables-driven machine test mode while held.
+    m_driverController.y().whileTrue(m_testShootCommand).onFalse(m_idleDeployedCommand);
 
     // Left bumper behavior depends on current zone:
     // - From shooting zone, go out to trench pickup path (left/right based on side)
@@ -210,6 +215,8 @@ public class RobotContainer {
 
     // X -> begin intake state machine.
     m_driverController.rightBumper().onTrue(m_intakeCommand);
+
+    m_driverController.start().onTrue(m_drivetrainSubsystem.resetPoseWithMT1Command());
 
     // Emergency controller turret recovery controls.
     // X: step turret to closest LEFT 45-deg window anchor.
@@ -247,11 +254,14 @@ public class RobotContainer {
     return autoChooser.getSelected();
   }
 
+  boolean telemetryEnabled;
+  double nowSec;
+  double loopTimeMs;
   public void containerPeriodic() {
-    boolean telemetryEnabled = telemetryEnabledEntry.get(false);
+    telemetryEnabled = telemetryEnabledEntry.get(false);
 
-    double nowSec = Timer.getFPGATimestamp();
-    double loopTimeMs = (nowSec - lastContainerPeriodicTimeSec) * 1000.0;
+    nowSec = Timer.getFPGATimestamp();
+    loopTimeMs = (nowSec - lastContainerPeriodicTimeSec) * 1000.0;
     lastContainerPeriodicTimeSec = nowSec;
 
     SmartDashboard.putNumber(
@@ -364,6 +374,20 @@ public class RobotContainer {
     // - Run one mechanism at a time with the robot safely supported/clear.
     // - Reverse directly after forward helps return mechanisms toward start position.
     // - Start with lower dynamic voltage if a mechanism is aggressive.
+    // Swerve drivetrain
+    SmartDashboard.putData(
+        "SysId/Swerve/QuasiForward",
+        m_drivetrainSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
+    SmartDashboard.putData(
+        "SysId/Swerve/QuasiReverse",
+        m_drivetrainSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+    SmartDashboard.putData(
+        "SysId/Swerve/DynamicForward",
+        m_drivetrainSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
+    SmartDashboard.putData(
+        "SysId/Swerve/DynamicReverse",
+        m_drivetrainSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+
     // Shooter
     SmartDashboard.putData(
         "SysId/Shooter/Flywheel/QuasiForward",
@@ -484,5 +508,7 @@ public class RobotContainer {
     SmartDashboard.putData(
         "SysId/Feeder/Feed/DynamicReverse",
         m_feederSubsystem.feederFeedSysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+    
   }
 }

@@ -34,23 +34,6 @@
             }
           },
           {
-            "title": "isAimed",
-            "x": 384.0,
-            "y": 512.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Boolean Box",
-            "properties": {
-              "topic": "/SmartDashboard/Conf/isAimed",
-              "period": 0.06,
-              "data_type": "boolean",
-              "true_color": 4283215696,
-              "false_color": 4294198070,
-              "true_icon": "None",
-              "false_icon": "None"
-            }
-          },
-          {
             "title": "Field",
             "x": 0.0,
             "y": 0.0,
@@ -89,7 +72,7 @@
             "title": "ManualOverrideEnabled",
             "x": 1152.0,
             "y": 128.0,
-            "width": 256.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Toggle Button",
             "properties": {
@@ -167,7 +150,7 @@
           {
             "title": "EnableTelemetry",
             "x": 0.0,
-            "y": 512.0,
+            "y": 640.0,
             "width": 256.0,
             "height": 128.0,
             "type": "Toggle Button",
@@ -179,8 +162,8 @@
           },
           {
             "title": "IsBlue",
-            "x": 256.0,
-            "y": 512.0,
+            "x": 1280.0,
+            "y": 128.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Boolean Box",
@@ -196,9 +179,9 @@
           },
           {
             "title": "Throughbore",
-            "x": 320.0,
-            "y": 640.0,
-            "width": 192.0,
+            "x": 0.0,
+            "y": 512.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Text Display",
             "properties": {
@@ -206,6 +189,45 @@
               "period": 0.06,
               "data_type": "double",
               "show_submit_button": false
+            }
+          },
+          {
+            "title": "LL-Fixed_Enabled",
+            "x": 256.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Toggle Button",
+            "properties": {
+              "topic": "/LL/LL-Fixed_Enabled",
+              "period": 0.06,
+              "data_type": "boolean"
+            }
+          },
+          {
+            "title": "LL-Turret_Enabled",
+            "x": 256.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Toggle Button",
+            "properties": {
+              "topic": "/LL/LL-Turret_Enabled",
+              "period": 0.06,
+              "data_type": "boolean"
+            }
+          },
+          {
+            "title": "DisabledLocoEnabled",
+            "x": 128.0,
+            "y": 512.0,
+            "width": 128.0,
+            "height": 128.0,
+            "type": "Toggle Button",
+            "properties": {
+              "topic": "/LL/DisabledLocoEnabled",
+              "period": 0.06,
+              "data_type": "boolean"
             }
           }
         ]
@@ -1844,9 +1866,9 @@
         "layouts": [
           {
             "title": "AimShoot",
-            "x": 640.0,
+            "x": 704.0,
             "y": 128.0,
-            "width": 320.0,
+            "width": 256.0,
             "height": 512.0,
             "type": "List Layout",
             "properties": {
@@ -2049,7 +2071,7 @@
           {
             "title": "HoodGoalDeg",
             "x": 448.0,
-            "y": 128.0,
+            "y": 0.0,
             "width": 192.0,
             "height": 128.0,
             "type": "Text Display",
@@ -2148,10 +2170,10 @@
           },
           {
             "title": "FeedMotorVelocityErrorRps",
-            "x": 384.0,
-            "y": 448.0,
+            "x": 128.0,
+            "y": 384.0,
             "width": 256.0,
-            "height": 192.0,
+            "height": 256.0,
             "type": "Graph",
             "properties": {
               "topic": "/SmartDashboard/Feeder/FeedMotorVelocityErrorRps",
@@ -2164,8 +2186,8 @@
           },
           {
             "title": "Motor1VelocityRps",
-            "x": 256.0,
-            "y": 512.0,
+            "x": 0.0,
+            "y": 384.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Text Display",
@@ -2251,6 +2273,18 @@
               "period": 0.06,
               "data_type": "double",
               "show_submit_button": false
+            }
+          },
+          {
+            "title": "Scheduler",
+            "x": 448.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 512.0,
+            "type": "Scheduler",
+            "properties": {
+              "topic": "/SmartDashboard/Scheduler",
+              "period": 0.06
             }
           }
         ]

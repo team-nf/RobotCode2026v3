@@ -424,7 +424,6 @@ public class TheMachine {
     hopperSubsystem.publishTelemetry();
     intakeSubsystem.publishTelemetry();
 
-    SmartDashboard.putString("TheMachine/State", state.toString());
     SmartDashboard.putString("TheMachine/LedState", currentLedState.toString());
     SmartDashboard.putBoolean(
         "TheMachine/ManualOverrideEnabled", shooterSubsystem.isManualOverrideEnabled());
@@ -535,6 +534,7 @@ public class TheMachine {
 
   public void machinePeriodic() {
     updateLedsForCurrentState();
+    SmartDashboard.putString("TheMachine/State", state.toString());
 
     // Manual override disables automatic hub-facing behavior.
     if (!shooterSubsystem.isManualOverrideEnabled()) {

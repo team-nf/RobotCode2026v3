@@ -55,9 +55,9 @@ public final class ShooterCalculator {
     {29, 0}, // 0.5 meters
     {29, 0}, // 1.0 meters
     {29.5, 3}, // 1.5 meters
-    {31.4, 5.5}, // 2.0 meters
+    {31.1, 5.5}, // 2.0 meters
     {33.3, 5.5}, // 2.5 meters
-    {34.5, 6}, // 3.0 meters
+    {34, 6}, // 3.0 meters
     {36.6, 8}, // 3.5 meters
     {38, 8}, // 4.0 meters
     {40, 10}, // 4.5 meters
