@@ -67,7 +67,7 @@ public class HopperConstants {
   public static final AngularVelocity HOPPER_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
 
   public static final AngularVelocity HOPPER_FEEDING_VELOCITY =
-      RotationsPerSecond.of(20); // in RPS 20
+      RotationsPerSecond.of(30); // in RPS 20
   public static final AngularVelocity HOPPER_SIDE_PUSHING_VELOCITY =
       RotationsPerSecond.of(-1); // in RPS
   public static final AngularVelocity HOPPER_REVERSE_VELOCITY =

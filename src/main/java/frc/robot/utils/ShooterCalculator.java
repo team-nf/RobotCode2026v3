@@ -222,7 +222,7 @@ public final class ShooterCalculator {
     tempWheelSpeed = Math.max(MIN_FLYWHEEL_RPS, Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS));
 
     tempHoodAngleDeg = Math.max(MIN_HOOD_DEG, Math.min(tempHoodAngleDeg, MAX_HOOD_DEG));
-    shootingParams[0] = tempWheelSpeed * 0.985;
+    shootingParams[0] = tempWheelSpeed * ShooterConstants.RPS_LOOKUP_COEFFICIENT;
     shootingParams[1] = tempHoodAngleDeg;
     return shootingParams;
   }

@@ -6,6 +6,8 @@ import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
+import java.lang.Thread.State;
+
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -21,6 +23,7 @@ import edu.wpi.first.units.measure.*;
 import frc.robot.Robot;
 
 public class ShooterConstants {
+  public static final double RPS_LOOKUP_COEFFICIENT = 0.995;
   // Motor IDs
   public static final int FIRST_SHOOTER_MOTOR_ID = 51;
   public static final int SECOND_SHOOTER_MOTOR_ID = 52;
