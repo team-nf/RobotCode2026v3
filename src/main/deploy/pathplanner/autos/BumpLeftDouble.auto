@@ -7,7 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "TrenchAndHuman_1"
+            "pathName": "BumpLeftDouble_1"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "IdleDeployedNC"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "BumpLeftDouble_2"
           }
         },
         {

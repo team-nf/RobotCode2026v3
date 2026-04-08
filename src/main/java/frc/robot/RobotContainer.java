@@ -245,8 +245,11 @@ public class RobotContainer {
         "AutoShootSequenceNC",
         new SequentialCommandGroup(
             new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine)
-                .withTimeout(6),
+                .withTimeout(5.5),
             new IdleDeployedCommand(m_theMachine).until(m_shooterSubsystem::isHoodClosed)));
+    NamedCommands.registerCommand(
+        "IdleDeployedNC",
+            new IdleDeployedCommand(m_theMachine).until(m_shooterSubsystem::isHoodClosed));
   }
 
   public Command getAutonomousCommand() {
