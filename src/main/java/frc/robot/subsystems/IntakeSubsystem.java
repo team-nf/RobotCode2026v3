@@ -283,7 +283,7 @@ public class IntakeSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(intakeVelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/RollerCurrentA",
-        TelemetryConstants.roundTelemetry(intakeCurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(intakeMotor.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/RollerVoltageV",
         TelemetryConstants.roundTelemetry(intakeVoltageSignal.getValueAsDouble()));
