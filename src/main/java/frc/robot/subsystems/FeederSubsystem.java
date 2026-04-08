@@ -54,11 +54,6 @@ public class FeederSubsystem extends SubsystemBase {
   private double feederFeedTestRPM;
   private boolean feederBeltFeedLatchEnabled = false;
 
-  private static final double FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS =
-      FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
-  private static final double FEEDER_BELT_LATCH_DISENGAGE_ERROR_RPS =
-      FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS * 3.0;
-
   private static final int FEEDER_FEED_VELOCITY_AVG_SAMPLES = 5;
   private final double[] feederFeedVelocityWindow = new double[FEEDER_FEED_VELOCITY_AVG_SAMPLES];
   private int feederFeedVelocityWindowIndex = 0;
@@ -66,9 +61,7 @@ public class FeederSubsystem extends SubsystemBase {
   private double feederFeedVelocityWindowSum = 0.0;
   private double feederFeedVelocityAverageRps = 0.0;
   private double feederFeedVelocityRps;
-  private double feederFeedVelocityErrorRps;
   private boolean feederCanEngageBelt;
-  private boolean feederMustDisengageBelt;
 
   private final VoltageOut feederBeltSysIdControl;
   private final VoltageOut feederFeedSysIdControl;
@@ -367,22 +360,15 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void feed() {
-    // Gate belt feed with hysteresis to avoid stopping belt on momentary shot load dips.
+    // Feed belt when feed wheel reaches at least 50% of current feed goal.
     feederFeedGoalVelocity = getShooterGoalRpsForFeed();
     feederFeedSetSpeed(feederFeedGoalVelocity);
 
     feederFeedVelocityRps = getFeederFeedVelocity();
-    feederFeedVelocityErrorRps = Math.abs(feederFeedGoalVelocity - feederFeedVelocityRps);
-    feederCanEngageBelt = feederFeedVelocityErrorRps <= FEEDER_BELT_LATCH_ENGAGE_ERROR_RPS;
-    feederMustDisengageBelt = feederFeedVelocityErrorRps >= FEEDER_BELT_LATCH_DISENGAGE_ERROR_RPS;
-
-    if (!feederBeltFeedLatchEnabled) {
-      if (feederCanEngageBelt) {
-        feederBeltFeedLatchEnabled = true;
-      }
-    } else if (feederMustDisengageBelt) {
-      feederBeltFeedLatchEnabled = false;
-    }
+    feederCanEngageBelt =
+        Math.abs(feederFeedGoalVelocity) > 0.0
+            && feederFeedVelocityRps >= (Math.abs(feederFeedGoalVelocity) * 0.5);
+    feederBeltFeedLatchEnabled = feederCanEngageBelt;
 
     if (feederBeltFeedLatchEnabled) {
       feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_BELT_VELOCITY_RPS;
