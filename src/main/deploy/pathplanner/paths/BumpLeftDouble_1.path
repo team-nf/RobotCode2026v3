@@ -64,16 +64,16 @@
     },
     {
       "anchor": {
-        "x": 3.3550248344370863,
-        "y": 5.465206953642383
+        "x": 3.1807864238410595,
+        "y": 5.363567880794701
       },
       "prevControl": {
-        "x": 3.570284652671484,
-        "y": 5.328084151279546
+        "x": 3.396046242075457,
+        "y": 5.226445078431864
       },
       "nextControl": {
-        "x": 1.3149834437086096,
-        "y": 6.764735099337748
+        "x": 1.1407450331125828,
+        "y": 6.663096026490066
       },
       "isLocked": false,
       "linkedName": null
@@ -137,7 +137,7 @@
       "minWaypointRelativePos": 3.9820022497187706,
       "maxWaypointRelativePos": 5.0,
       "constraints": {
-        "maxVelocity": 0.6,
+        "maxVelocity": 0.5,
         "maxAcceleration": 4.5,
         "maxAngularVelocity": 540.0,
         "maxAngularAcceleration": 720.0,
@@ -148,9 +148,9 @@
     {
       "name": "Constraints Zone",
       "minWaypointRelativePos": 2.8904593639575977,
-      "maxWaypointRelativePos": 3.59,
+      "maxWaypointRelativePos": 3.9081272084805674,
       "constraints": {
-        "maxVelocity": 3.0,
+        "maxVelocity": 2.5,
         "maxAcceleration": 4.5,
         "maxAngularVelocity": 540.0,
         "maxAngularAcceleration": 720.0,
@@ -185,7 +185,7 @@
     },
     {
       "name": "AutoShootSequenceNC",
-      "waypointRelativePos": 4.083239595050621,
+      "waypointRelativePos": 4.0070671378091935,
       "endWaypointRelativePos": 5.0,
       "command": {
         "type": "named",
