@@ -11,6 +11,7 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -20,6 +21,7 @@ import frc.robot.Robot;
 import frc.robot.TheMachine;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
+import frc.robot.constants.TheMachineConstants;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.Container;
@@ -67,11 +69,24 @@ public class AimAndPassCommand extends Command {
   private Pose2d passAimPose;
 
   private static final int FILTER_SIZE = 2;
+  private final double[] speedXBuffer = new double[FILTER_SIZE];
+  private final double[] speedYBuffer = new double[FILTER_SIZE];
   private final double[] angleErrorBuffer = new double[FILTER_SIZE];
   private int bufferIndex = 0;
+  private int validSampleCount = 0;
 
   private static final double TURRET_TOLERANCE_DEG =
       ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
+  private static final double TURRET_LOOKAHEAD_SEC = 0.1;
+  private static final double PASS_SETPOINT_RPS_DEADBAND = 0.05;
+  private static final double PASS_SETPOINT_HOOD_DEG_DEADBAND = 0.05;
+  private static final double PASS_SETPOINT_TURRET_DEG_DEADBAND = 0.10;
+
+  private boolean hasSentPassSetpoint = false;
+  private double lastSentVelocityRps = 0.0;
+  private double lastSentHoodAngleDeg = 0.0;
+  private double lastSentTurretAngleDeg = 0.0;
+  private boolean lastSentPassMode = false;
 
   /** Creates a new AimAndPassCommand. */
   public AimAndPassCommand(
@@ -91,15 +106,46 @@ public class AimAndPassCommand extends Command {
   @Override
   public void initialize() {
     for (int i = 0; i < FILTER_SIZE; i++) {
+      speedXBuffer[i] = 0.0;
+      speedYBuffer[i] = 0.0;
       angleErrorBuffer[i] = 0.0;
     }
     bufferIndex = 0;
+    validSampleCount = 0;
+    hasSentPassSetpoint = false;
 
     passAimPose = Container.isBlue ? PoseConstants.BLUE_PASS_RIGHT : PoseConstants.RED_PASS_RIGHT;
   }
 
+  private boolean shouldUpdatePassSetpoint(
+      double velocityRps, double hoodAngleDeg, double turretAngleDeg, boolean shouldPass) {
+    if (!hasSentPassSetpoint) {
+      return true;
+    }
+
+    if (shouldPass != lastSentPassMode) {
+      return true;
+    }
+
+    return Math.abs(velocityRps - lastSentVelocityRps) > PASS_SETPOINT_RPS_DEADBAND
+        || Math.abs(hoodAngleDeg - lastSentHoodAngleDeg) > PASS_SETPOINT_HOOD_DEG_DEADBAND
+        || Math.abs(turretAngleDeg - lastSentTurretAngleDeg) > PASS_SETPOINT_TURRET_DEG_DEADBAND;
+  }
+
+  private void cacheLastPassSetpoint(
+      double velocityRps, double hoodAngleDeg, double turretAngleDeg, boolean shouldPass) {
+    hasSentPassSetpoint = true;
+    lastSentVelocityRps = velocityRps;
+    lastSentHoodAngleDeg = hoodAngleDeg;
+    lastSentTurretAngleDeg = turretAngleDeg;
+    lastSentPassMode = shouldPass;
+  }
+
   private Pose2d robotPose = new Pose2d();
+  private ChassisSpeeds speeds = new ChassisSpeeds();
   private double filteredAngleError = 0.0;
+  private double filteredSpeedX = 0.0;
+  private double filteredSpeedY = 0.0;
 
   private double velocityRPS = 0.0;
   private double hoodAngle = 0.0;
@@ -123,40 +169,95 @@ public class AimAndPassCommand extends Command {
   double aimY;
 
   double heading;
+  double headingSin;
+  double headingCos;
+  double shooterOffsetFieldX;
+  double shooterOffsetFieldY;
   double shooterX;
   double shooterY;
+  double shooterSpeedX;
+  double shooterSpeedY;
+  double predictedShooterX;
+  double predictedShooterY;
+  double predictedHeading;
   double robotAngleToPass;
   double rawAngleError;
+  double normalizedAngleErrorRad;
+  double sumSin;
+  double sumCos;
+  boolean shouldPass;
+  double distance;
+
+  double time;
 
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
     // 1) Determine current pass target from robot lane side.
     robotPose = swerveDrivetrain.getPose();
+    speeds = swerveDrivetrain.getFieldSpeeds();
     heading = robotPose.getRotation().getRadians();
-    shooterX = ShooterCalculator.getShooterXFromRobotState(robotPose.getX(), heading);
-    shooterY = ShooterCalculator.getShooterYFromRobotState(robotPose.getY(), heading);
+    headingSin = Math.sin(heading);
+    headingCos = Math.cos(heading);
+
+    shooterOffsetFieldX =
+        TheMachineConstants.SHOOTER_ROTATION_AXIS.getX() * headingCos
+            - TheMachineConstants.SHOOTER_ROTATION_AXIS.getY() * headingSin;
+    shooterOffsetFieldY =
+        TheMachineConstants.SHOOTER_ROTATION_AXIS.getX() * headingSin
+            + TheMachineConstants.SHOOTER_ROTATION_AXIS.getY() * headingCos;
+
+    shooterX = robotPose.getX() + shooterOffsetFieldX;
+    shooterY = robotPose.getY() + shooterOffsetFieldY;
+    shooterSpeedX = speeds.vxMetersPerSecond - speeds.omegaRadiansPerSecond * shooterOffsetFieldY;
+    shooterSpeedY = speeds.vyMetersPerSecond + speeds.omegaRadiansPerSecond * shooterOffsetFieldX;
+
     passAimPose = selectPassAimPose(robotPose);
 
-    filteredAngleError = 0.0;
-    for (int i = 0; i < FILTER_SIZE; i++) {
-      filteredAngleError += angleErrorBuffer[i];
+    // Update speed buffers before filtering so newest sample contributes this cycle.
+    speedXBuffer[bufferIndex] = shooterSpeedX;
+    speedYBuffer[bufferIndex] = shooterSpeedY;
+    if (validSampleCount < FILTER_SIZE) {
+      validSampleCount++;
     }
-    filteredAngleError /= FILTER_SIZE;
 
-    aimX = passAimPose.getX();
-    aimY = passAimPose.getY();
+    filteredSpeedX = 0.0;
+    filteredSpeedY = 0.0;
+    filteredAngleError = 0.0;
+    for (int i = 0; i < validSampleCount; i++) {
+      filteredSpeedX += speedXBuffer[i];
+      filteredSpeedY += speedYBuffer[i];
+    }
+    filteredSpeedX /= validSampleCount;
+    filteredSpeedY /= validSampleCount;
 
-    robotAngleToPass = Math.atan2(aimY - shooterY, aimX - shooterX);
-    rawAngleError = robotAngleToPass - heading;
-    rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
+    predictedShooterX = shooterX + filteredSpeedX * TURRET_LOOKAHEAD_SEC;
+    predictedShooterY = shooterY + filteredSpeedY * TURRET_LOOKAHEAD_SEC;
+    predictedHeading = heading + speeds.omegaRadiansPerSecond * TURRET_LOOKAHEAD_SEC;
 
-    angleErrorBuffer[bufferIndex] = rawAngleError;
+    distance = Math.hypot(passAimPose.getX() - shooterX, passAimPose.getY() - shooterY);
+    time = ShooterCalculator.flightTimeOfFuelFormula(distance);
+
+    aimX = passAimPose.getX() - (filteredSpeedX * time);
+    aimY = passAimPose.getY() - (filteredSpeedY * time);
+
+    robotAngleToPass = Math.atan2(aimY - predictedShooterY, aimX - predictedShooterX);
+    rawAngleError = robotAngleToPass - predictedHeading;
+    normalizedAngleErrorRad = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
+
+    // Update angle buffer and compute wrap-safe filtered angle.
+    angleErrorBuffer[bufferIndex] = normalizedAngleErrorRad;
+    sumSin = 0.0;
+    sumCos = 0.0;
+    for (int i = 0; i < validSampleCount; i++) {
+      sumSin += Math.sin(angleErrorBuffer[i]);
+      sumCos += Math.cos(angleErrorBuffer[i]);
+    }
+    filteredAngleError = Math.atan2(sumSin, sumCos);
+
     bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
 
-    turretAngleDeg =
-        Math.toDegrees(
-            Math.atan2(Math.sin(robotAngleToPass - heading), Math.cos(robotAngleToPass - heading)));
+    turretAngleDeg = Math.toDegrees(normalizedAngleErrorRad);
 
     // 2) Keep manual driving active while assist computes pass turret angle.
     swerveDrivetrain.setControl(
@@ -168,28 +269,33 @@ public class AimAndPassCommand extends Command {
             .withRotationalRate(-driverController.getRightX() * MaxAngularRate));
 
     // 3) Solve pass setpoints and gate feed on shooter readiness.
-    velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentState(robotPose.getX(), heading);
+  velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentPose(robotPose);
     hoodAngle = ShooterCalculator.calculatePassHoodAngle();
 
-    if (theMachine.isPassReady() || Robot.isSimulation()) {
-      theMachine.pass(velocityRPS, hoodAngle, turretAngleDeg);
-    } else {
-      theMachine.getReadyPass(velocityRPS, hoodAngle, turretAngleDeg);
+    shouldPass = theMachine.isPassReady() || Robot.isSimulation();
+    if (shouldUpdatePassSetpoint(velocityRPS, hoodAngle, turretAngleDeg, shouldPass)) {
+      if (shouldPass) {
+        theMachine.pass(velocityRPS, hoodAngle, turretAngleDeg);
+      } else {
+        theMachine.getReadyPass(velocityRPS, hoodAngle, turretAngleDeg);
+      }
+      cacheLastPassSetpoint(velocityRPS, hoodAngle, turretAngleDeg, shouldPass);
     }
 
-    if(Robot.isSimulation())
-    {
-    passOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
-    passAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
-    passAimPoseXEntry.set(aimX);
-    passAimPoseYEntry.set(aimY);
-    passAimPoseZEntry.set(0.0);
+    if (Robot.isSimulation()) {
+      passOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
+      passAngleErrorEntry.set(Math.toDegrees(filteredAngleError));
+      passAimPoseXEntry.set(aimX);
+      passAimPoseYEntry.set(aimY);
+      passAimPoseZEntry.set(0.0);
     }
   }
 
   // Called once the command ends or is interrupted.
   @Override
-  public void end(boolean interrupted) {}
+  public void end(boolean interrupted) {
+    hasSentPassSetpoint = false;
+  }
 
   // Returns true when the command should end.
   @Override
