@@ -236,7 +236,7 @@ public class AimAndPassCommand extends Command {
     predictedHeading = heading + speeds.omegaRadiansPerSecond * TURRET_LOOKAHEAD_SEC;
 
     distance = Math.hypot(passAimPose.getX() - shooterX, passAimPose.getY() - shooterY);
-    time = ShooterCalculator.flightTimeOfFuelFormula(distance);
+    time = ShooterCalculator.flightTimeOfFuelFormula(distance)*0.8;
 
     aimX = passAimPose.getX() - (filteredSpeedX * time);
     aimY = passAimPose.getY() - (filteredSpeedY * time);
