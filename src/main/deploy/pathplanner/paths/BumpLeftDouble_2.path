@@ -8,8 +8,8 @@
       },
       "prevControl": null,
       "nextControl": {
-        "x": 3.9830055888436,
-        "y": 7.271547881223128
+        "x": 3.8702855506707796,
+        "y": 7.046438083128239
       },
       "isLocked": false,
       "linkedName": "BLD_2_Start"
@@ -20,12 +20,12 @@
         "y": 7.171304863582444
       },
       "prevControl": {
-        "x": 6.20953526852769,
-        "y": 7.60129439789989
+        "x": 5.861742603851315,
+        "y": 7.876252290901382
       },
       "nextControl": {
-        "x": 7.344681704525294,
-        "y": 6.8980265151249816
+        "x": 7.422779747031145,
+        "y": 6.819996736071818
       },
       "isLocked": false,
       "linkedName": null
@@ -36,60 +36,28 @@
         "y": 6.053261589403974
       },
       "prevControl": {
-        "x": 7.238969998910698,
-        "y": 6.311203770923695
+        "x": 7.273836581056365,
+        "y": 6.302925057228046
       },
       "nextControl": {
-        "x": 7.298824153661278,
-        "y": 5.606205106756267
+        "x": 7.247901829539661,
+        "y": 5.803598121579901
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 7.260869205298013,
-        "y": 3.7591225165562916
+        "x": 6.903582443653619,
+        "y": 4.37391459074733
       },
       "prevControl": {
-        "x": 7.397851583729875,
-        "y": 4.421155004306159
+        "x": 7.527935706690402,
+        "y": 4.841838724181787
       },
       "nextControl": {
-        "x": 7.120855658841104,
-        "y": 3.0824404678090076
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 5.9468211920529805,
-        "y": 3.301746688741722
-      },
-      "prevControl": {
-        "x": 6.108609279316455,
-        "y": 3.1111565137073662
-      },
-      "nextControl": {
-        "x": 5.728551540785874,
-        "y": 3.5588734756598424
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 5.9468211920529805,
-        "y": 4.38467378410439
-      },
-      "prevControl": {
-        "x": 5.805600781788968,
-        "y": 3.720531644373887
-      },
-      "nextControl": {
-        "x": 6.035468699303111,
-        "y": 4.801572057072235
+        "x": 6.227009907522642,
+        "y": 3.8668545072702147
       },
       "isLocked": false,
       "linkedName": null
@@ -100,12 +68,12 @@
         "y": 5.309964412811388
       },
       "prevControl": {
-        "x": 6.022563644267189,
-        "y": 5.07298967883291
+        "x": 5.998833086351895,
+        "y": 5.127753440328544
       },
       "nextControl": {
-        "x": 5.668860195115837,
-        "y": 5.503048940612251
+        "x": 5.547818351871668,
+        "y": 5.607860022919377
       },
       "isLocked": false,
       "linkedName": null
@@ -116,8 +84,8 @@
         "y": 5.595885761589403
       },
       "prevControl": {
-        "x": 3.7863231088905116,
-        "y": 5.5087665562913894
+        "x": 4.54731909845789,
+        "y": 5.299205219454329
       },
       "nextControl": null,
       "isLocked": false,
@@ -138,19 +106,11 @@
       "rotationDegrees": -107.62069153063237
     },
     {
-      "waypointRelativePos": 3.605683836589689,
-      "rotationDegrees": 88.21300953233083
-    },
-    {
-      "waypointRelativePos": 4.95,
-      "rotationDegrees": 89.00041715626496
-    },
-    {
-      "waypointRelativePos": 5.45,
+      "waypointRelativePos": 3.75,
       "rotationDegrees": 78.567
     },
     {
-      "waypointRelativePos": 6.728813559322033,
+      "waypointRelativePos": 4.728813559322033,
       "rotationDegrees": 78.45886283854485
     }
   ],
@@ -158,9 +118,9 @@
     {
       "name": "Constraints Zone",
       "minWaypointRelativePos": 1.6737907761529807,
-      "maxWaypointRelativePos": 4.9763779527559295,
+      "maxWaypointRelativePos": 3.5,
       "constraints": {
-        "maxVelocity": 2.5,
+        "maxVelocity": 3.0,
         "maxAcceleration": 4.5,
         "maxAngularVelocity": 540.0,
         "maxAngularAcceleration": 720.0,

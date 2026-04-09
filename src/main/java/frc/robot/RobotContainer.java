@@ -201,6 +201,11 @@ public class RobotContainer {
         .onFalse(m_idleDeployedCommand);
 
     m_driverController
+        .rightTrigger()
+        .whileTrue(new AimAndShootCommand(m_drivetrainSubsystem, m_driverController, m_theMachine))
+        .onFalse(m_idleDeployedCommand);
+
+    m_driverController
         .a()
         .whileTrue(m_reverseCommand)
         .onFalse(m_idleDeployedCommand);
