@@ -58,7 +58,7 @@ public class FeederConstants {
                   .withKP(FEEDER_FEED_KP)
                   .withKI(FEEDER_FEED_KI)
                   .withKD(FEEDER_FEED_KD))
-          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(9).withPeakReverseVoltage(-9))
+          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(10).withPeakReverseVoltage(-10))
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)

@@ -34,8 +34,8 @@ public class TestShootCommand extends Command {
     shooterHoodRotEntry = testTable.getDoubleTopic("ShooterHoodRot").getEntry(0.0);
 
     // Seed defaults so entries appear immediately on dashboards.
-    shooterFlywheelRpsEntry.setDefault(0.0);
-    shooterHoodRotEntry.setDefault(0.0);
+    shooterFlywheelRpsEntry.setDefault(32.0);
+    shooterHoodRotEntry.setDefault(5.4);
 
     // This command owns all machine subsystems while active.
     addRequirements(theMachine.getSubsystems());
@@ -45,8 +45,8 @@ public class TestShootCommand extends Command {
   public void execute() {
     // Read latest NT values every loop so tuning updates apply immediately.
     theMachine.shootTest(
-        shooterFlywheelRpsEntry.get(0.0),
-        shooterHoodRotEntry.get(0.0),
+        shooterFlywheelRpsEntry.get(32.0),
+        shooterHoodRotEntry.get(5.4),
         theMachine.getTurretAngleToHub());
 
     double[] shooterValuesForHub = theMachine.getShooterValuesForHub();
