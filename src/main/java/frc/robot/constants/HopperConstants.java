@@ -32,7 +32,7 @@ public class HopperConstants {
                   .withKP(HOPPER_KP)
                   .withKI(HOPPER_KI)
                   .withKD(HOPPER_KD))
-          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(10).withPeakReverseVoltage(-10))
+          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(9).withPeakReverseVoltage(-9))
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
