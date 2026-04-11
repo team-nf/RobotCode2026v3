@@ -21,7 +21,7 @@
       },
       "prevControl": {
         "x": 7.936043046357616,
-        "y": 0.3977731788079466
+        "y": 0.3977731788079468
       },
       "nextControl": {
         "x": 8.284519867549667,
@@ -183,7 +183,7 @@
   "folder": "TrenchAndHuman",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": 90.0
   },
   "useDefaultConstraints": true
 }

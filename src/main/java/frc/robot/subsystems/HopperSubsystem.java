@@ -203,7 +203,7 @@ public class HopperSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(hopper1VelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Hopper/Motor1CurrentA",
-        TelemetryConstants.roundTelemetry(hopper1CurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(hopperMotor.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Hopper/Motor1VoltageV",
         TelemetryConstants.roundTelemetry(hopper1VoltageSignal.getValueAsDouble()));
@@ -216,7 +216,7 @@ public class HopperSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(hopper2VelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Hopper/Motor2CurrentA",
-        TelemetryConstants.roundTelemetry(hopper2CurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(hopperMotor2.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Hopper/Motor2VoltageV",
         TelemetryConstants.roundTelemetry(hopper2VoltageSignal.getValueAsDouble()));
@@ -229,7 +229,7 @@ public class HopperSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(hopper3VelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Hopper/Motor3CurrentA",
-        TelemetryConstants.roundTelemetry(hopper3CurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(hopperSideMotor.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Hopper/Motor3VoltageV",
         TelemetryConstants.roundTelemetry(hopper3VoltageSignal.getValueAsDouble()));

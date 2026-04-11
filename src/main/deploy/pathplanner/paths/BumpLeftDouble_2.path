@@ -156,7 +156,7 @@
     "rotation": 135.55625222708053
   },
   "reversed": false,
-  "folder": null,
+  "folder": "BumpLeftDouble",
   "idealStartingState": {
     "velocity": 0,
     "rotation": 0.0

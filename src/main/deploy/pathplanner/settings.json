@@ -4,9 +4,11 @@
   "holonomicMode": true,
   "pathFolders": [
     "AutoTrench",
-    "UnderRightDouble",
+    "BumpRightDouble",
+    "BumpLeftDouble",
     "TrenchAndHuman",
-    "UnderLeftDouble"
+    "UnderLeftDouble",
+    "UnderRightDouble"
   ],
   "autoFolders": [],
   "defaultMaxVel": 4.5,
@@ -21,7 +23,7 @@
   "driveGearing": 6.03,
   "maxDriveSpeed": 5.85,
   "driveMotorType": "krakenX60",
-  "driveCurrentLimit": 30.0,
+  "driveCurrentLimit": 35.0,
   "wheelCOF": 1.2,
   "flModuleX": 0.271,
   "flModuleY": 0.271,

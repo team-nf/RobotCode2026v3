@@ -237,7 +237,7 @@ public class FeederSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(feederBeltVelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Feeder/BeltMotorCurrentA",
-        TelemetryConstants.roundTelemetry(feederBeltCurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(feederBeltMotor.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Feeder/BeltMotorVoltageV",
         TelemetryConstants.roundTelemetry(feederBeltVoltageSignal.getValueAsDouble()));
@@ -250,7 +250,7 @@ public class FeederSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(feederFeedVelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Feeder/FeedMotorCurrentA",
-        TelemetryConstants.roundTelemetry(feederFeedCurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(feederFeedMotor.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Feeder/FeedMotorVoltageV",
         TelemetryConstants.roundTelemetry(feederFeedVoltageSignal.getValueAsDouble()));

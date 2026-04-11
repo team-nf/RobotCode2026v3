@@ -691,7 +691,7 @@ public class ShooterSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(flywheel1VelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/Flywheel1CurrentA",
-        TelemetryConstants.roundTelemetry(flywheel1CurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(flywheelMotor1.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/Flywheel1VoltageV",
         TelemetryConstants.roundTelemetry(flywheel1VoltageSignal.getValueAsDouble()));
@@ -701,7 +701,7 @@ public class ShooterSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(flywheel2VelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/Flywheel2CurrentA",
-        TelemetryConstants.roundTelemetry(flywheel2CurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(flywheelMotor2.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/Flywheel2VoltageV",
         TelemetryConstants.roundTelemetry(flywheel2VoltageSignal.getValueAsDouble()));
@@ -714,7 +714,7 @@ public class ShooterSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(hoodVelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/HoodMotorCurrentA",
-        TelemetryConstants.roundTelemetry(hoodCurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(hoodMotor.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/HoodMotorVoltageV",
         TelemetryConstants.roundTelemetry(hoodVoltageSignal.getValueAsDouble()));
@@ -727,7 +727,7 @@ public class ShooterSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(turretVelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/TurretMotorCurrentA",
-        TelemetryConstants.roundTelemetry(turretCurrentSignal.getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(turretMotor.getSupplyCurrent().getValueAsDouble()));
     SmartDashboard.putNumber(
         "Shooter/TurretMotorVoltageV",
         TelemetryConstants.roundTelemetry(turretVoltageSignal.getValueAsDouble()));
