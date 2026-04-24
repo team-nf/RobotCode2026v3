@@ -94,7 +94,7 @@ public class HopperSubsystem extends SubsystemBase {
       System.out.println("Could not apply configs, error code: " + status.toString());
     }
 
-    hopperMotor2.setControl(new Follower(hopperMotor.getDeviceID(), MotorAlignmentValue.Opposed));
+    hopperMotor2.setControl(new Follower(hopperMotor.getDeviceID(), MotorAlignmentValue.Aligned));
 
     hopper1PositionSignal = hopperMotor.getPosition(false);
     hopper1VelocitySignal = hopperMotor.getVelocity(false);
@@ -278,7 +278,7 @@ public class HopperSubsystem extends SubsystemBase {
       hopperSim = new DCMotorSim(hopperSystem, hopperDcMotor);
       hopperMotor.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
       hopperMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
-      hopperMotor2.getSimState().Orientation = ChassisReference.Clockwise_Positive;
+      hopperMotor2.getSimState().Orientation = ChassisReference.CounterClockwise_Positive;
       hopperMotor2.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);
       hopperSideMotor.getSimState().Orientation = ChassisReference.Clockwise_Positive;
       hopperSideMotor.getSimState().setMotorType(TalonFXSimState.MotorType.KrakenX60);

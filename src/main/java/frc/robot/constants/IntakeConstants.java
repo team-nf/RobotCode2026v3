@@ -52,7 +52,7 @@ public class IntakeConstants {
   public static final double INTAKE_GEAR_REDUCTION = 20.0 / 12.0;
 
   // Linear rack conversion (motor-side)
-  public static final Distance INTAKE_EXTENSION_PER_MOTOR_ROTATION = Millimeters.of(9.87);
+  public static final Distance INTAKE_EXTENSION_PER_MOTOR_ROTATION = Millimeters.of(9.42);
   public static final double INTAKE_LINEAR_METERS_PER_MOTOR_ROTATION =
       INTAKE_EXTENSION_PER_MOTOR_ROTATION.in(Meters);
 
@@ -153,7 +153,7 @@ public class IntakeConstants {
       new PositionVoltage(0).withSlot(0).withEnableFOC(false);
 
   public static final Mass INTAKE_ARM_MASS = Kilograms.of(1);
-  public static final double INTAKE_ARM_GEAR_REDUCTION = 21.0;
+  public static final double INTAKE_ARM_GEAR_REDUCTION = 21.0 * 17 / 21;
   public static final double INTAKE_SIM_DRUM_RADIUS_METERS = 0.33;
   public static final Distance INTAKE_ARM_LENGTH = Meters.of(0.1);
   public static final double INTAKE_ARM_INERTIA =

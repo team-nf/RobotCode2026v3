@@ -11,9 +11,11 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.sim.ChassisReference;
 import com.ctre.phoenix6.sim.TalonFXSimState;
 import edu.wpi.first.math.numbers.N1;
@@ -40,19 +42,18 @@ public class FeederSubsystem extends SubsystemBase {
   private final VelocityVoltage feederVelocityControl;
   private final StatusSignal<?> feederBeltPositionSignal;
   private final StatusSignal<?> feederBeltVelocitySignal;
-  private final StatusSignal<?> feederBeltCurrentSignal;
   private final StatusSignal<?> feederBeltVoltageSignal;
   private final StatusSignal<?> feederFeedPositionSignal;
   private final StatusSignal<?> feederFeedVelocitySignal;
-  private final StatusSignal<?> feederFeedCurrentSignal;
   private final StatusSignal<?> feederFeedVoltageSignal;
   private final Supplier<Double> shooterGoalRpsSupplier;
 
   private double feederBeltGoalVelocity;
   private double feederFeedGoalVelocity;
-  private double feederBeltTestRPM;
   private double feederFeedTestRPM;
-  private boolean feederBeltFeedLatchEnabled = false;
+  private boolean isFeederReady = false;
+  private int feederReadyLoops = 0;
+  private static final int FEEDER_READY_REQUIRED_LOOPS = 3;
 
   private static final int FEEDER_FEED_VELOCITY_AVG_SAMPLES = 5;
   private final double[] feederFeedVelocityWindow = new double[FEEDER_FEED_VELOCITY_AVG_SAMPLES];
@@ -60,8 +61,6 @@ public class FeederSubsystem extends SubsystemBase {
   private int feederFeedVelocityWindowCount = 0;
   private double feederFeedVelocityWindowSum = 0.0;
   private double feederFeedVelocityAverageRps = 0.0;
-  private double feederFeedVelocityRps;
-  private boolean feederCanEngageBelt;
 
   private final VoltageOut feederBeltSysIdControl;
   private final VoltageOut feederFeedSysIdControl;
@@ -100,13 +99,15 @@ public class FeederSubsystem extends SubsystemBase {
           "Could not apply configs to feeder motor 2, error code: " + status.toString());
     }
 
+    // Mechanical update: feed motor is now coupled with belt motor and follows same orientation.
+    feederFeedMotor.setControl(
+        new Follower(feederBeltMotor.getDeviceID(), MotorAlignmentValue.Aligned));
+
     feederBeltPositionSignal = feederBeltMotor.getPosition(false);
     feederBeltVelocitySignal = feederBeltMotor.getVelocity(false);
-    feederBeltCurrentSignal = feederBeltMotor.getStatorCurrent(false);
     feederBeltVoltageSignal = feederBeltMotor.getMotorVoltage(false);
     feederFeedPositionSignal = feederFeedMotor.getPosition(false);
     feederFeedVelocitySignal = feederFeedMotor.getVelocity(false);
-    feederFeedCurrentSignal = feederFeedMotor.getStatorCurrent(false);
     feederFeedVoltageSignal = feederFeedMotor.getMotorVoltage(false);
 
     feederBeltSysIdControl = new VoltageOut(0).withEnableFOC(false);
@@ -173,7 +174,8 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void feederStop() {
-    feederBeltFeedLatchEnabled = false;
+    isFeederReady = false;
+    feederReadyLoops = 0;
     feederBeltMotor.set(0.0);
     feederFeedMotor.set(0.0);
   }
@@ -185,13 +187,16 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   public void feederFeedSetSpeed(double velocity) {
-    // Convert mechanism rps to motor-side rps through gear reduction.
-    feederFeedMotor.setControl(
-        feederVelocityControl.withVelocity(velocity * FeederConstants.FEEDER_GEAR_REDUCTION));
+    // Feed motor is configured as a follower of belt motor; command master speed only.
+    feederBeltSetSpeed(velocity);
   }
 
   public double getFeederFeedVelocity() {
     return feederFeedVelocityAverageRps;
+  }
+
+  public boolean isFeederReady() {
+    return isFeederReady;
   }
 
   /** Get the current feeder belt goal velocity in RPS. */
@@ -226,6 +231,22 @@ public class FeederSubsystem extends SubsystemBase {
   public boolean isFeederFeedAtGoalSpeed() {
     return Math.abs(getFeederFeedVelocity() - feederFeedGoalVelocity)
         < FeederConstants.FEEDER_ALLOWABLE_ERROR_RPS;
+  }
+
+  private void updateFeederReadyLatch() {
+    if (Math.abs(feederFeedGoalVelocity) <= 0.0) {
+      feederReadyLoops = 0;
+      isFeederReady = false;
+      return;
+    }
+
+    if (getFeederFeedVelocity() > (Math.abs(feederFeedGoalVelocity) * 0.5)) {
+      feederReadyLoops++;
+    } else {
+      feederReadyLoops = 0;
+    }
+
+    isFeederReady = feederReadyLoops >= FEEDER_READY_REQUIRED_LOOPS;
   }
 
   public void publishTelemetry() {
@@ -276,7 +297,8 @@ public class FeederSubsystem extends SubsystemBase {
         "Feeder/FeedMotorVelocityErrorRps",
         TelemetryConstants.roundTelemetry(feederFeedGoalVelocity - getFeederFeedVelocity()));
     SmartDashboard.putBoolean("Feeder/FeedMotorAtGoalSpeed", isFeederFeedAtGoalSpeed());
-    SmartDashboard.putBoolean("Feeder/BeltFeedLatchEnabled", feederBeltFeedLatchEnabled);
+    SmartDashboard.putBoolean("Feeder/IsFeederReady", isFeederReady);
+    SmartDashboard.putNumber("Feeder/ReadyLoops", feederReadyLoops);
   }
 
   private void refreshStatusSignals() {
@@ -353,39 +375,26 @@ public class FeederSubsystem extends SubsystemBase {
   // End of simulation part
 
   public void zero() {
-    feederBeltFeedLatchEnabled = false;
+    isFeederReady = false;
+    feederReadyLoops = 0;
     feederBeltGoalVelocity = 0;
     feederFeedGoalVelocity = 0;
     feederStop();
   }
 
   public void feed() {
-    // Feed belt when feed wheel reaches at least 50% of current feed goal.
+    // Single-master follower setup: belt/feed move together at one commanded speed.
     feederFeedGoalVelocity = getShooterGoalRpsForFeed();
-    feederFeedSetSpeed(feederFeedGoalVelocity);
-
-    feederFeedVelocityRps = getFeederFeedVelocity();
-    feederCanEngageBelt =
-        Math.abs(feederFeedGoalVelocity) > 0.0
-            && feederFeedVelocityRps >= (Math.abs(feederFeedGoalVelocity) * 0.5);
-    feederBeltFeedLatchEnabled = feederCanEngageBelt;
-
-    if (feederBeltFeedLatchEnabled) {
-      feederBeltGoalVelocity = FeederConstants.FEEDER_FEEDING_BELT_VELOCITY_RPS;
-    } else {
-      feederBeltGoalVelocity = 0;
-    }
+    feederBeltGoalVelocity = feederFeedGoalVelocity;
 
     feederBeltSetSpeed(feederBeltGoalVelocity);
   }
 
   public void feedGetReady() {
-    // Spin feed wheel up while holding belt still.
-    feederBeltFeedLatchEnabled = false;
-    feederBeltGoalVelocity = 0;
+    // In follower setup, get-ready uses the same commanded velocity path as feed.
     feederFeedGoalVelocity = getShooterGoalRpsForFeed();
+    feederBeltGoalVelocity = feederFeedGoalVelocity;
     feederBeltSetSpeed(feederBeltGoalVelocity);
-    feederFeedSetSpeed(feederFeedGoalVelocity);
   }
 
   /**
@@ -398,23 +407,22 @@ public class FeederSubsystem extends SubsystemBase {
 
   public void reverse() {
     // Reverse both motors to clear jams.
-    feederBeltFeedLatchEnabled = false;
+    isFeederReady = false;
+    feederReadyLoops = 0;
     feederBeltGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY_RPS;
     feederFeedGoalVelocity = FeederConstants.FEEDER_REVERSE_VELOCITY_RPS;
     feederBeltSetSpeed(feederBeltGoalVelocity);
-    feederFeedSetSpeed(feederFeedGoalVelocity);
   }
 
   public void test() {
-    feederBeltGoalVelocity = feederBeltTestRPM;
+    // In follower mode, use one velocity command for both motors.
+    feederBeltGoalVelocity = feederFeedTestRPM;
     feederFeedGoalVelocity = feederFeedTestRPM;
     feederBeltSetSpeed(feederBeltGoalVelocity);
-    feederFeedSetSpeed(feederFeedGoalVelocity);
   }
 
   /** Set independent test RPS values for belt and feed motors, then apply immediately. */
   public void test(double feederBeltRps, double feederFeedRps) {
-    feederBeltTestRPM = feederBeltRps;
     feederFeedTestRPM = feederFeedRps;
     test();
   }
@@ -431,5 +439,6 @@ public class FeederSubsystem extends SubsystemBase {
   public void periodic() {
     refreshStatusSignals();
     updateFeederFeedVelocityAverage();
+    updateFeederReadyLatch();
   }
 }
