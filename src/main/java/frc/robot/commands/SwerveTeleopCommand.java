@@ -7,6 +7,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.constants.DriveConstants;
 import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 
@@ -19,7 +20,7 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 public class SwerveTeleopCommand extends Command {
   /** Creates a new SwerveTeleopCommand. */
   private double MaxSpeed =
-      0.9 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+      DriveConstants.TELEOP_MAX_SPEED_FRACTION * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
 
   private double MaxAngularRate =
       RotationsPerSecond.of(1)
@@ -35,8 +36,8 @@ public class SwerveTeleopCommand extends Command {
   private CommandXboxController driverController;
   private CommandSwerveDrivetrain swerveDrivetrain;
 
-  private SlewRateLimiter joyXSlewLimiter = new SlewRateLimiter(25);
-  private SlewRateLimiter joyYSlewLimiter = new SlewRateLimiter(25);
+  private SlewRateLimiter joyXSlewLimiter = new SlewRateLimiter(DriveConstants.TELEOP_TRANSLATION_SLEW_RATE);
+  private SlewRateLimiter joyYSlewLimiter = new SlewRateLimiter(DriveConstants.TELEOP_TRANSLATION_SLEW_RATE);
 
   public SwerveTeleopCommand(CommandSwerveDrivetrain drivetrain, CommandXboxController joystick) {
     // Use addRequirements() here to declare subsystem dependencies.

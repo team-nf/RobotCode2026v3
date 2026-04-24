@@ -32,6 +32,9 @@ import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.BooleanTopic;
 import edu.wpi.first.networktables.NetworkTableEvent;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.util.datalog.BooleanLogEntry;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
@@ -674,6 +677,56 @@ public class ShooterSubsystem extends SubsystemBase {
 
   public boolean isHoodClosed() {
     return getHoodPosition() < 0.01;
+  }
+
+  // ===== DATA LOGGING =====
+
+  private final DoubleLogEntry logFlywheel1Rps      = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/Flywheel1Rps");
+  private final DoubleLogEntry logFlywheel2Rps      = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/Flywheel2Rps");
+  private final DoubleLogEntry logFlywheelGoalRps   = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/FlywheelGoalRps");
+  private final DoubleLogEntry logFlywheelErrorRps  = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/FlywheelErrorRps");
+  private final DoubleLogEntry logFlywheel1CurrentA = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/Flywheel1CurrentA");
+  private final DoubleLogEntry logFlywheel2CurrentA = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/Flywheel2CurrentA");
+  private final DoubleLogEntry logHoodAngleDeg      = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/HoodAngleDeg");
+  private final DoubleLogEntry logHoodGoalDeg       = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/HoodGoalDeg");
+  private final DoubleLogEntry logHoodErrorDeg      = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/HoodErrorDeg");
+  private final DoubleLogEntry logTurretAngleDeg    = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/TurretAngleDeg");
+  private final DoubleLogEntry logTurretGoalDeg     = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/TurretGoalDeg");
+  private final DoubleLogEntry logTurretErrorDeg    = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/TurretErrorDeg");
+  private final DoubleLogEntry logTurretVelocityRps = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Shooter/TurretVelocityRps");
+  private final BooleanLogEntry logFlywheelAtSpeed  = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Shooter/FlywheelAtSpeed");
+  private final BooleanLogEntry logHoodAtAngle      = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Shooter/HoodAtAngle");
+  private final BooleanLogEntry logTurretAtAngle    = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Shooter/TurretAtAngle");
+  private final BooleanLogEntry logReadyToShoot     = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Shooter/ReadyToShoot");
+  private final BooleanLogEntry logReadyToPass      = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Shooter/ReadyToPass");
+  private final BooleanLogEntry logTurretHomed      = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Shooter/TurretHomed");
+  private final BooleanLogEntry logManualOverride   = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Shooter/ManualOverride");
+
+  public void logData() {
+    tempHoodAngleDeg  = getHoodAngleDegrees();
+    tempTurretAngleDeg = getTurretAngleDegrees();
+    tempFlywheelRps   = getFlywheel1SpeedAbs();
+
+    logFlywheel1Rps.append(flywheel1VelocitySignal.getValueAsDouble() / ShooterConstants.FLYWHEEL_GEAR_REDUCTION);
+    logFlywheel2Rps.append(flywheel2VelocitySignal.getValueAsDouble() / ShooterConstants.FLYWHEEL_GEAR_REDUCTION);
+    logFlywheelGoalRps.append(flywheelGoalVelocity);
+    logFlywheelErrorRps.append(Math.abs(flywheelGoalVelocity) - tempFlywheelRps);
+    logFlywheel1CurrentA.append(flywheelMotor1.getSupplyCurrent().getValueAsDouble());
+    logFlywheel2CurrentA.append(flywheelMotor2.getSupplyCurrent().getValueAsDouble());
+    logHoodAngleDeg.append(tempHoodAngleDeg);
+    logHoodGoalDeg.append(hoodGoalAngle);
+    logHoodErrorDeg.append(hoodGoalAngle - tempHoodAngleDeg);
+    logTurretAngleDeg.append(tempTurretAngleDeg);
+    logTurretGoalDeg.append(turretGoalAngleDegrees);
+    logTurretErrorDeg.append(normalizeToMinus180To180(turretGoalAngleDegrees - tempTurretAngleDeg));
+    logTurretVelocityRps.append(turretVelocitySignal.getValueAsDouble());
+    logFlywheelAtSpeed.append(isFlywheelAtSpeed());
+    logHoodAtAngle.append(isHoodAtAngle());
+    logTurretAtAngle.append(isTurretAtAngle());
+    logReadyToShoot.append(isReadyToShoot());
+    logReadyToPass.append(isReadyToPass());
+    logTurretHomed.append(isTurretHomed);
+    logManualOverride.append(manualOverrideEnabled);
   }
 
   public void publishTelemetry() {

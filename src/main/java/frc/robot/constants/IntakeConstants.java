@@ -168,4 +168,10 @@ public class IntakeConstants {
       KilogramSquareMeters.of(
               0.5 * ROLLER_MASS.in(Kilogram) * Math.pow(ROLLER_RADIUS.in(Meters), 2))
           .times(ROLLER_AMOUNT); // kg*m^2
+
+  // Hardstop zeroing routine parameters
+  public static final double INTAKE_ARM_ZEROING_REVERSE_OUTPUT = -0.12;
+  public static final double INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS = 0.05;
+  public static final double INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC = 0.20;
+  public static final double INTAKE_ARM_ZEROING_TIMEOUT_SEC = 2.0;
 }

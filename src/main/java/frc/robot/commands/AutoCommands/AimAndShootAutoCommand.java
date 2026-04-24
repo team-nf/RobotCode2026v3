@@ -218,7 +218,7 @@ public class AimAndShootAutoCommand extends Command {
     hubX = hubAimPose.getX();
     hubY = hubAimPose.getY();
     distance = Math.hypot(hubX - shooterPoseX, hubY - shooterPoseY);
-    time = ShooterCalculator.flightTimeOfFuelFormula(distance);
+    time = ShooterCalculator.getShooterFlightTime(distance);
 
     filteredSpeedX = 0.0;
     filteredSpeedY = 0.0;

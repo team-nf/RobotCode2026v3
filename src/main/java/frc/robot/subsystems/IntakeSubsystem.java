@@ -27,6 +27,9 @@ import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.util.datalog.BooleanLogEntry;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
@@ -54,10 +57,6 @@ public class IntakeSubsystem extends SubsystemBase {
   private static final double INTAKE_RETRACTED_THRESHOLD_METERS =
       IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS
           + IntakeConstants.INTAKE_EXTENSION_ALLOWABLE_ERROR_METERS;
-  private static final double INTAKE_ARM_ZEROING_REVERSE_OUTPUT = -0.12;
-  private static final double INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS = 0.05;
-  private static final double INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC = 0.20;
-  private static final double INTAKE_ARM_ZEROING_TIMEOUT_SEC = 2.0;
 
   private TalonFX intakeMotor;
   private TalonFX intakeMotor2;
@@ -273,6 +272,34 @@ public class IntakeSubsystem extends SubsystemBase {
         IntakeConstants.extensionMetersToMotorRotations(
             IntakeConstants.INTAKE_EXTENSION_RETRACTED_METERS));
     intakeHomed = true;
+  }
+
+  // ===== DATA LOGGING =====
+
+  private final DoubleLogEntry logRollerVelocityRps    = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Intake/RollerVelocityRps");
+  private final DoubleLogEntry logRollerGoalRps        = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Intake/RollerGoalRps");
+  private final DoubleLogEntry logRollerCurrentA       = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Intake/RollerCurrentA");
+  private final DoubleLogEntry logExtensionMeters      = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Intake/ExtensionMeters");
+  private final DoubleLogEntry logExtensionGoalMeters  = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Intake/ExtensionGoalMeters");
+  private final DoubleLogEntry logArmCurrentA          = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Intake/ArmCurrentA");
+  private final BooleanLogEntry logIsDeployed          = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/IsDeployed");
+  private final BooleanLogEntry logIsRetracted         = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/IsRetracted");
+  private final BooleanLogEntry logIsHomed             = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/IsHomed");
+  private final BooleanLogEntry logZeroingActive       = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/ZeroingActive");
+  private final BooleanLogEntry logZeroingSucceeded    = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/ZeroingSucceeded");
+
+  public void logData() {
+    logRollerVelocityRps.append(intakeVelocitySignal.getValueAsDouble() / IntakeConstants.INTAKE_GEAR_REDUCTION);
+    logRollerGoalRps.append(intakeGoalVelocity);
+    logRollerCurrentA.append(intakeMotor.getSupplyCurrent().getValueAsDouble());
+    logExtensionMeters.append(getIntakeExtensionMeters());
+    logExtensionGoalMeters.append(intakeGoalExtensionMeters);
+    logArmCurrentA.append(intakeArmMotor.getSupplyCurrent().getValueAsDouble());
+    logIsDeployed.append(isIntakeDeployed());
+    logIsRetracted.append(isIntakeRetracted());
+    logIsHomed.append(intakeHomed);
+    logZeroingActive.append(intakeHardstopZeroingActive);
+    logZeroingSucceeded.append(intakeHardstopZeroingSucceeded);
   }
 
   public void publishTelemetry() {
@@ -534,15 +561,15 @@ public class IntakeSubsystem extends SubsystemBase {
     double armVelAbsRps;
 
     // Keep retracting toward hardstop.
-    intakeArmMotor.set(INTAKE_ARM_ZEROING_REVERSE_OUTPUT);
+    intakeArmMotor.set(IntakeConstants.INTAKE_ARM_ZEROING_REVERSE_OUTPUT);
     armVelAbsRps = Math.abs(intakeArmVelocitySignal.getValueAsDouble());
 
-    if (armVelAbsRps <= INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS) {
+    if (armVelAbsRps <= IntakeConstants.INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS) {
       if (intakeHardstopStallStartSec < 0.0) {
         intakeHardstopStallStartSec = nowSec;
       }
 
-      if ((nowSec - intakeHardstopStallStartSec) >= INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC) {
+      if ((nowSec - intakeHardstopStallStartSec) >= IntakeConstants.INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC) {
         intakeArmMotor.set(0.0);
         homeIntakeAtRetractedPosition();
         intakeHardstopZeroingActive = false;
@@ -553,7 +580,7 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeHardstopStallStartSec = -1.0;
     }
 
-    if (elapsedSec >= INTAKE_ARM_ZEROING_TIMEOUT_SEC) {
+    if (elapsedSec >= IntakeConstants.INTAKE_ARM_ZEROING_TIMEOUT_SEC) {
       intakeArmMotor.set(0.0);
       intakeHardstopZeroingActive = false;
       intakeHardstopZeroingComplete = true;

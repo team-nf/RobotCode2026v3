@@ -159,7 +159,7 @@ public class RobotContainer {
     configureBindings();
 
     // Toggle this to true to expose only autos prefixed with "comp" during events.
-    boolean isCompetition = false;
+    boolean isCompetition = TheMachineConstants.IS_COMPETITION;
     autoChooser =
         AutoBuilder.buildAutoChooserWithOptionsModifier(
             (stream) ->
@@ -202,7 +202,7 @@ public class RobotContainer {
 
     m_driverController
         .rightTrigger()
-        .whileTrue(new AimAndShootCommand(m_drivetrainSubsystem, m_driverController, m_theMachine))
+        .whileTrue(m_aimAndShootCommand)
         .onFalse(m_idleDeployedCommand);
 
     m_driverController
@@ -289,6 +289,12 @@ public class RobotContainer {
         SmartDashboard.putData(CommandScheduler.getInstance());
         publishTelemetry();
       }
+    }
+
+    // Log data every loop, independent of dashboard telemetry gate.
+    if (TelemetryConstants.SHOULD_LOG) {
+      m_theMachine.logData();
+      m_drivetrainSubsystem.logData();
     }
 
     // Always run machine periodic, both real robot and simulation.

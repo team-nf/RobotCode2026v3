@@ -79,6 +79,7 @@ public class AimAndPassAutoCommand extends Command {
 
   private double velocityRPS = 0.0;
   private double hoodAngle = 0.0;
+  private double[] passResult;
   private double turretAngleDeg = 0.0;
 
   double laneSplitY;
@@ -135,8 +136,9 @@ public class AimAndPassAutoCommand extends Command {
             Math.atan2(Math.sin(robotAngleToPass - heading), Math.cos(robotAngleToPass - heading)));
 
     // 2) Solve pass setpoints and gate feed on shooter readiness.
-    velocityRPS = ShooterCalculator.calculatePassSpeedFromCurrentState(robotPose.getX(), heading);
-    hoodAngle = ShooterCalculator.calculatePassHoodAngle();
+    passResult = ShooterCalculator.calculatePassParameters(shooterX, shooterY, passAimPose);
+    velocityRPS = passResult[0];
+    hoodAngle = passResult[1];
 
     if (theMachine.isPassReady()) {
       theMachine.pass(velocityRPS, hoodAngle, turretAngleDeg);

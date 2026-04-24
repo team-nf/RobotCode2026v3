@@ -4,6 +4,9 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.util.datalog.BooleanLogEntry;
+import edu.wpi.first.util.datalog.StringLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -416,6 +419,27 @@ public class TheMachine {
   @Deprecated
   public void calculateSubsytemPoses() {
     calculateSubsystemPoses();
+  }
+
+  // ===== DATA LOGGING =====
+
+  private final StringLogEntry  logState           = new StringLogEntry(DataLogManager.getLog(),  "/Log/TheMachine/State");
+  private final BooleanLogEntry logShooterReady    = new BooleanLogEntry(DataLogManager.getLog(), "/Log/TheMachine/ShooterReady");
+  private final BooleanLogEntry logPassReady       = new BooleanLogEntry(DataLogManager.getLog(), "/Log/TheMachine/PassReady");
+  private final BooleanLogEntry logHomed           = new BooleanLogEntry(DataLogManager.getLog(), "/Log/TheMachine/Homed");
+  private final BooleanLogEntry logManualOverride  = new BooleanLogEntry(DataLogManager.getLog(), "/Log/TheMachine/ManualOverride");
+
+  public void logData() {
+    shooterSubsystem.logData();
+    feederSubsystem.logData();
+    hopperSubsystem.logData();
+    intakeSubsystem.logData();
+
+    logState.append(state.toString());
+    logShooterReady.append(isShooterReady());
+    logPassReady.append(isPassReady());
+    logHomed.append(isHomed());
+    logManualOverride.append(shooterSubsystem.isManualOverrideEnabled());
   }
 
   public void publishTelemetry() {

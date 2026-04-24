@@ -29,4 +29,14 @@ public class DriveConstants {
   public static final double AIMED_DRIVING_KD = 0.0;
 
   public static final double AIMING_TOLERANCE_RADIANS = Degrees.of(2).in(Radians);
+
+  // Teleop drive speed/slew
+  public static final double TELEOP_MAX_SPEED_FRACTION = 0.9;
+  public static final double TELEOP_TRANSLATION_SLEW_RATE = 25.0;
+
+  // Aim-and-shoot drive speed/slew
+  public static final double AIM_MAX_SPEED_FRACTION = 0.2;
+  public static final double AIM_TRANSLATION_SLEW_RATE = 2.5;
+  public static final double AIM_MAX_ANGULAR_RATE_RPS = 0.35;
+  public static final int AIM_FILTER_SIZE = 3;
 }

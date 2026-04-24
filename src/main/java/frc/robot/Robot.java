@@ -1,8 +1,12 @@
 package frc.robot;
 
+import com.ctre.phoenix6.SignalLogger;
 import com.pathplanner.lib.commands.PathfindingCommand;
 import com.pathplanner.lib.pathfinding.LocalADStar;
 import com.pathplanner.lib.pathfinding.Pathfinding;
+
+import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -26,7 +30,13 @@ public class Robot extends TimedRobot {
   private final MatchTracker matchTracker;
 
   public Robot() {
+    DriverStation.waitForDsConnection(60.0);
     AllianceUtil.refreshAllianceFromDriverStation();
+    // Start loggers before RobotContainer so all subsystem log entries are created after
+    // the DataLog file is open. Prefers USB stick; falls back to roboRIO storage.
+    SignalLogger.start();
+    DataLogManager.start();
+    DriverStation.startDataLog(DataLogManager.getLog());
     matchTracker = new MatchTracker();
     m_robotContainer = new RobotContainer();
   }
@@ -41,6 +51,7 @@ public class Robot extends TimedRobot {
 
     // Cache alliance once on startup; refreshed again on each mode transition.
     AllianceUtil.refreshAllianceFromDriverStation();
+    DataLogManager.log("Robot code started");
   }
 
   @Override
@@ -71,6 +82,9 @@ public class Robot extends TimedRobot {
     if (m_autonomousCommand != null) {
       CommandScheduler.getInstance().schedule(m_autonomousCommand);
     }
+
+    DataLogManager.log("Autonomous mode started");
+
   }
 
   @Override
@@ -83,6 +97,9 @@ public class Robot extends TimedRobot {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+
+    DataLogManager.log("Teleop mode started");
+
   }
 
   @Override

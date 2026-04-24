@@ -25,7 +25,6 @@ public final class ShooterCalculator {
       ShooterConstants.FLYWHEEL_REST_SPEED.in(RotationsPerSecond);
   private static final double MIN_HOOD_DEG = ShooterConstants.MIN_HOOD_ANGLE.in(Degrees);
   private static final double MAX_HOOD_DEG = ShooterConstants.MAX_HOOD_ANGLE.in(Degrees);
-  private static final double PASS_HOOD_DEG = ShooterConstants.PASS_HOOD_ANGLE.in(Degrees);
 
   // Lookup tables sampled every 0.5 meters from 0.5m to 7.0m.
   // Index 0 -> 0.5m, index 1 -> 1.0m, ..., index 13 -> 7.0m.
@@ -50,21 +49,21 @@ public final class ShooterCalculator {
     {50.5, 20} // 6.5 meters
   };
 
-  // Columns: [0] = shooter RPS, [1] = hood angle deg
+  // Columns: [0] = shooter RPS, [1] = hood angle deg, [2] = flight time sec
   private static final double[][] SHOOTER_LOOKUP_TABLE = {
-    {29, 0}, // 0.5 meters
-    {29, 0}, // 1.0 meters
-    {29.5, 3}, // 1.5 meters
-    {31.1, 5.5}, // 2.0 meters
-    {33.3, 5.5}, // 2.5 meters
-    {34, 6}, // 3.0 meters
-    {36.6, 8}, // 3.5 meters
-    {38, 8}, // 4.0 meters
-    {40, 10}, // 4.5 meters
-    {41, 12}, // 5.0 meters
-    {41, 14.4}, // 5.5 meters
-    {41.8, 16.0}, // 6.0 meters
-    {42.4, 18.0} // 6.5 meters
+    {29,   0,    0.65}, // 0.5 meters
+    {29,   0,    0.71}, // 1.0 meters
+    {29.5, 3,    0.87}, // 1.5 meters
+    {31.1, 5.5,  1.01}, // 2.0 meters
+    {33.3, 5.5,  1.14}, // 2.5 meters
+    {34,   6,    1.24}, // 3.0 meters
+    {36.6, 8,    1.33}, // 3.5 meters
+    {38,   8,    1.40}, // 4.0 meters
+    {40,   10,   1.45}, // 4.5 meters
+    {41,   12,   1.48}, // 5.0 meters
+    {41,   14.4, 1.49}, // 5.5 meters
+    {41.8, 16.0, 1.49}, // 6.0 meters
+    {42.4, 18.0, 1.46}, // 6.5 meters
   };
 
   public static Translation2d getHubTranslation() {
@@ -114,8 +113,9 @@ public final class ShooterCalculator {
     return Math.hypot(tempDx, tempDy);
   }
 
-  // Reusable result array to avoid allocation every loop
+  // Reusable result arrays to avoid allocation every loop
   private static final double[] shootingParams = new double[2];
+  private static final double[] passParams = new double[2];
   private static Pose2d tempHubAimPose;
   private static double tempHubX;
   private static double tempHubY;
@@ -157,8 +157,39 @@ public final class ShooterCalculator {
   private static final double FLYWHEEL_SIM_CLOSE_RANGE_BREAKPOINT_METERS = 1.0;
   private static final double FLYWHEEL_SIM_CLOSE_RANGE_RPS = 17.5;
 
-  private static final double PASS_RPS_A = 250.0;
-  private static final double PASS_RPS_B = 1500.0;
+  // Pass lookup table: columns are [RPS, hood angle deg, flight time sec]
+  // Index 0 = 0.0 m, index 1 = 0.5 m, ..., index 24 = 12.0 m (0.5 m steps)
+  // Flight times seeded from flightTimeOfFuelFormula * 0.8; beyond 6 m extrapolated linearly.
+  // Tune all three columns on the field.
+  private static final double[][] PASS_LOOKUP_TABLE = {
+    {25.0, 14.0, 0.52}, // 0.0 meters
+    {27.1, 14.0, 0.52}, // 0.5 meters
+    {29.2, 14.0, 0.57}, // 1.0 meters
+    {31.3, 14.0, 0.70}, // 1.5 meters
+    {33.3, 14.0, 0.81}, // 2.0 meters
+    {35.4, 14.0, 0.91}, // 2.5 meters
+    {37.5, 14.0, 1.00}, // 3.0 meters
+    {39.6, 14.0, 1.07}, // 3.5 meters
+    {41.7, 14.0, 1.12}, // 4.0 meters
+    {43.8, 14.0, 1.16}, // 4.5 meters
+    {45.8, 14.0, 1.19}, // 5.0 meters
+    {47.9, 14.0, 1.20}, // 5.5 meters
+    {50.0, 14.0, 1.21}, // 6.0 meters — formula unreliable past here; tune on field
+    {52.1, 14.0, 1.22}, // 6.5 meters
+    {53.3, 14.0, 1.24}, // 7.0 meters
+    {53.3, 14.0, 1.26}, // 7.5 meters
+    {53.3, 14.0, 1.28}, // 8.0 meters
+    {53.3, 14.0, 1.30}, // 8.5 meters
+    {53.3, 14.0, 1.32}, // 9.0 meters
+    {53.3, 14.0, 1.34}, // 9.5 meters
+    {53.3, 14.0, 1.36}, // 10.0 meters
+    {53.3, 14.0, 1.38}, // 10.5 meters
+    {53.3, 14.0, 1.40}, // 11.0 meters
+    {53.3, 14.0, 1.42}, // 11.5 meters
+    {53.3, 14.0, 1.45}, // 12.0 meters
+  };
+  private static final double PASS_LOOKUP_MIN_DISTANCE_METERS = 0.0;
+  private static final double PASS_LOOKUP_MAX_DISTANCE_METERS = 12.0;
 
   private static final double FLIGHT_TIME_A = -0.0374327;
   private static final double FLIGHT_TIME_B = 0.418028;
@@ -227,17 +258,44 @@ public final class ShooterCalculator {
     return shootingParams;
   }
 
-  public static double calculatePassSpeedFromCurrentPose(Pose2d pose) {
-    tempWheelSpeed = passRPSFormula(getXDistanceToHub(pose));
-    tempWheelSpeed = Math.max(MIN_FLYWHEEL_RPS, Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS));
-    return tempWheelSpeed;
+  /**
+   * Pass ballistics — no speed compensation (auto variant).
+   * Distance is full 2D from shooter to the selected pass aim pose.
+   */
+  public static double[] calculatePassParameters(
+      double shooterX, double shooterY, Pose2d passAimPose) {
+    tempDx = passAimPose.getX() - shooterX;
+    tempDy = passAimPose.getY() - shooterY;
+    tempDistance = Math.hypot(tempDx, tempDy);
+    return calculatePassParametersFromDistance(tempDistance);
   }
 
-  public static double calculatePassSpeedFromCurrentState(
-      double robotX, double robotHeadingRadians) {
-    tempWheelSpeed = passRPSFormula(getXDistanceToHub(robotX, robotHeadingRadians));
-    tempWheelSpeed = Math.max(MIN_FLYWHEEL_RPS, Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS));
-    return tempWheelSpeed;
+  /**
+   * Pass ballistics — speed-compensated (teleop variant).
+   * Adjusts the effective aim point by robot velocity × flight time, then computes
+   * the 2D distance from shooter to that adjusted point for lookup interpolation.
+   */
+  public static double[] calculatePassParameters(
+      double filteredSpeedX,
+      double filteredSpeedY,
+      double shooterX,
+      double shooterY,
+      Pose2d passAimPose) {
+    tempDx = passAimPose.getX() - shooterX;
+    tempDy = passAimPose.getY() - shooterY;
+    tempDistance = Math.hypot(tempDx, tempDy);
+    // Reuse tempDistance as flight time, then overwrite with adjusted distance.
+    tempDistance = getPassFlightTime(tempDistance);
+    tempDx = passAimPose.getX() - filteredSpeedX * tempDistance - shooterX;
+    tempDy = passAimPose.getY() - filteredSpeedY * tempDistance - shooterY;
+    tempDistance = Math.hypot(tempDx, tempDy);
+    return calculatePassParametersFromDistance(tempDistance);
+  }
+
+  private static double[] calculatePassParametersFromDistance(double distanceMeters) {
+    passParams[0] = Math.max(MIN_FLYWHEEL_RPS, Math.min(getPassLookupValue(distanceMeters, 0), MAX_FLYWHEEL_RPS));
+    passParams[1] = Math.max(MIN_HOOD_DEG, Math.min(getPassLookupValue(distanceMeters, 1), MAX_HOOD_DEG));
+    return passParams;
   }
 
   public static double calculateRestFlywheelSpeed() {
@@ -246,10 +304,6 @@ public final class ShooterCalculator {
 
   public static double calculateRestHoodAngle() {
     return MIN_HOOD_DEG;
-  }
-
-  public static double calculatePassHoodAngle() {
-    return PASS_HOOD_DEG;
   }
 
   private static double getLookupValue(double distanceMeters, int valueColumn) {
@@ -275,6 +329,25 @@ public final class ShooterCalculator {
             * tempInterpolationT;
   }
 
+  private static double getPassLookupValue(double distanceMeters, int valueColumn) {
+    if (distanceMeters <= PASS_LOOKUP_MIN_DISTANCE_METERS) {
+      return PASS_LOOKUP_TABLE[0][valueColumn];
+    }
+    if (distanceMeters >= PASS_LOOKUP_MAX_DISTANCE_METERS) {
+      return PASS_LOOKUP_TABLE[PASS_LOOKUP_TABLE.length - 1][valueColumn];
+    }
+    tempClampedDistance =
+        Math.max(PASS_LOOKUP_MIN_DISTANCE_METERS, Math.min(distanceMeters, PASS_LOOKUP_MAX_DISTANCE_METERS));
+    tempLookupIndex = (tempClampedDistance - PASS_LOOKUP_MIN_DISTANCE_METERS) / LOOKUP_STEP_METERS;
+    tempLowIndex = (int) Math.floor(tempLookupIndex);
+    tempHighIndex = Math.min(tempLowIndex + 1, PASS_LOOKUP_TABLE.length - 1);
+    tempInterpolationT = tempLookupIndex - tempLowIndex;
+    return PASS_LOOKUP_TABLE[tempLowIndex][valueColumn]
+        + (PASS_LOOKUP_TABLE[tempHighIndex][valueColumn]
+                - PASS_LOOKUP_TABLE[tempLowIndex][valueColumn])
+            * tempInterpolationT;
+  }
+
   // Name intentionally follows requested spelling.
   public static double getShooterRpsFromLookupTable(double distanceMeters) {
     tempWheelSpeed = getLookupValue(distanceMeters, 0);
@@ -284,6 +357,16 @@ public final class ShooterCalculator {
   public static double getShooterHoodDegFromLookupTable(double distanceMeters) {
     tempHoodAngleDeg = getLookupValue(distanceMeters, 1);
     return Math.max(MIN_HOOD_DEG, Math.min(tempHoodAngleDeg, MAX_HOOD_DEG));
+  }
+
+  /** Shooter flight time (seconds) interpolated from column 2 of SHOOTER_LOOKUP_TABLE. */
+  public static double getShooterFlightTime(double distanceMeters) {
+    return getLookupValue(distanceMeters, 2);
+  }
+
+  /** Pass flight time (seconds) interpolated from column 2 of PASS_LOOKUP_TABLE. */
+  public static double getPassFlightTime(double distanceMeters) {
+    return getPassLookupValue(distanceMeters, 2);
   }
 
   public static double hoodAngleFormula(double x) {
@@ -319,12 +402,6 @@ public final class ShooterCalculator {
     tempY = ((FLYWHEEL_SIM_A * x + FLYWHEEL_SIM_B) * x + FLYWHEEL_SIM_C);
 
     return tempY;
-  }
-
-  public static double passRPSFormula(double x) {
-    tempY = PASS_RPS_A * x + PASS_RPS_B;
-    if (tempY > 3200) tempY = 3200;
-    return tempY / 60.0;
   }
 
   public static double flightTimeOfFuelFormula(double x) {

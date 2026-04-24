@@ -23,6 +23,8 @@ import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -192,6 +194,24 @@ public class HopperSubsystem extends SubsystemBase {
   @Deprecated
   public void sethopperSpeed(double velocity) {
     setHopperSpeed(velocity);
+  }
+
+  // ===== DATA LOGGING =====
+
+  private final DoubleLogEntry logMotor1VelocityRps  = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Hopper/Motor1VelocityRps");
+  private final DoubleLogEntry logMotor1CurrentA     = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Hopper/Motor1CurrentA");
+  private final DoubleLogEntry logMotor2VelocityRps  = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Hopper/Motor2VelocityRps");
+  private final DoubleLogEntry logSideVelocityRps    = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Hopper/SideVelocityRps");
+  private final DoubleLogEntry logSideCurrentA       = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Hopper/SideCurrentA");
+  private final DoubleLogEntry logGoalVelocityRps    = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Hopper/GoalVelocityRps");
+
+  public void logData() {
+    logMotor1VelocityRps.append(hopper1VelocitySignal.getValueAsDouble() / HopperConstants.HOPPER_GEAR_REDUCTION);
+    logMotor1CurrentA.append(hopperMotor.getSupplyCurrent().getValueAsDouble());
+    logMotor2VelocityRps.append(hopper2VelocitySignal.getValueAsDouble() / HopperConstants.HOPPER_GEAR_REDUCTION);
+    logSideVelocityRps.append(hopper3VelocitySignal.getValueAsDouble() / HopperConstants.HOPPER_SIDE_GEAR_REDUCTION);
+    logSideCurrentA.append(hopperSideMotor.getSupplyCurrent().getValueAsDouble());
+    logGoalVelocityRps.append(hopperGoalVelocity);
   }
 
   public void publishTelemetry() {

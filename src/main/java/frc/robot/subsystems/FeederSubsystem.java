@@ -23,6 +23,9 @@ import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.util.datalog.BooleanLogEntry;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -53,10 +56,8 @@ public class FeederSubsystem extends SubsystemBase {
   private double feederFeedTestRPM;
   private boolean isFeederReady = false;
   private int feederReadyLoops = 0;
-  private static final int FEEDER_READY_REQUIRED_LOOPS = 3;
-
-  private static final int FEEDER_FEED_VELOCITY_AVG_SAMPLES = 5;
-  private final double[] feederFeedVelocityWindow = new double[FEEDER_FEED_VELOCITY_AVG_SAMPLES];
+  private final double[] feederFeedVelocityWindow =
+      new double[FeederConstants.FEEDER_VELOCITY_AVG_SAMPLES];
   private int feederFeedVelocityWindowIndex = 0;
   private int feederFeedVelocityWindowCount = 0;
   private double feederFeedVelocityWindowSum = 0.0;
@@ -214,7 +215,7 @@ public class FeederSubsystem extends SubsystemBase {
   private void updateFeederFeedVelocityAverage() {
     newSample = feederFeedVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_GEAR_REDUCTION;
 
-    if (feederFeedVelocityWindowCount < FEEDER_FEED_VELOCITY_AVG_SAMPLES) {
+    if (feederFeedVelocityWindowCount < FeederConstants.FEEDER_VELOCITY_AVG_SAMPLES) {
       feederFeedVelocityWindowCount++;
     } else {
       feederFeedVelocityWindowSum -= feederFeedVelocityWindow[feederFeedVelocityWindowIndex];
@@ -223,7 +224,7 @@ public class FeederSubsystem extends SubsystemBase {
     feederFeedVelocityWindow[feederFeedVelocityWindowIndex] = newSample;
     feederFeedVelocityWindowSum += newSample;
     feederFeedVelocityWindowIndex =
-        (feederFeedVelocityWindowIndex + 1) % FEEDER_FEED_VELOCITY_AVG_SAMPLES;
+        (feederFeedVelocityWindowIndex + 1) % FeederConstants.FEEDER_VELOCITY_AVG_SAMPLES;
 
     feederFeedVelocityAverageRps = feederFeedVelocityWindowSum / feederFeedVelocityWindowCount;
   }
@@ -246,7 +247,33 @@ public class FeederSubsystem extends SubsystemBase {
       feederReadyLoops = 0;
     }
 
-    isFeederReady = feederReadyLoops >= FEEDER_READY_REQUIRED_LOOPS;
+    isFeederReady = feederReadyLoops >= FeederConstants.FEEDER_READY_REQUIRED_LOOPS;
+  }
+
+  // ===== DATA LOGGING =====
+
+  private final DoubleLogEntry logBeltVelocityRps  = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/BeltVelocityRps");
+  private final DoubleLogEntry logBeltGoalRps      = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/BeltGoalRps");
+  private final DoubleLogEntry logBeltErrorRps     = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/BeltErrorRps");
+  private final DoubleLogEntry logBeltCurrentA     = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/BeltCurrentA");
+  private final DoubleLogEntry logFeedVelocityRps  = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/FeedVelocityAvgRps");
+  private final DoubleLogEntry logFeedGoalRps      = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/FeedGoalRps");
+  private final DoubleLogEntry logFeedErrorRps     = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/FeedErrorRps");
+  private final BooleanLogEntry logIsReady         = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Feeder/IsReady");
+  private final DoubleLogEntry logReadyLoops       = new DoubleLogEntry(DataLogManager.getLog(), "/Log/Feeder/ReadyLoops");
+
+  double beltActualRps;
+  public void logData() {
+    beltActualRps = feederBeltVelocitySignal.getValueAsDouble() / FeederConstants.FEEDER_BELT_GEAR_REDUCTION;
+    logBeltVelocityRps.append(beltActualRps);
+    logBeltGoalRps.append(feederBeltGoalVelocity);
+    logBeltErrorRps.append(feederBeltGoalVelocity - beltActualRps);
+    logBeltCurrentA.append(feederBeltMotor.getSupplyCurrent().getValueAsDouble());
+    logFeedVelocityRps.append(feederFeedVelocityAverageRps);
+    logFeedGoalRps.append(feederFeedGoalVelocity);
+    logFeedErrorRps.append(feederFeedGoalVelocity - feederFeedVelocityAverageRps);
+    logIsReady.append(isFeederReady);
+    logReadyLoops.append(feederReadyLoops);
   }
 
   public void publishTelemetry() {

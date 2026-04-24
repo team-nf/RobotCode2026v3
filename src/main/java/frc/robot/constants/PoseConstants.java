@@ -23,13 +23,13 @@ public class PoseConstants {
   public static final Pose2d RED_SHOOT_NEAR_TRENCH1_POSE =
       new Pose2d(13.5, 0.95, new Rotation2d(Math.toRadians(159.305)));
   public static final Pose2d RED_SHOOT_NEAR_TRENCH2_POSE =
-      new Pose2d(13.5, 0.95, new Rotation2d(Math.toRadians(159.305)));
+      new Pose2d(13.5, 7.0, new Rotation2d(Math.toRadians(159.305)));
 
   public static final Pose2d BLUE_WALL_INTAKE_POSE = new Pose2d(2.0, 2.0, new Rotation2d());
   public static final Pose2d BLUE_SHOOT_NEAR_TRENCH1_POSE =
-      new Pose2d(13.5, 0.95, new Rotation2d(Math.toRadians(159.305)));
+      new Pose2d(3.01, 7.0, new Rotation2d(Math.toRadians(20.695)));
   public static final Pose2d BLUE_SHOOT_NEAR_TRENCH2_POSE =
-      new Pose2d(13.5, 0.95, new Rotation2d(Math.toRadians(159.305)));
+      new Pose2d(3.01, 0.95, new Rotation2d(Math.toRadians(20.695)));
 
   public static final Pose2d BLUE_HUB_AIM_POSE = new Pose2d(4.61, 4.02, new Rotation2d());
   public static final Pose2d RED_HUB_AIM_POSE = new Pose2d(11.75, 4.02, new Rotation2d());

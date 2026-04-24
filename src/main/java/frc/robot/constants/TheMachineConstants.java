@@ -25,4 +25,7 @@ public class TheMachineConstants {
 
   public static int DRIVER_CONTROLLER_PORT_ID = 0;
   public static int EMERGENCY_CONTROLLER_PORT_ID = 1;
+
+  // Set to true before competitions to filter auto chooser to "comp" prefixed autos only.
+  public static final boolean IS_COMPETITION = false;
 }

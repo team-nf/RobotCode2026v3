@@ -13,6 +13,11 @@ import edu.wpi.first.units.measure.*;
 
 public class FeederConstants {
   public static final int FEEDER_BELT_MOTOR_ID = 31;
+
+  // Stability detection
+  public static final int FEEDER_VELOCITY_AVG_SAMPLES = 5;
+  public static final int FEEDER_READY_REQUIRED_LOOPS = 3;
+
   public static final int FEEDER_FEED_MOTOR_ID = 32;
 
   // Belt motor PID/feedforward

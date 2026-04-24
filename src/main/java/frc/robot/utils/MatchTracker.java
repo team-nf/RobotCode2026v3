@@ -91,7 +91,7 @@ public class MatchTracker {
       redInactiveFirst =
           DriverStation.getAlliance()
               .map(alliance -> alliance == DriverStation.Alliance.Blue)
-              .orElse(Boolean.TRUE.equals(Container.isBlue));
+              .orElse(Container.isBlue);
     }
 
     firstPhaseStatus = (redInactiveFirst ? "BlueFirst" : "RedFirst");
