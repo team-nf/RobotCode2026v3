@@ -32,11 +32,11 @@ public class HopperConstants {
                   .withKP(HOPPER_KP)
                   .withKI(HOPPER_KI)
                   .withKD(HOPPER_KD))
-          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(10).withPeakReverseVoltage(-10))
+          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(9).withPeakReverseVoltage(-9))
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
-                  .withSupplyCurrentLimit(37.5))
+                  .withSupplyCurrentLimit(10.0))
           .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive));
 
   // Dedicated side hopper motor configuration (kept identical for now,
@@ -50,11 +50,11 @@ public class HopperConstants {
                   .withKP(HOPPER_KP)
                   .withKI(HOPPER_KI)
                   .withKD(HOPPER_KD))
-          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(9).withPeakReverseVoltage(-9))
+          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(4).withPeakReverseVoltage(-4))
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
-                  .withSupplyCurrentLimit(37.5))
+                  .withSupplyCurrentLimit(20.0))
           .withMotorOutput(
               new MotorOutputConfigs().withInverted(InvertedValue.CounterClockwise_Positive));
 
@@ -67,7 +67,7 @@ public class HopperConstants {
   public static final AngularVelocity HOPPER_ALLOWABLE_ERROR = RotationsPerSecond.of(1.0); // in RPS
 
   public static final AngularVelocity HOPPER_FEEDING_VELOCITY =
-      RotationsPerSecond.of(30); // in RPS 20
+      RotationsPerSecond.of(15); // in RPS 20
   public static final AngularVelocity HOPPER_SIDE_PUSHING_VELOCITY =
       RotationsPerSecond.of(-1); // in RPS
   public static final AngularVelocity HOPPER_REVERSE_VELOCITY =

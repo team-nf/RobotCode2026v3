@@ -121,10 +121,7 @@ public class FeederSubsystem extends SubsystemBase {
   }
 
   private double getShooterGoalRpsForFeed() {
-    if (shooterGoalRpsSupplier == null) {
-      return DEFAULT_FEEDER_FEED_RPS;
-    }
-    return Math.abs(shooterGoalRpsSupplier.get());
+    return DEFAULT_FEEDER_FEED_RPS;
   }
 
   private SysIdRoutine createSysIdRoutine(

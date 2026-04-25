@@ -59,7 +59,7 @@ public class IntakeConstants {
   // Linear extension targets
   public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
   public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(273);
-  public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(120);
+  public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(90);
   public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
   public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);
 
@@ -87,7 +87,7 @@ public class IntakeConstants {
 
   public static final AngularVelocity INTAKE_INTAKING_VELOCITY =
       RotationsPerSecond.of(55); // in RPS
-  public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(10); // in RPS
+  public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(1); // in RPS
   public static final AngularVelocity INTAKE_REVERSE_VELOCITY =
       RotationsPerSecond.of(-15.0); // in RPS
   public static final AngularVelocity INTAKE_REVERSE_FAILSAFE_VELOCITY =

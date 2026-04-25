@@ -111,7 +111,7 @@ public class Robot extends TimedRobot {
     m_robotContainer.publishSysIdCommands();
     // Start test mode from a known clean command state.
     CommandScheduler.getInstance().cancelAll();
-    CommandScheduler.getInstance().schedule(m_robotContainer.getTestCommand());
+    //CommandScheduler.getInstance().schedule(m_robotContainer.getTestCommand());
   }
 
   @Override

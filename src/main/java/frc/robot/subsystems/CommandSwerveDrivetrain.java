@@ -101,7 +101,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
               output -> setControl(m_translationCharacterization.withVolts(output)), null, this));
 
   /* SysId routine for characterizing steer. This is used to find PID gains for the steer motors. */
-  @SuppressWarnings("unused")
   private final SysIdRoutine m_sysIdRoutineSteer =
       new SysIdRoutine(
           new SysIdRoutine.Config(
@@ -118,7 +117,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    * This is used to find PID gains for the FieldCentricFacingAngle HeadingController.
    * See the documentation of SwerveRequest.SysIdSwerveRotation for info on importing the log to SysId.
    */
-  @SuppressWarnings("unused")
   private final SysIdRoutine m_sysIdRoutineRotation =
       new SysIdRoutine(
           new SysIdRoutine.Config(
@@ -138,9 +136,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
               },
               null,
               this));
-
-  /* The SysId routine to test */
-  private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
 
   /**
    * Constructs a CTRE SwerveDrivetrain using the specified constants.
@@ -214,18 +209,27 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    * @return Command to run
    */
   public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
-    return m_sysIdRoutineToApply.quasistatic(direction);
+    return m_sysIdRoutineTranslation.quasistatic(direction);
   }
 
-  /**
-   * Runs the SysId Dynamic test in the given direction for the routine specified by {@link
-   * #m_sysIdRoutineToApply}.
-   *
-   * @param direction Direction of the SysId Dynamic test
-   * @return Command to run
-   */
   public Command sysIdDynamic(SysIdRoutine.Direction direction) {
-    return m_sysIdRoutineToApply.dynamic(direction);
+    return m_sysIdRoutineTranslation.dynamic(direction);
+  }
+
+  public Command sysIdSteerQuasistatic(SysIdRoutine.Direction direction) {
+    return m_sysIdRoutineSteer.quasistatic(direction);
+  }
+
+  public Command sysIdSteerDynamic(SysIdRoutine.Direction direction) {
+    return m_sysIdRoutineSteer.dynamic(direction);
+  }
+
+  public Command sysIdRotationQuasistatic(SysIdRoutine.Direction direction) {
+    return m_sysIdRoutineRotation.quasistatic(direction);
+  }
+
+  public Command sysIdRotationDynamic(SysIdRoutine.Direction direction) {
+    return m_sysIdRoutineRotation.dynamic(direction);
   }
 
   public Pose2d getPose() {

@@ -50,7 +50,7 @@ public class FeederConstants {
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
-                  .withSupplyCurrentLimit(37.5))
+                  .withSupplyCurrentLimit(39.5))
           .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive));
 
   public static final TalonFXConfiguration FEEDER_FEED_MOTOR_CONFIG =
@@ -67,19 +67,19 @@ public class FeederConstants {
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
-                  .withSupplyCurrentLimit(38))
+                  .withSupplyCurrentLimit(39.5))
           .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive));
 
   public static final VelocityVoltage FEEDER_VELOCITY_CONTROL =
       new VelocityVoltage(0).withSlot(0).withEnableFOC(false);
 
   // Feed motor reduction
-  public static final double FEEDER_GEAR_REDUCTION = 2.0;
+  public static final double FEEDER_GEAR_REDUCTION = 2.0; 
   // Belt motor reduction
   public static final double FEEDER_BELT_GEAR_REDUCTION = 2.0;
 
   public static final AngularVelocity FEEDER_ALLOWABLE_ERROR = RotationsPerSecond.of(30); // in RPS
-  public static final AngularVelocity FEEDER_FEEDING_VELOCITY = RotationsPerSecond.of(30); // in RPS
+  public static final AngularVelocity FEEDER_FEEDING_VELOCITY = RotationsPerSecond.of(50); // in RPS
   public static final AngularVelocity FEEDER_FEEDING_BELT_VELOCITY =
       RotationsPerSecond.of(50); // in RPS
   public static final AngularVelocity FEEDER_REVERSE_VELOCITY =

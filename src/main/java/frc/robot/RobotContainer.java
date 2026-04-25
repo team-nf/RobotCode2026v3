@@ -420,17 +420,41 @@ public class RobotContainer {
     // - Start with lower dynamic voltage if a mechanism is aggressive.
     // Swerve drivetrain
     SmartDashboard.putData(
-        "SysId/Swerve/QuasiForward",
+        "SysId/Swerve/Translation/QuasiForward",
         m_drivetrainSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
     SmartDashboard.putData(
-        "SysId/Swerve/QuasiReverse",
+        "SysId/Swerve/Translation/QuasiReverse",
         m_drivetrainSubsystem.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
     SmartDashboard.putData(
-        "SysId/Swerve/DynamicForward",
+        "SysId/Swerve/Translation/DynamicForward",
         m_drivetrainSubsystem.sysIdDynamic(SysIdRoutine.Direction.kForward));
     SmartDashboard.putData(
-        "SysId/Swerve/DynamicReverse",
+        "SysId/Swerve/Translation/DynamicReverse",
         m_drivetrainSubsystem.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    SmartDashboard.putData(
+        "SysId/Swerve/Steer/QuasiForward",
+        m_drivetrainSubsystem.sysIdSteerQuasistatic(SysIdRoutine.Direction.kForward));
+    SmartDashboard.putData(
+        "SysId/Swerve/Steer/QuasiReverse",
+        m_drivetrainSubsystem.sysIdSteerQuasistatic(SysIdRoutine.Direction.kReverse));
+    SmartDashboard.putData(
+        "SysId/Swerve/Steer/DynamicForward",
+        m_drivetrainSubsystem.sysIdSteerDynamic(SysIdRoutine.Direction.kForward));
+    SmartDashboard.putData(
+        "SysId/Swerve/Steer/DynamicReverse",
+        m_drivetrainSubsystem.sysIdSteerDynamic(SysIdRoutine.Direction.kReverse));
+    SmartDashboard.putData(
+        "SysId/Swerve/Rotation/QuasiForward",
+        m_drivetrainSubsystem.sysIdRotationQuasistatic(SysIdRoutine.Direction.kForward));
+    SmartDashboard.putData(
+        "SysId/Swerve/Rotation/QuasiReverse",
+        m_drivetrainSubsystem.sysIdRotationQuasistatic(SysIdRoutine.Direction.kReverse));
+    SmartDashboard.putData(
+        "SysId/Swerve/Rotation/DynamicForward",
+        m_drivetrainSubsystem.sysIdRotationDynamic(SysIdRoutine.Direction.kForward));
+    SmartDashboard.putData(
+        "SysId/Swerve/Rotation/DynamicReverse",
+        m_drivetrainSubsystem.sysIdRotationDynamic(SysIdRoutine.Direction.kReverse));
 
     // Shooter
     SmartDashboard.putData(

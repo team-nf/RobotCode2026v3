@@ -38,7 +38,7 @@ public class VisionConstants {
 
   // Floor on computed XY stdDev so no measurement ever gets infinite weight,
   // even with many tags at very close range.
-  public static final double MIN_XY_STD_DEV = 0.05;
+  public static final double MIN_XY_STD_DEV = 0.25;
 
   // Heading is always ignored in vision updates (gyro is more accurate).
   public static final double HEADING_STD_DEV_IGNORED = 9999999.0;
