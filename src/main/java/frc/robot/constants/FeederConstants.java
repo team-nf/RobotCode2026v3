@@ -28,11 +28,11 @@ public class FeederConstants {
   public static final double FEEDER_BELT_KI = 0.0;
   public static final double FEEDER_BELT_KD = 0.0;
 
-  // Feed wheel motor PID/feedforward (separate tune from belt)
-  public static final double FEEDER_FEED_KS = 0.0;
-  public static final double FEEDER_FEED_KV = 0.11795;
-  public static final double FEEDER_FEED_KA = 0.021261;
-  public static final double FEEDER_FEED_KP = 0.1568;
+ // FEED motor PID/feedforward
+  public static final double FEEDER_FEED_KS = 0.20536;
+  public static final double FEEDER_FEED_KV = 0.11887;
+  public static final double FEEDER_FEED_KA = 0.0052158;
+  public static final double FEEDER_FEED_KP = 0.10035;
   public static final double FEEDER_FEED_KI = 0.0;
   public static final double FEEDER_FEED_KD = 0.0;
 
@@ -76,7 +76,7 @@ public class FeederConstants {
   // Feed motor reduction
   public static final double FEEDER_GEAR_REDUCTION = 2.0;
   // Belt motor reduction
-  public static final double FEEDER_BELT_GEAR_REDUCTION = 3.0;
+  public static final double FEEDER_BELT_GEAR_REDUCTION = 2.0;
 
   public static final AngularVelocity FEEDER_ALLOWABLE_ERROR = RotationsPerSecond.of(30); // in RPS
   public static final AngularVelocity FEEDER_FEEDING_VELOCITY = RotationsPerSecond.of(30); // in RPS

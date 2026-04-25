@@ -15,7 +15,7 @@ import frc.robot.TheMachine;
 public class TestShootCommand extends Command {
 
   // NetworkTables path used by dashboards/pit tools to write test setpoints.
-  private static final String TEST_TABLE = "Conf/TestMachine";
+  private static final String TEST_TABLE = "Conf/TestShoot";
 
   private final TheMachine theMachine;
 
@@ -30,8 +30,8 @@ public class TestShootCommand extends Command {
     NetworkTable testTable = NetworkTableInstance.getDefault().getTable(TEST_TABLE);
 
     // Topic names should match dashboard widgets exactly.
-    shooterFlywheelRpsEntry = testTable.getDoubleTopic("ShooterFlywheelRps").getEntry(0.0);
-    shooterHoodRotEntry = testTable.getDoubleTopic("ShooterHoodRot").getEntry(0.0);
+    shooterFlywheelRpsEntry = testTable.getDoubleTopic("ShootFlywheelRps").getEntry(0.0);
+    shooterHoodRotEntry = testTable.getDoubleTopic("ShootHoodRot").getEntry(0.0);
 
     // Seed defaults so entries appear immediately on dashboards.
     shooterFlywheelRpsEntry.setDefault(32.0);

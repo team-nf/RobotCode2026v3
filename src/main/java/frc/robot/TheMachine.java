@@ -269,13 +269,12 @@ public class TheMachine {
       double shooterFlywheelRps,
       double shooterHoodRot,
       double shooterTurretDeg,
-      double feederBeltRps,
-      double feederFeedRps,
+      double feederRps,
       double hopperRps,
       double intakeRps,
       double intakeExtensionMeters) {
     shooterSubsystem.test(shooterFlywheelRps, shooterHoodRot, shooterTurretDeg);
-    feederSubsystem.test(feederBeltRps, feederFeedRps);
+    feederSubsystem.test(feederRps);
     hopperSubsystem.test(hopperRps);
     intakeSubsystem.test(intakeRps, intakeExtensionMeters);
     state = TheMachineState.TEST;
@@ -284,13 +283,12 @@ public class TheMachine {
   public void testWithTurretToHub(
       double shooterFlywheelRps,
       double shooterHoodRot,
-      double feederBeltRps,
-      double feederFeedRps,
+      double feederRps,
       double hopperRps,
       double intakeRps,
       double intakeExtensionMeters) {
     shooterSubsystem.test(shooterFlywheelRps, shooterHoodRot, getTurretAngleToHub());
-    feederSubsystem.test(feederBeltRps, feederFeedRps);
+    feederSubsystem.test(feederRps);
     hopperSubsystem.test(hopperRps);
     intakeSubsystem.test(intakeRps, intakeExtensionMeters);
     state = TheMachineState.TEST;
@@ -298,13 +296,12 @@ public class TheMachine {
 
   public void testWithTurretToHubAndHoodCalculated(
       double shooterFlywheelRps,
-      double feederBeltRps,
-      double feederFeedRps,
+      double feederRps,
       double hopperRps,
       double intakeRps,
       double intakeExtensionMeters) {
     shooterSubsystem.test(shooterFlywheelRps, getTurretAngleToHub());
-    feederSubsystem.test(feederBeltRps, feederFeedRps);
+    feederSubsystem.test(feederRps);
     hopperSubsystem.test(hopperRps);
     intakeSubsystem.test(intakeRps, intakeExtensionMeters);
     state = TheMachineState.TEST;
@@ -313,6 +310,20 @@ public class TheMachine {
   public void shootTest(double shooterFlywheelRps, double shooterHoodRot, double shooterTurretDeg) {
     shooterSubsystem.shoot(shooterFlywheelRps, shooterHoodRot, shooterTurretDeg);
     if (shooterSubsystem.isReadyToShoot() || Robot.isSimulation()) {
+      feederSubsystem.feed();
+      hopperSubsystem.feed();
+      intakeSubsystem.intake();
+    } else {
+      feederSubsystem.feedGetReady();
+      hopperSubsystem.idle();
+      intakeSubsystem.intake();
+    }
+    state = TheMachineState.TEST;
+  }
+
+  public void passTest(double velocityRPS, double hoodAngleDeg, double turretAngleDeg) {
+    shooterSubsystem.pass(velocityRPS, hoodAngleDeg, turretAngleDeg);
+    if (shooterSubsystem.isReadyToPass() || Robot.isSimulation()) {
       feederSubsystem.feed();
       hopperSubsystem.feed();
       intakeSubsystem.intake();

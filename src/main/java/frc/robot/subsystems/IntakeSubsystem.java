@@ -31,7 +31,6 @@ import edu.wpi.first.util.datalog.BooleanLogEntry;
 import edu.wpi.first.util.datalog.DoubleLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -81,11 +80,6 @@ public class IntakeSubsystem extends SubsystemBase {
   private double intakeTestRPM;
   private double intakeTestExtensionMeters;
   private boolean intakeHomed = false;
-  private boolean intakeHardstopZeroingActive = false;
-  private boolean intakeHardstopZeroingComplete = false;
-  private boolean intakeHardstopZeroingSucceeded = false;
-  private double intakeHardstopZeroingStartSec = 0.0;
-  private double intakeHardstopStallStartSec = -1.0;
 
   private final VoltageOut intakeRollerSysIdControl;
   private final VoltageOut intakeArmSysIdControl;
@@ -285,8 +279,6 @@ public class IntakeSubsystem extends SubsystemBase {
   private final BooleanLogEntry logIsDeployed          = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/IsDeployed");
   private final BooleanLogEntry logIsRetracted         = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/IsRetracted");
   private final BooleanLogEntry logIsHomed             = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/IsHomed");
-  private final BooleanLogEntry logZeroingActive       = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/ZeroingActive");
-  private final BooleanLogEntry logZeroingSucceeded    = new BooleanLogEntry(DataLogManager.getLog(), "/Log/Intake/ZeroingSucceeded");
 
   public void logData() {
     logRollerVelocityRps.append(intakeVelocitySignal.getValueAsDouble() / IntakeConstants.INTAKE_GEAR_REDUCTION);
@@ -298,8 +290,6 @@ public class IntakeSubsystem extends SubsystemBase {
     logIsDeployed.append(isIntakeDeployed());
     logIsRetracted.append(isIntakeRetracted());
     logIsHomed.append(intakeHomed);
-    logZeroingActive.append(intakeHardstopZeroingActive);
-    logZeroingSucceeded.append(intakeHardstopZeroingSucceeded);
   }
 
   public void publishTelemetry() {
@@ -521,89 +511,14 @@ public class IntakeSubsystem extends SubsystemBase {
     setIntakeSpeed(intakeGoalVelocity);
   }
 
-  /**
-   * Drive intake arm in reverse until it stalls on the retracted hardstop, then reseed encoder to
-   * retracted zero.
-   *
-   * <p>Starts the non-blocking process. Call {@link #updateIntakeHardstopZeroing()} repeatedly
-   * (e.g., from a command execute) until complete.
-   */
-  public void zeroIntakeAtHardstop() {
-    startIntakeHardstopZeroing();
-  }
-
-  public void startIntakeHardstopZeroing() {
-    if (intakeHardstopZeroingActive) {
-      return;
-    }
-
-    intakeHomed = false;
-    intakeHardstopZeroingActive = true;
-    intakeHardstopZeroingComplete = false;
-    intakeHardstopZeroingSucceeded = false;
-    intakeHardstopZeroingStartSec = Timer.getFPGATimestamp();
-    intakeHardstopStallStartSec = -1.0;
-
-    // Stop rollers while zeroing extension.
-    intakeGoalVelocity = 0.0;
-    intakeStop();
-  }
-
-  public void updateIntakeHardstopZeroing() {
-    if (!intakeHardstopZeroingActive || intakeHardstopZeroingComplete) {
-      return;
-    }
-
-    refreshStatusSignals();
-
-    double nowSec = Timer.getFPGATimestamp();
-    double elapsedSec = nowSec - intakeHardstopZeroingStartSec;
-    double armVelAbsRps;
-
-    // Keep retracting toward hardstop.
+  /** Drives arm in reverse at zeroing output. Call repeatedly from a command execute loop. */
+  public void driveArmReverseForZeroing() {
     intakeArmMotor.set(IntakeConstants.INTAKE_ARM_ZEROING_REVERSE_OUTPUT);
-    armVelAbsRps = Math.abs(intakeArmVelocitySignal.getValueAsDouble());
-
-    if (armVelAbsRps <= IntakeConstants.INTAKE_ARM_ZEROING_STALL_VELOCITY_RPS) {
-      if (intakeHardstopStallStartSec < 0.0) {
-        intakeHardstopStallStartSec = nowSec;
-      }
-
-      if ((nowSec - intakeHardstopStallStartSec) >= IntakeConstants.INTAKE_ARM_ZEROING_STALL_DEBOUNCE_SEC) {
-        intakeArmMotor.set(0.0);
-        homeIntakeAtRetractedPosition();
-        intakeHardstopZeroingActive = false;
-        intakeHardstopZeroingComplete = true;
-        intakeHardstopZeroingSucceeded = true;
-      }
-    } else {
-      intakeHardstopStallStartSec = -1.0;
-    }
-
-    if (elapsedSec >= IntakeConstants.INTAKE_ARM_ZEROING_TIMEOUT_SEC) {
-      intakeArmMotor.set(0.0);
-      intakeHardstopZeroingActive = false;
-      intakeHardstopZeroingComplete = true;
-      intakeHardstopZeroingSucceeded = false;
-      intakeHardstopStallStartSec = -1.0;
-    }
   }
 
-  public void stopIntakeHardstopZeroing() {
+  /** Stops the arm motor. Call from command end() before seeding the encoder. */
+  public void stopArmMotor() {
     intakeArmMotor.set(0.0);
-    intakeHardstopZeroingActive = false;
-  }
-
-  public boolean isIntakeHardstopZeroingComplete() {
-    return intakeHardstopZeroingComplete;
-  }
-
-  public boolean didIntakeHardstopZeroingSucceed() {
-    return intakeHardstopZeroingSucceeded;
-  }
-
-  public boolean isIntakeHardstopZeroingActive() {
-    return intakeHardstopZeroingActive;
   }
 
   public void test() {

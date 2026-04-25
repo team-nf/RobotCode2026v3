@@ -3,7 +3,12 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.IntakeSubsystem;
 
-/** Runs intake hardstop zeroing until complete. */
+/**
+ * Manually zeros the intake arm at the hardstop.
+ *
+ * <p>While held: drives the arm in reverse toward the retracted hardstop.
+ * When released: seeds the encoder to retracted-zero at whatever position the arm is now at.
+ */
 public class ZeroIntakeAtHardstopCommand extends Command {
 
   private final IntakeSubsystem intakeSubsystem;
@@ -14,22 +19,18 @@ public class ZeroIntakeAtHardstopCommand extends Command {
   }
 
   @Override
-  public void initialize() {
-    intakeSubsystem.startIntakeHardstopZeroing();
-  }
-
-  @Override
   public void execute() {
-    intakeSubsystem.updateIntakeHardstopZeroing();
+    intakeSubsystem.driveArmReverseForZeroing();
   }
 
   @Override
   public boolean isFinished() {
-    return intakeSubsystem.isIntakeHardstopZeroingComplete();
+    return false;
   }
 
   @Override
   public void end(boolean interrupted) {
-    intakeSubsystem.stopIntakeHardstopZeroing();
+    intakeSubsystem.stopArmMotor();
+    intakeSubsystem.homeIntakeAtRetractedPosition();
   }
 }

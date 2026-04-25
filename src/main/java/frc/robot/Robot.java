@@ -108,7 +108,7 @@ public class Robot extends TimedRobot {
   @Override
   public void testInit() {
     // Expose SysId dashboard commands only in test mode to avoid periodic dashboard overhead.
-    // m_robotContainer.publishSysIdCommands();
+    m_robotContainer.publishSysIdCommands();
     // Start test mode from a known clean command state.
     CommandScheduler.getInstance().cancelAll();
     CommandScheduler.getInstance().schedule(m_robotContainer.getTestCommand());

@@ -26,7 +26,6 @@ import frc.robot.commands.AutoCommands.AimAndPassAutoCommand;
 import frc.robot.commands.AutoCommands.AimAndShootAutoCommand;
 import frc.robot.commands.GoFromLeftTrenchCommand;
 import frc.robot.commands.GoFromRightTrenchCommand;
-import frc.robot.commands.GoToMidCommand;
 import frc.robot.commands.IdleDeployedCommand;
 import frc.robot.commands.IdleRetractedCommand;
 import frc.robot.commands.IntakeCommand;
@@ -35,11 +34,15 @@ import frc.robot.commands.ReturnFromLeftTrenchCommand;
 import frc.robot.commands.ReturnFromRightTrenchCommand;
 import frc.robot.commands.ReverseCommand;
 import frc.robot.commands.SwerveTeleopCommand;
+import frc.robot.commands.TestMachineCommand;
+import frc.robot.commands.TestPassCommand;
 import frc.robot.commands.TestShootCommand;
 import frc.robot.commands.TurretStepClosestLeftCommand;
 import frc.robot.commands.TurretStepClosestRightCommand;
 import frc.robot.commands.ZeroIntakeAtHardstopCommand;
 import frc.robot.constants.Dimensions;
+import frc.robot.constants.PoseConstants;
+import frc.robot.utils.ShooterCalculator;
 import frc.robot.constants.States.TheMachineStates.TheMachineState;
 import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.TheMachineConstants;
@@ -84,6 +87,8 @@ public class RobotContainer {
   private final ReverseCommand m_reverseCommand;
   private final IntakeCommand m_intakeCommand;
   private final TestShootCommand m_testShootCommand;
+  private final TestPassCommand m_testPassCommand;
+  private final TestMachineCommand m_testMachineCommand;
   private final TurretStepClosestLeftCommand m_turretStepClosestLeftCommand;
   private final TurretStepClosestRightCommand m_turretStepClosestRightCommand;
   private final ResetTurretFromKnownPositionCommand m_resetTurretFromKnownPositionCommand;
@@ -133,6 +138,8 @@ public class RobotContainer {
     m_intakeCommand = new IntakeCommand(m_theMachine);
     m_reverseCommand = new ReverseCommand(m_theMachine);
     m_testShootCommand = new TestShootCommand(m_theMachine);
+    m_testPassCommand = new TestPassCommand(m_theMachine, m_drivetrainSubsystem);
+    m_testMachineCommand = new TestMachineCommand(m_theMachine);
     m_turretStepClosestLeftCommand = new TurretStepClosestLeftCommand(m_shooterSubsystem);
     m_turretStepClosestRightCommand = new TurretStepClosestRightCommand(m_shooterSubsystem);
     m_resetTurretFromKnownPositionCommand =
@@ -213,6 +220,9 @@ public class RobotContainer {
     // Y -> run NetworkTables-driven machine test mode while held.
     m_driverController.y().whileTrue(m_testShootCommand).onFalse(m_idleDeployedCommand);
 
+    m_driverController.x().whileTrue(m_testPassCommand).onFalse(m_idleDeployedCommand);
+
+
     // Left bumper behavior depends on current zone:
     // - From shooting zone, go out to trench pickup path (left/right based on side)
     // - Outside shooting zone, return from trench back toward shooting area
@@ -232,6 +242,8 @@ public class RobotContainer {
     m_emergencyController.x().whileTrue(m_turretStepClosestRightCommand);
     m_emergencyController.y().whileTrue(m_resetTurretFromKnownPositionCommand);
     m_emergencyController.a().whileTrue(m_zeroIntakeAtHardstopCommand);
+
+    m_emergencyController.leftBumper().whileTrue(m_testMachineCommand).onFalse(m_idleDeployedCommand);
 
     // Named commands are used by PathPlanner autos.
     // Keep names stable once autos are authored to avoid broken references.
@@ -265,6 +277,11 @@ public class RobotContainer {
   boolean telemetryEnabled;
   double nowSec;
   double loopTimeMs;
+  edu.wpi.first.math.geometry.Pose2d tempPublishPose;
+  double tempPublishShooterX;
+  double tempPublishShooterY;
+  edu.wpi.first.math.geometry.Pose2d tempPublishPassLeft;
+  edu.wpi.first.math.geometry.Pose2d tempPublishPassRight;
   public void containerPeriodic() {
     telemetryEnabled = telemetryEnabledEntry.get(false);
 
@@ -321,15 +338,28 @@ public class RobotContainer {
         TelemetryConstants.roundTelemetry(m_shooterSubsystem.getTurretGoalAngleDegrees()));
 
     SmartDashboard.putNumber(
-        "Telemetry/FeederGoalBeltRps",
-        TelemetryConstants.roundTelemetry(m_feederSubsystem.getFeederBeltGoalVelocityRps()));
-    SmartDashboard.putNumber(
-        "Telemetry/FeederGoalFeedRps",
-        TelemetryConstants.roundTelemetry(m_feederSubsystem.getFeederFeedGoalVelocityRps()));
+        "Telemetry/FeederGoalRps",
+        TelemetryConstants.roundTelemetry(m_feederSubsystem.getFeederGoalVelocityRps()));
 
     SmartDashboard.putNumber(
         "DistanceToHub",
         TelemetryConstants.roundTelemetry(m_drivetrainSubsystem.getDistanceToHub()));
+
+    tempPublishPose = m_drivetrainSubsystem.getPose();
+    tempPublishShooterX = ShooterCalculator.getShooterXFromRobotPose(tempPublishPose);
+    tempPublishShooterY = ShooterCalculator.getShooterYFromRobotPose(tempPublishPose);
+    tempPublishPassLeft  = Container.isBlue ? PoseConstants.BLUE_PASS_LEFT  : PoseConstants.RED_PASS_LEFT;
+    tempPublishPassRight = Container.isBlue ? PoseConstants.BLUE_PASS_RIGHT : PoseConstants.RED_PASS_RIGHT;
+    SmartDashboard.putNumber(
+        "DistanceToPassLeft",
+        TelemetryConstants.roundTelemetry(Math.hypot(
+            tempPublishPassLeft.getX()  - tempPublishShooterX,
+            tempPublishPassLeft.getY()  - tempPublishShooterY)));
+    SmartDashboard.putNumber(
+        "DistanceToPassRight",
+        TelemetryConstants.roundTelemetry(Math.hypot(
+            tempPublishPassRight.getX() - tempPublishShooterX,
+            tempPublishPassRight.getY() - tempPublishShooterY)));
   }
 
   public Command getTestCommand() {
