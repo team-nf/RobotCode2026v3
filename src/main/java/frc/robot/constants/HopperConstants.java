@@ -36,7 +36,7 @@ public class HopperConstants {
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
-                  .withSupplyCurrentLimit(10.0))
+                  .withSupplyCurrentLimit(25.0))
           .withMotorOutput(new MotorOutputConfigs().withInverted(InvertedValue.Clockwise_Positive));
 
   // Dedicated side hopper motor configuration (kept identical for now,

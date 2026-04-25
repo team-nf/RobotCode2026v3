@@ -51,19 +51,19 @@ public final class ShooterCalculator {
 
   // Columns: [0] = shooter RPS, [1] = hood angle deg, [2] = flight time sec
   private static final double[][] SHOOTER_LOOKUP_TABLE = {
-    {29,   0,    0.65}, // 0.5 meters
-    {29,   0,    0.71}, // 1.0 meters
-    {29.5, 3,    0.87}, // 1.5 meters
-    {31.1, 5.5,  1.01}, // 2.0 meters
-    {33.3, 5.5,  1.14}, // 2.5 meters
-    {34,   6,    1.24}, // 3.0 meters
-    {36.6, 8,    1.33}, // 3.5 meters
-    {38,   8,    1.40}, // 4.0 meters
-    {40,   10,   1.45}, // 4.5 meters
-    {41,   12,   1.48}, // 5.0 meters
-    {41,   14.4, 1.49}, // 5.5 meters
-    {41.8, 16.0, 1.49}, // 6.0 meters
-    {42.4, 18.0, 1.46}, // 6.5 meters
+    {28,   0,    0.65}, // 0.5 meters
+    {28,   0,    0.71}, // 1.0 meters
+    {28, 3,    1}, // 1.5 meters
+    {29.8, 5,  1}, // 2.0 meters
+    {31, 5,  1}, // 2.5 meters
+    {33,   6.5,    1.5}, // 3.0 meters
+    {35, 7.5,    1.6}, // 3.5 meters
+    {36.2,   10,    1.8}, // 4.0 meters
+    {38,   12,   2}, // 4.5 meters
+    {39,   14,   2.1}, // 5.0 meters
+    {39.5,   16, 2.1}, // 5.5 meters
+    {39.5, 17, 2.1}, // 6.0 meters
+    {41.5, 17, 2.3}, // 6.5 meters
   };
 
   public static Translation2d getHubTranslation() {
@@ -162,34 +162,28 @@ public final class ShooterCalculator {
   // Flight times seeded from flightTimeOfFuelFormula * 0.8; beyond 6 m extrapolated linearly.
   // Tune all three columns on the field.
   private static final double[][] PASS_LOOKUP_TABLE = {
-    {25.0, 14.0, 0.52}, // 0.0 meters
-    {27.1, 14.0, 0.52}, // 0.5 meters
-    {29.2, 14.0, 0.57}, // 1.0 meters
-    {31.3, 14.0, 0.70}, // 1.5 meters
-    {33.3, 14.0, 0.81}, // 2.0 meters
-    {35.4, 14.0, 0.91}, // 2.5 meters
-    {37.5, 14.0, 1.00}, // 3.0 meters
-    {39.6, 14.0, 1.07}, // 3.5 meters
-    {41.7, 14.0, 1.12}, // 4.0 meters
-    {43.8, 14.0, 1.16}, // 4.5 meters
-    {45.8, 14.0, 1.19}, // 5.0 meters
-    {47.9, 14.0, 1.20}, // 5.5 meters
-    {50.0, 14.0, 1.21}, // 6.0 meters — formula unreliable past here; tune on field
-    {52.1, 14.0, 1.22}, // 6.5 meters
-    {53.3, 14.0, 1.24}, // 7.0 meters
-    {53.3, 14.0, 1.26}, // 7.5 meters
-    {53.3, 14.0, 1.28}, // 8.0 meters
-    {53.3, 14.0, 1.30}, // 8.5 meters
-    {53.3, 14.0, 1.32}, // 9.0 meters
-    {53.3, 14.0, 1.34}, // 9.5 meters
-    {53.3, 14.0, 1.36}, // 10.0 meters
-    {53.3, 14.0, 1.38}, // 10.5 meters
-    {53.3, 14.0, 1.40}, // 11.0 meters
-    {53.3, 14.0, 1.42}, // 11.5 meters
-    {53.3, 14.0, 1.45}, // 12.0 meters
+    {30, 0, 1}, // 1.0 meters
+    {30, 2.5, 1}, // 2.0 meters
+    {32.5, 14.0, 1.00}, // 3.0 meters
+    {36, 16.0, 1.6}, // 4.0 meters
+    {40, 16.0, 1.7}, // 5.0 meters
+    {43.0, 16.0, 1.9}, // 6.0 meters — formula unreliable past here; tune on field
+    {46, 16.0, 2.1}, // 7.0 meters
+    {49, 17.0, 2.3}, // 8.0 meters
+    {53, 20.0, 2.5}, // 9.0 meters
+    {56, 20.0, 2.6}, // 10.0 meters
+    {59, 20.0, 2.7}, // 11.0 meters
+    {63, 20.0, 2.8}, // 12.0 meters
+    {66, 20, 2.9}, // 13.0 meters
+    {69, 20.0, 3}, // 14.0 meters
+    {72, 20.0, 3.1}, // 15.0 meters
+    {75, 20.0, 3.2}  // 16.0 meters
+
   };
-  private static final double PASS_LOOKUP_MIN_DISTANCE_METERS = 0.0;
-  private static final double PASS_LOOKUP_MAX_DISTANCE_METERS = 12.0;
+  private static final double PASS_LOOKUP_MIN_DISTANCE_METERS = 1.0;
+  private static final double PASS_LOOKUP_MAX_DISTANCE_METERS = 16.0;
+  private static final double LOOKUP_STEP_METERS_PASS = 1.0;
+
 
   private static final double FLIGHT_TIME_A = -0.0374327;
   private static final double FLIGHT_TIME_B = 0.418028;
@@ -338,7 +332,7 @@ public final class ShooterCalculator {
     }
     tempClampedDistance =
         Math.max(PASS_LOOKUP_MIN_DISTANCE_METERS, Math.min(distanceMeters, PASS_LOOKUP_MAX_DISTANCE_METERS));
-    tempLookupIndex = (tempClampedDistance - PASS_LOOKUP_MIN_DISTANCE_METERS) / LOOKUP_STEP_METERS;
+    tempLookupIndex = (tempClampedDistance - PASS_LOOKUP_MIN_DISTANCE_METERS) / (LOOKUP_STEP_METERS_PASS);
     tempLowIndex = (int) Math.floor(tempLookupIndex);
     tempHighIndex = Math.min(tempLowIndex + 1, PASS_LOOKUP_TABLE.length - 1);
     tempInterpolationT = tempLookupIndex - tempLowIndex;
@@ -361,7 +355,7 @@ public final class ShooterCalculator {
 
   /** Shooter flight time (seconds) interpolated from column 2 of SHOOTER_LOOKUP_TABLE. */
   public static double getShooterFlightTime(double distanceMeters) {
-    return getLookupValue(distanceMeters, 2);
+    return getLookupValue(distanceMeters, 2)*0.7;
   }
 
   /** Pass flight time (seconds) interpolated from column 2 of PASS_LOOKUP_TABLE. */

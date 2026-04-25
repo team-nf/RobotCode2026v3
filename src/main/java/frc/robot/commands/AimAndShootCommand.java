@@ -294,7 +294,7 @@ public class AimAndShootCommand extends Command {
             filteredSpeedY,
             shooterPoseX,
             shooterPoseY,
-            time + TURRET_LOOKAHEAD_SEC);
+            time);
     velocityRPS = shootParams[0];
     hoodAngle = shootParams[1];
     turretAngleDeg = Math.toDegrees(normalizedAngleErrorRad);
