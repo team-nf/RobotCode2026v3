@@ -11,6 +11,7 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.TheMachine;
+import frc.robot.constants.MoveNShootConstants;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -44,8 +45,7 @@ public class AimAndPassAutoCommand extends Command {
 
   private Pose2d passAimPose;
 
-  private static final int FILTER_SIZE = 2;
-  private final double[] angleErrorBuffer = new double[FILTER_SIZE];
+  private final double[] angleErrorBuffer = new double[MoveNShootConstants.PASS_FILTER_SIZE];
   private int bufferIndex = 0;
 
   private static final double TURRET_TOLERANCE_DEG =
@@ -66,7 +66,7 @@ public class AimAndPassAutoCommand extends Command {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    for (int i = 0; i < FILTER_SIZE; i++) {
+    for (int i = 0; i < MoveNShootConstants.PASS_FILTER_SIZE; i++) {
       angleErrorBuffer[i] = 0.0;
     }
     bufferIndex = 0;
@@ -116,10 +116,10 @@ public class AimAndPassAutoCommand extends Command {
     passAimPose = selectPassAimPose(robotPose);
 
     filteredAngleError = 0.0;
-    for (int i = 0; i < FILTER_SIZE; i++) {
+    for (int i = 0; i < MoveNShootConstants.PASS_FILTER_SIZE; i++) {
       filteredAngleError += angleErrorBuffer[i];
     }
-    filteredAngleError /= FILTER_SIZE;
+    filteredAngleError /= MoveNShootConstants.PASS_FILTER_SIZE;
 
     aimX = passAimPose.getX();
     aimY = passAimPose.getY();
@@ -129,11 +129,9 @@ public class AimAndPassAutoCommand extends Command {
     rawAngleError = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
 
     angleErrorBuffer[bufferIndex] = rawAngleError;
-    bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
+    bufferIndex = (bufferIndex + 1) % MoveNShootConstants.PASS_FILTER_SIZE;
 
-    turretAngleDeg =
-        Math.toDegrees(
-            Math.atan2(Math.sin(robotAngleToPass - heading), Math.cos(robotAngleToPass - heading)));
+    turretAngleDeg = Math.toDegrees(rawAngleError);
 
     // 2) Solve pass setpoints and gate feed on shooter readiness.
     passResult = ShooterCalculator.calculatePassParameters(shooterX, shooterY, passAimPose);

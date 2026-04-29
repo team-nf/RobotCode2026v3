@@ -220,7 +220,7 @@ public class RobotContainer {
     // Y -> run NetworkTables-driven machine test mode while held.
     m_driverController.y().whileTrue(m_testShootCommand).onFalse(m_idleDeployedCommand);
 
-    m_driverController.x().whileTrue(m_testPassCommand).onFalse(m_idleDeployedCommand);
+    //m_driverController.x().whileTrue(m_testPassCommand).onFalse(m_idleDeployedCommand);
 
 
     // Left bumper behavior depends on current zone:

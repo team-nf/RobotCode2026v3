@@ -355,7 +355,7 @@ public final class ShooterCalculator {
 
   /** Shooter flight time (seconds) interpolated from column 2 of SHOOTER_LOOKUP_TABLE. */
   public static double getShooterFlightTime(double distanceMeters) {
-    return getLookupValue(distanceMeters, 2)*0.7;
+    return getLookupValue(distanceMeters, 2) * Container.fTimeCoefficient + Container.loopTimeOffset;
   }
 
   /** Pass flight time (seconds) interpolated from column 2 of PASS_LOOKUP_TABLE. */

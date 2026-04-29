@@ -27,7 +27,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Robot;
 import frc.robot.TheMachine;
 import frc.robot.constants.Dimensions;
-import frc.robot.constants.DriveConstants;
+import frc.robot.constants.MoveNShootConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.TheMachineConstants;
@@ -58,9 +58,9 @@ public class AimAndShootCommand extends Command {
       NetworkTableInstance.getDefault().getBooleanTopic("Conf/EnableTelemetry").getEntry(false);
 
   private double MaxSpeed =
-      DriveConstants.AIM_MAX_SPEED_FRACTION * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+      MoveNShootConstants.SHOOT_MAX_SPEED_FRACTION * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
   private double MaxAngularRate =
-      RotationsPerSecond.of(DriveConstants.AIM_MAX_ANGULAR_RATE_RPS).in(RadiansPerSecond);
+      RotationsPerSecond.of(MoveNShootConstants.SHOOT_MAX_ANGULAR_RATE_RPS).in(RadiansPerSecond);
 
   private static final Translation2d SHOOTER_CENTER_OF_ROTATION =
       new Translation2d(
@@ -82,14 +82,14 @@ public class AimAndShootCommand extends Command {
   private Pose2d hubAimPose;
 
   // Moving average buffers for noise reduction
-  private final double[] speedXBuffer = new double[DriveConstants.AIM_FILTER_SIZE];
-  private final double[] speedYBuffer = new double[DriveConstants.AIM_FILTER_SIZE];
-  private final double[] angleErrorBuffer = new double[DriveConstants.AIM_FILTER_SIZE];
+  private final double[] speedXBuffer = new double[MoveNShootConstants.SHOOT_FILTER_SIZE];
+  private final double[] speedYBuffer = new double[MoveNShootConstants.SHOOT_FILTER_SIZE];
+  private final double[] angleErrorBuffer = new double[MoveNShootConstants.SHOOT_FILTER_SIZE];
   private int bufferIndex = 0;
   private int validSampleCount = 0;
 
-  private SlewRateLimiter joyXSlewLimiter = new SlewRateLimiter(DriveConstants.AIM_TRANSLATION_SLEW_RATE);
-  private SlewRateLimiter joyYSlewLimiter = new SlewRateLimiter(DriveConstants.AIM_TRANSLATION_SLEW_RATE);
+  private SlewRateLimiter joyXSlewLimiter = new SlewRateLimiter(MoveNShootConstants.SHOOT_TRANSLATION_SLEW_RATE);
+  private SlewRateLimiter joyYSlewLimiter = new SlewRateLimiter(MoveNShootConstants.SHOOT_TRANSLATION_SLEW_RATE);
 
   /** Creates a new AimAndShootCommand. */
   public AimAndShootCommand(
@@ -109,7 +109,7 @@ public class AimAndShootCommand extends Command {
   @Override
   public void initialize() {
     // Clear moving average buffers
-    for (int i = 0; i < DriveConstants.AIM_FILTER_SIZE; i++) {
+    for (int i = 0; i < MoveNShootConstants.SHOOT_FILTER_SIZE; i++) {
       speedXBuffer[i] = 0.0;
       speedYBuffer[i] = 0.0;
       angleErrorBuffer[i] = 0.0;
@@ -141,10 +141,10 @@ public class AimAndShootCommand extends Command {
   double filteredSpeedX = 0.0, filteredSpeedY = 0.0, filteredAngleError = 0.0;
   private static final double TURRET_TOLERANCE_DEG =
       ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
-  private static final double TURRET_LOOKAHEAD_SEC = 0.1;
-  private static final double SHOOTER_SETPOINT_RPS_DEADBAND = 0.05;
-  private static final double SHOOTER_SETPOINT_HOOD_DEG_DEADBAND = 0.05;
-  private static final double SHOOTER_SETPOINT_TURRET_DEG_DEADBAND = 0.10;
+  private static final double TURRET_LOOKAHEAD_SEC = MoveNShootConstants.TURRET_LOOKAHEAD_SEC;
+  private static final double SHOOTER_SETPOINT_RPS_DEADBAND = MoveNShootConstants.SETPOINT_RPS_DEADBAND;
+  private static final double SHOOTER_SETPOINT_HOOD_DEG_DEADBAND = MoveNShootConstants.SETPOINT_HOOD_DEG_DEADBAND;
+  private static final double SHOOTER_SETPOINT_TURRET_DEG_DEADBAND = MoveNShootConstants.SETPOINT_TURRET_DEG_DEADBAND;
 
   private boolean hasSentShooterSetpoint = false;
   private double lastSentVelocityRps = 0.0;
@@ -235,7 +235,7 @@ public class AimAndShootCommand extends Command {
     // Update speed buffers before filtering so newest sample contributes this cycle.
     speedXBuffer[bufferIndex] = shooterSpeedX;
     speedYBuffer[bufferIndex] = shooterSpeedY;
-    if (validSampleCount < DriveConstants.AIM_FILTER_SIZE) {
+    if (validSampleCount < MoveNShootConstants.SHOOT_FILTER_SIZE) {
       validSampleCount++;
     }
 
@@ -272,7 +272,7 @@ public class AimAndShootCommand extends Command {
     }
     filteredAngleError = Math.atan2(sumSin, sumCos);
 
-    bufferIndex = (bufferIndex + 1) % DriveConstants.AIM_FILTER_SIZE;
+    bufferIndex = (bufferIndex + 1) % MoveNShootConstants.SHOOT_FILTER_SIZE;
 
     // 3) Run normal driver translation/rotation while assist computes shooter setpoints.
     leftY = driverController.getLeftY();
@@ -294,7 +294,7 @@ public class AimAndShootCommand extends Command {
             filteredSpeedY,
             shooterPoseX,
             shooterPoseY,
-            time);
+            time + TURRET_LOOKAHEAD_SEC);
     velocityRPS = shootParams[0];
     hoodAngle = shootParams[1];
     turretAngleDeg = Math.toDegrees(normalizedAngleErrorRad);

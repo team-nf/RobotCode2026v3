@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Robot;
 import frc.robot.TheMachine;
+import frc.robot.constants.MoveNShootConstants;
 import frc.robot.constants.PoseConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TheMachineConstants;
@@ -50,10 +51,9 @@ public class AimAndPassCommand extends Command {
       NetworkTableInstance.getDefault().getBooleanTopic("/PASS/AimOnTarget").getEntry(false);
 
   private double MaxSpeed =
-      0.4 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
+      MoveNShootConstants.PASS_MAX_SPEED_FRACTION * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
   private double MaxAngularRate =
-      RotationsPerSecond.of(0.4)
-          .in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
+      RotationsPerSecond.of(MoveNShootConstants.PASS_MAX_ANGULAR_RATE_RPS).in(RadiansPerSecond);
 
   private SwerveRequest.FieldCentric drive =
       new SwerveRequest.FieldCentric()
@@ -68,19 +68,18 @@ public class AimAndPassCommand extends Command {
 
   private Pose2d passAimPose;
 
-  private static final int FILTER_SIZE = 2;
-  private final double[] speedXBuffer = new double[FILTER_SIZE];
-  private final double[] speedYBuffer = new double[FILTER_SIZE];
-  private final double[] angleErrorBuffer = new double[FILTER_SIZE];
+  private final double[] speedXBuffer = new double[MoveNShootConstants.PASS_FILTER_SIZE];
+  private final double[] speedYBuffer = new double[MoveNShootConstants.PASS_FILTER_SIZE];
+  private final double[] angleErrorBuffer = new double[MoveNShootConstants.PASS_FILTER_SIZE];
   private int bufferIndex = 0;
   private int validSampleCount = 0;
 
   private static final double TURRET_TOLERANCE_DEG =
       ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
-  private static final double TURRET_LOOKAHEAD_SEC = 0.1;
-  private static final double PASS_SETPOINT_RPS_DEADBAND = 0.05;
-  private static final double PASS_SETPOINT_HOOD_DEG_DEADBAND = 0.05;
-  private static final double PASS_SETPOINT_TURRET_DEG_DEADBAND = 0.10;
+  private static final double TURRET_LOOKAHEAD_SEC = MoveNShootConstants.TURRET_LOOKAHEAD_SEC;
+  private static final double PASS_SETPOINT_RPS_DEADBAND = MoveNShootConstants.SETPOINT_RPS_DEADBAND;
+  private static final double PASS_SETPOINT_HOOD_DEG_DEADBAND = MoveNShootConstants.SETPOINT_HOOD_DEG_DEADBAND;
+  private static final double PASS_SETPOINT_TURRET_DEG_DEADBAND = MoveNShootConstants.SETPOINT_TURRET_DEG_DEADBAND;
 
   private boolean hasSentPassSetpoint = false;
   private double lastSentVelocityRps = 0.0;
@@ -105,7 +104,7 @@ public class AimAndPassCommand extends Command {
   // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    for (int i = 0; i < FILTER_SIZE; i++) {
+    for (int i = 0; i < MoveNShootConstants.PASS_FILTER_SIZE; i++) {
       speedXBuffer[i] = 0.0;
       speedYBuffer[i] = 0.0;
       angleErrorBuffer[i] = 0.0;
@@ -218,7 +217,7 @@ public class AimAndPassCommand extends Command {
     // Update speed buffers before filtering so newest sample contributes this cycle.
     speedXBuffer[bufferIndex] = shooterSpeedX;
     speedYBuffer[bufferIndex] = shooterSpeedY;
-    if (validSampleCount < FILTER_SIZE) {
+    if (validSampleCount < MoveNShootConstants.PASS_FILTER_SIZE) {
       validSampleCount++;
     }
 
@@ -256,7 +255,7 @@ public class AimAndPassCommand extends Command {
     }
     filteredAngleError = Math.atan2(sumSin, sumCos);
 
-    bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
+    bufferIndex = (bufferIndex + 1) % MoveNShootConstants.PASS_FILTER_SIZE;
 
     turretAngleDeg = Math.toDegrees(normalizedAngleErrorRad);
 

@@ -5,17 +5,10 @@
 package frc.robot.commands.AutoCommands;
 
 import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
 
-import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
-import com.ctre.phoenix6.swerve.SwerveRequest;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
@@ -27,17 +20,19 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Robot;
 import frc.robot.TheMachine;
 import frc.robot.constants.Dimensions;
+import frc.robot.constants.MoveNShootConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.TheMachineConstants;
-import frc.robot.constants.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.utils.AllianceUtil;
 import frc.robot.utils.ShooterCalculator;
 
 /**
- * Driver-assist command for shooting: keeps manual translational control while auto-solving shooter
- * setpoints (flywheel/hood/turret) toward the alliance hub.
+ * Autonomous variant of shoot aiming command.
+ *
+ * <p>Solves flywheel/hood/turret setpoints toward the alliance hub without writing manual drive
+ * controls — the auto routine owns the drivetrain.
  */
 /* You should consider using the more terse Command factories API instead https://docs.wpilib.org/en/stable/docs/software/commandbased/organizing-command-based.html#defining-commands */
 public class AimAndShootAutoCommand extends Command {
@@ -56,40 +51,34 @@ public class AimAndShootAutoCommand extends Command {
   private final BooleanEntry telemetryEnabledEntry =
       NetworkTableInstance.getDefault().getBooleanTopic("Conf/EnableTelemetry").getEntry(false);
 
-  private double MaxSpeed =
-      0.2 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
-  private double MaxAngularRate =
-      RotationsPerSecond.of(0.35)
-          .in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
-
-  private static final Translation2d SHOOTER_CENTER_OF_ROTATION =
-      new Translation2d(
-          TheMachineConstants.SHOOTER_ROTATION_AXIS.getX(),
-          TheMachineConstants.SHOOTER_ROTATION_AXIS.getY());
-
-  private CommandXboxController driverController;
-  private CommandSwerveDrivetrain swerveDrivetrain;
-  private TheMachine theMachine;
+  private final CommandSwerveDrivetrain swerveDrivetrain;
+  private final TheMachine theMachine;
 
   private Pose2d hubAimPose;
 
-  // Moving average buffers for noise reduction
-  private static final int FILTER_SIZE = 3; // 3-sample moving average
-  private final double[] speedXBuffer = new double[FILTER_SIZE];
-  private final double[] speedYBuffer = new double[FILTER_SIZE];
-  private final double[] angleErrorBuffer = new double[FILTER_SIZE];
+  private final double[] speedXBuffer = new double[MoveNShootConstants.SHOOT_FILTER_SIZE];
+  private final double[] speedYBuffer = new double[MoveNShootConstants.SHOOT_FILTER_SIZE];
+  private final double[] angleErrorBuffer = new double[MoveNShootConstants.SHOOT_FILTER_SIZE];
   private int bufferIndex = 0;
   private int validSampleCount = 0;
 
-  private SlewRateLimiter joyXSlewLimiter = new SlewRateLimiter(2.5);
-  private SlewRateLimiter joyYSlewLimiter = new SlewRateLimiter(2.5);
+  private static final double TURRET_TOLERANCE_DEG =
+      ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
+  private static final double TURRET_LOOKAHEAD_SEC = MoveNShootConstants.TURRET_LOOKAHEAD_SEC;
+  private static final double SHOOTER_SETPOINT_RPS_DEADBAND = MoveNShootConstants.SETPOINT_RPS_DEADBAND;
+  private static final double SHOOTER_SETPOINT_HOOD_DEG_DEADBAND = MoveNShootConstants.SETPOINT_HOOD_DEG_DEADBAND;
+  private static final double SHOOTER_SETPOINT_TURRET_DEG_DEADBAND = MoveNShootConstants.SETPOINT_TURRET_DEG_DEADBAND;
 
-  /** Creates a new AimAndShootCommand. */
+  private boolean hasSentShooterSetpoint = false;
+  private double lastSentVelocityRps = 0.0;
+  private double lastSentHoodAngleDeg = 0.0;
+  private double lastSentTurretAngleDeg = 0.0;
+  private boolean lastSentShootMode = false;
+
+  /** Creates a new AimAndShootAutoCommand. */
   public AimAndShootAutoCommand(
       CommandSwerveDrivetrain drivetrain, CommandXboxController joystick, TheMachine theMachine) {
-    // Use addRequirements() here to declare subsystem dependencies.
     this.swerveDrivetrain = drivetrain;
-    this.driverController = joystick;
     this.theMachine = theMachine;
 
     addRequirements(theMachine.getSubsystems());
@@ -97,11 +86,9 @@ public class AimAndShootAutoCommand extends Command {
     hubAimPose = AllianceUtil.getHubAimPose();
   }
 
-  // Called when the command is initially scheduled.
   @Override
   public void initialize() {
-    // Clear moving average buffers
-    for (int i = 0; i < FILTER_SIZE; i++) {
+    for (int i = 0; i < MoveNShootConstants.SHOOT_FILTER_SIZE; i++) {
       speedXBuffer[i] = 0.0;
       speedYBuffer[i] = 0.0;
       angleErrorBuffer[i] = 0.0;
@@ -110,7 +97,6 @@ public class AimAndShootAutoCommand extends Command {
     validSampleCount = 0;
     hasSentShooterSetpoint = false;
 
-    // Re-resolve alliance hub target in case DS alliance changed while disabled.
     hubAimPose = AllianceUtil.getHubAimPose();
   }
 
@@ -131,18 +117,6 @@ public class AimAndShootAutoCommand extends Command {
   double turretAngleDeg;
 
   double filteredSpeedX = 0.0, filteredSpeedY = 0.0, filteredAngleError = 0.0;
-  private static final double TURRET_TOLERANCE_DEG =
-      ShooterConstants.TURRET_ALLOWABLE_ERROR.in(edu.wpi.first.units.Units.Degrees);
-  private static final double TURRET_LOOKAHEAD_SEC = 0.1;
-  private static final double SHOOTER_SETPOINT_RPS_DEADBAND = 0.05;
-  private static final double SHOOTER_SETPOINT_HOOD_DEG_DEADBAND = 0.05;
-  private static final double SHOOTER_SETPOINT_TURRET_DEG_DEADBAND = 0.10;
-
-  private boolean hasSentShooterSetpoint = false;
-  private double lastSentVelocityRps = 0.0;
-  private double lastSentHoodAngleDeg = 0.0;
-  private double lastSentTurretAngleDeg = 0.0;
-  private boolean lastSentShootMode = false;
 
   double rawAngleError = 0.0;
   double shooterSpeedX = 0.0;
@@ -161,9 +135,6 @@ public class AimAndShootAutoCommand extends Command {
   double hubX = 0.0;
   double hubY = 0.0;
   double normalizedAngleErrorRad = 0.0;
-  double leftY = 0.0;
-  double leftX = 0.0;
-  double rightX = 0.0;
   boolean shouldShoot = false;
 
   private boolean shouldUpdateShooterSetpoint(
@@ -190,7 +161,6 @@ public class AimAndShootAutoCommand extends Command {
     lastSentShootMode = shouldShoot;
   }
 
-  // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
     // 1) Gather drivetrain state and derive shooter point kinematics.
@@ -210,7 +180,6 @@ public class AimAndShootAutoCommand extends Command {
     shooterPoseX = robotPose.getX() + shooterOffsetFieldX;
     shooterPoseY = robotPose.getY() + shooterOffsetFieldY;
 
-    // Convert robot-relative CoR offset to field frame and compute shooter-point velocity:
     // v_point = v_center + omega x r
     shooterSpeedX = speeds.vxMetersPerSecond - speeds.omegaRadiansPerSecond * shooterOffsetFieldY;
     shooterSpeedY = speeds.vyMetersPerSecond + speeds.omegaRadiansPerSecond * shooterOffsetFieldX;
@@ -224,14 +193,12 @@ public class AimAndShootAutoCommand extends Command {
     filteredSpeedY = 0.0;
     filteredAngleError = 0.0;
 
-    // Update speed buffers before filtering so newest sample contributes this cycle.
     speedXBuffer[bufferIndex] = shooterSpeedX;
     speedYBuffer[bufferIndex] = shooterSpeedY;
-    if (validSampleCount < FILTER_SIZE) {
+    if (validSampleCount < MoveNShootConstants.SHOOT_FILTER_SIZE) {
       validSampleCount++;
     }
 
-    // Calculate filtered (smoothed) values
     for (int i = 0; i < validSampleCount; i++) {
       filteredSpeedX += speedXBuffer[i];
       filteredSpeedY += speedYBuffer[i];
@@ -250,10 +217,8 @@ public class AimAndShootAutoCommand extends Command {
 
     robotAngleToHub = Math.atan2(aimY - predictedShooterY, aimX - predictedShooterX);
     rawAngleError = robotAngleToHub - predictedHeading;
-    // Normalize angle error to [-π, π]
     normalizedAngleErrorRad = Math.atan2(Math.sin(rawAngleError), Math.cos(rawAngleError));
 
-    // Update angle buffer and compute wrap-safe filtered angle.
     angleErrorBuffer[bufferIndex] = normalizedAngleErrorRad;
 
     sumSin = 0.0;
@@ -264,14 +229,9 @@ public class AimAndShootAutoCommand extends Command {
     }
     filteredAngleError = Math.atan2(sumSin, sumCos);
 
-    bufferIndex = (bufferIndex + 1) % FILTER_SIZE;
+    bufferIndex = (bufferIndex + 1) % MoveNShootConstants.SHOOT_FILTER_SIZE;
 
-    // 3) Run normal driver translation/rotation while assist computes shooter setpoints.
-    leftY = driverController.getLeftY();
-    leftX = driverController.getLeftX();
-    rightX = driverController.getRightX();
-
-    // 4) Solve shooter parameters from filtered motion estimate and predicted aim point.
+    // 3) Solve shooter parameters from filtered motion estimate and predicted aim point.
     shootParams =
         ShooterCalculator.calculateShootingParameters(
             filteredSpeedX,
@@ -283,7 +243,6 @@ public class AimAndShootAutoCommand extends Command {
     hoodAngle = shootParams[1];
     turretAngleDeg = Math.toDegrees(normalizedAngleErrorRad);
 
-    // Feed only once shooter is ready; otherwise stay in spin-up state.
     shouldShoot = theMachine.isShooterReady() || Robot.isSimulation();
     if (shouldUpdateShooterSetpoint(velocityRPS, hoodAngle, turretAngleDeg, shouldShoot)) {
       if (shouldShoot) {
@@ -314,7 +273,6 @@ public class AimAndShootAutoCommand extends Command {
       SmartDashboard.putBoolean("AimShoot/ShouldShoot", shouldShoot);
     }
 
-    // Publish simulated aiming telemetry for dashboards/3D overlays.
     if (Robot.isSimulation()) {
       aimPose3d.set(new Pose3d(aimX, aimY, Dimensions.HUB_HEIGHT.in(Meters), new Rotation3d()));
       aimOnTargetEntry.set(Math.abs(turretAngleDeg) <= TURRET_TOLERANCE_DEG);
@@ -322,13 +280,11 @@ public class AimAndShootAutoCommand extends Command {
     }
   }
 
-  // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
     hasSentShooterSetpoint = false;
   }
 
-  // Returns true when the command should end.
   @Override
   public boolean isFinished() {
     return false;
