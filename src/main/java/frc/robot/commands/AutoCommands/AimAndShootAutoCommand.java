@@ -14,6 +14,7 @@ import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructEntry;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -69,6 +70,9 @@ public class AimAndShootAutoCommand extends Command {
   private static final double SHOOTER_SETPOINT_HOOD_DEG_DEADBAND = MoveNShootConstants.SETPOINT_HOOD_DEG_DEADBAND;
   private static final double SHOOTER_SETPOINT_TURRET_DEG_DEADBAND = MoveNShootConstants.SETPOINT_TURRET_DEG_DEADBAND;
 
+  private final Timer executionTimer = new Timer();
+  private boolean executionTimeoutElapsed = false;
+
   private boolean hasSentShooterSetpoint = false;
   private double lastSentVelocityRps = 0.0;
   private double lastSentHoodAngleDeg = 0.0;
@@ -96,6 +100,8 @@ public class AimAndShootAutoCommand extends Command {
     bufferIndex = 0;
     validSampleCount = 0;
     hasSentShooterSetpoint = false;
+    executionTimeoutElapsed = false;
+    executionTimer.restart();
 
     hubAimPose = AllianceUtil.getHubAimPose();
   }
@@ -244,9 +250,18 @@ public class AimAndShootAutoCommand extends Command {
     turretAngleDeg = Math.toDegrees(normalizedAngleErrorRad);
 
     shouldShoot = theMachine.isShooterReady() || Robot.isSimulation();
+
+    if (!executionTimeoutElapsed && executionTimer.hasElapsed(3.0)) {
+      executionTimeoutElapsed = true;
+    }
+
     if (shouldUpdateShooterSetpoint(velocityRPS, hoodAngle, turretAngleDeg, shouldShoot)) {
       if (shouldShoot) {
-        theMachine.shoot(velocityRPS, hoodAngle, turretAngleDeg);
+        if(!executionTimeoutElapsed)
+          theMachine.shoot(velocityRPS, hoodAngle, turretAngleDeg);
+        else
+          theMachine.shootIntakeClosed(velocityRPS, hoodAngle, turretAngleDeg);
+
       } else {
         theMachine.getReady(velocityRPS, hoodAngle, turretAngleDeg);
       }
@@ -280,9 +295,14 @@ public class AimAndShootAutoCommand extends Command {
     }
   }
 
+  public boolean isExecutionTimeoutElapsed() {
+    return executionTimeoutElapsed;
+  }
+
   @Override
   public void end(boolean interrupted) {
     hasSentShooterSetpoint = false;
+    executionTimeoutElapsed = false;
   }
 
   @Override

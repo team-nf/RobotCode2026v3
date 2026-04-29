@@ -58,7 +58,7 @@ public class IntakeConstants {
 
   // Linear extension targets
   public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
-  public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(275);
+  public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(265);
   public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(90);
   public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
   public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);
@@ -87,7 +87,7 @@ public class IntakeConstants {
 
   public static final AngularVelocity INTAKE_INTAKING_VELOCITY =
       RotationsPerSecond.of(55); // in RPS
-  public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(1); // in RPS
+  public static final AngularVelocity INTAKE_FEEDING_VELOCITY = RotationsPerSecond.of(5); // in RPS
   public static final AngularVelocity INTAKE_REVERSE_VELOCITY =
       RotationsPerSecond.of(-15.0); // in RPS
   public static final AngularVelocity INTAKE_REVERSE_FAILSAFE_VELOCITY =
@@ -166,7 +166,7 @@ public class IntakeConstants {
 
   public static final MomentOfInertia INTAKE_MOMENT_OF_INERTIA =
       KilogramSquareMeters.of(
-              0.5 * ROLLER_MASS.in(Kilogram) * Math.pow(ROLLER_RADIUS.in(Meters), 2))
+              0.05 * ROLLER_MASS.in(Kilogram) * Math.pow(ROLLER_RADIUS.in(Meters), 2))
           .times(ROLLER_AMOUNT); // kg*m^2
 
   // Hardstop zeroing routine parameters

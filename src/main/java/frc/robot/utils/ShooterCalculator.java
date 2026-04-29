@@ -9,6 +9,7 @@ import static edu.wpi.first.units.Units.*;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import frc.robot.Robot;
+import frc.robot.constants.MoveNShootConstants;
 import frc.robot.constants.ShooterConstants;
 import frc.robot.constants.TheMachineConstants;
 
@@ -57,13 +58,13 @@ public final class ShooterCalculator {
     {29.8, 5,  1}, // 2.0 meters
     {31, 5,  1}, // 2.5 meters
     {33,   6.5,    1.5}, // 3.0 meters
-    {35, 7.5,    1.6}, // 3.5 meters
-    {36.2,   10,    1.8}, // 4.0 meters
-    {38,   12,   2}, // 4.5 meters
-    {39,   14,   2.1}, // 5.0 meters
-    {39.5,   16, 2.1}, // 5.5 meters
-    {39.5, 17, 2.1}, // 6.0 meters
-    {41.5, 17, 2.3}, // 6.5 meters
+    {34.5, 7.5,    1.6}, // 3.5 meters
+    {35.5,   10,    1.8}, // 4.0 meters
+    {37.5,   12,   2}, // 4.5 meters
+    {38.5,   14,   2.1}, // 5.0 meters
+    {39.0,   16, 2.1}, // 5.5 meters
+    {39.0, 17, 2.1}, // 6.0 meters
+    {41.0, 17, 2.3}, // 6.5 meters
   };
 
   public static Translation2d getHubTranslation() {
@@ -344,7 +345,7 @@ public final class ShooterCalculator {
 
   // Name intentionally follows requested spelling.
   public static double getShooterRpsFromLookupTable(double distanceMeters) {
-    tempWheelSpeed = getLookupValue(distanceMeters, 0);
+    tempWheelSpeed = getLookupValue(distanceMeters, 0)*MoveNShootConstants.ShootCoeff;
     return Math.max(MIN_FLYWHEEL_RPS, Math.min(tempWheelSpeed, MAX_FLYWHEEL_RPS));
   }
 

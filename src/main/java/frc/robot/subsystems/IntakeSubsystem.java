@@ -35,6 +35,7 @@ import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Robot;
@@ -329,6 +330,8 @@ public class IntakeSubsystem extends SubsystemBase {
         "Intake/ExtensionMotorVoltageV",
         TelemetryConstants.roundTelemetry(intakeArmVoltageSignal.getValueAsDouble()));
 
+    SmartDashboard.putBoolean("Intake/ShouldIntakeBoolean", shouldIntake);
+
     SmartDashboard.putNumber(
         "Intake/ExtensionAmountMeters", TelemetryConstants.roundTelemetry(extensionMeters));
     SmartDashboard.putNumber(
@@ -400,7 +403,7 @@ public class IntakeSubsystem extends SubsystemBase {
       intakeArmSim =
           new ElevatorSim(
               intakeArmDcMotor,
-              IntakeConstants.INTAKE_ARM_GEAR_REDUCTION,
+              IntakeConstants.INTAKE_ARM_GEAR_REDUCTION*3,
               IntakeConstants.INTAKE_ARM_MASS.in(edu.wpi.first.units.Units.Kilograms),
               IntakeConstants.INTAKE_SIM_DRUM_RADIUS_METERS,
               IntakeConstants.INTAKE_EXTENSION_RETRACTED.in(Meters),
@@ -538,6 +541,29 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeTestExtensionMeters = intakeExtensionMeters;
     test();
   }
+
+  private boolean shouldIntake = true;
+
+  public InstantCommand makeShouldIntakeTrueCmd(){
+    return new InstantCommand(
+    () -> this.shouldIntake = true
+  );
+  } 
+
+  public InstantCommand makeShouldIntakeFalseCmd(){
+    return new InstantCommand(
+    () -> this.shouldIntake = false
+  );
+  } 
+
+  public void intakeOrFeed()
+  {
+    if(shouldIntake)
+      intake();
+    else
+      feed();
+  }
+
 
   @Override
   public void periodic() {

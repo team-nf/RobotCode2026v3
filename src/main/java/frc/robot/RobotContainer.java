@@ -216,10 +216,9 @@ public class RobotContainer {
         .whileTrue(m_shootCommand)
         .onFalse(m_idleDeployedCommand);
 
-    m_driverController
-        .rightTrigger()
-        .whileTrue(m_aimAndShootCommand)
-        .onFalse(m_idleDeployedCommand);
+    m_driverController.rightTrigger()
+        .onTrue(m_theMachine.intakeShouldIntakeSetFalse())
+        .onFalse(m_theMachine.intakeShouldIntakeSetTrue());
 
     m_driverController
         .a()
@@ -235,7 +234,7 @@ public class RobotContainer {
     // Left bumper behavior depends on current zone:
     // - From shooting zone, go out to trench pickup path (left/right based on side)
     // - Outside shooting zone, return from trench back toward shooting area
-    m_driverController.leftBumper().whileTrue(m_leftBumperTrenchCommand);
+    //m_driverController.leftBumper().whileTrue(m_leftBumperTrenchCommand);
 
     // X -> begin intake state machine.
     m_driverController.rightBumper().onTrue(m_intakeCommand);

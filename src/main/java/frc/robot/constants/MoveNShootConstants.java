@@ -10,8 +10,8 @@ public class MoveNShootConstants {
   public static final double TURRET_LOOKAHEAD_SEC = 0.1;
 
   // Shoot (teleop) drive limits
-  public static final double SHOOT_MAX_SPEED_FRACTION = 0.3;
-  public static final double SHOOT_TRANSLATION_SLEW_RATE = 2.0;
+  public static final double SHOOT_MAX_SPEED_FRACTION = 0.22;
+  public static final double SHOOT_TRANSLATION_SLEW_RATE = 1.75;
   public static final double SHOOT_MAX_ANGULAR_RATE_RPS = 0.30;
   public static final int SHOOT_FILTER_SIZE = 4;
 
@@ -22,7 +22,10 @@ public class MoveNShootConstants {
 
   // Setpoint change deadbands — only re-send if the new value differs by more than this amount.
   // Keeps CAN traffic low while still tracking meaningful changes.
-  public static final double SETPOINT_RPS_DEADBAND = 0.5;
-  public static final double SETPOINT_HOOD_DEG_DEADBAND = 0.5;
-  public static final double SETPOINT_TURRET_DEG_DEADBAND = 1.0;
+  public static final double SETPOINT_RPS_DEADBAND = 0.1;
+  public static final double SETPOINT_HOOD_DEG_DEADBAND = 0.1;
+  public static final double SETPOINT_TURRET_DEG_DEADBAND = 0.50;
+
+  public static final double ShootCoeff = 0.95;
+  
 }

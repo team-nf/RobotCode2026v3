@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.States.TheMachineStates.TheMachineState;
 import frc.robot.constants.TelemetryConstants;
@@ -198,7 +199,7 @@ public class TheMachine {
     shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
     feederSubsystem.feedGetReady();
     hopperSubsystem.idle();
-    intakeSubsystem.intake();
+    intakeSubsystem.intakeOrFeed();
     state = TheMachineState.GET_READY;
   }
 
@@ -211,7 +212,16 @@ public class TheMachine {
     shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
     feederSubsystem.feed();
     hopperSubsystem.feed();
-    intakeSubsystem.intake();
+    intakeSubsystem.intakeOrFeed();
+    state = TheMachineState.SHOOT;
+  }
+
+  /** Shoot at requested setpoints. */
+  public void shootIntakeClosed(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
+    shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
+    feederSubsystem.feed();
+    hopperSubsystem.feed();
+    intakeSubsystem.feed();
     state = TheMachineState.SHOOT;
   }
 
@@ -225,7 +235,7 @@ public class TheMachine {
     shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
     feederSubsystem.feedGetReady();
     hopperSubsystem.idle();
-    intakeSubsystem.intake();
+    intakeSubsystem.intakeOrFeed();
     state = TheMachineState.GET_READY_PASS;
   }
 
@@ -238,7 +248,7 @@ public class TheMachine {
     shooterSubsystem.pass(velocityRPS, hoodAngleRotations, turretAngleDegrees);
     feederSubsystem.feed();
     hopperSubsystem.feed();
-    intakeSubsystem.intake();
+    intakeSubsystem.intakeOrFeed();
     state = TheMachineState.PASS;
   }
 
@@ -312,11 +322,11 @@ public class TheMachine {
     if (shooterSubsystem.isReadyToShoot() || Robot.isSimulation()) {
       feederSubsystem.feed();
       hopperSubsystem.feed();
-      intakeSubsystem.intake();
+      intakeSubsystem.intakeOrFeed();
     } else {
       feederSubsystem.feedGetReady();
       hopperSubsystem.idle();
-      intakeSubsystem.intake();
+      intakeSubsystem.intakeOrFeed();
     }
     state = TheMachineState.TEST;
   }
@@ -326,11 +336,11 @@ public class TheMachine {
     if (shooterSubsystem.isReadyToPass() || Robot.isSimulation()) {
       feederSubsystem.feed();
       hopperSubsystem.feed();
-      intakeSubsystem.intake();
+      intakeSubsystem.intakeOrFeed();
     } else {
       feederSubsystem.feedGetReady();
       hopperSubsystem.idle();
-      intakeSubsystem.intake();
+      intakeSubsystem.intakeOrFeed();
     }
     state = TheMachineState.TEST;
   }
@@ -583,5 +593,15 @@ public class TheMachine {
       }
       return;
     }
+  }
+
+  public InstantCommand intakeShouldIntakeSetTrue()
+  {
+    return intakeSubsystem.makeShouldIntakeTrueCmd();
+  }
+
+    public InstantCommand intakeShouldIntakeSetFalse()
+  {
+    return intakeSubsystem.makeShouldIntakeFalseCmd();
   }
 }

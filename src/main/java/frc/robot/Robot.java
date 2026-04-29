@@ -54,7 +54,7 @@ public class Robot extends TimedRobot {
 
     // Cache alliance once on startup; refreshed again on each mode transition.
     AllianceUtil.refreshAllianceFromDriverStation();
-    DataLogManager.log("Robot code started");
+    if (TelemetryConstants.SHOULD_LOG) DataLogManager.log("Robot code started");
   }
 
   @Override
@@ -86,7 +86,7 @@ public class Robot extends TimedRobot {
       CommandScheduler.getInstance().schedule(m_autonomousCommand);
     }
 
-    DataLogManager.log("Autonomous mode started");
+    if (TelemetryConstants.SHOULD_LOG) DataLogManager.log("Autonomous mode started");
 
   }
 
@@ -101,7 +101,7 @@ public class Robot extends TimedRobot {
       m_autonomousCommand.cancel();
     }
 
-    DataLogManager.log("Teleop mode started");
+    if (TelemetryConstants.SHOULD_LOG) DataLogManager.log("Teleop mode started");
 
   }
 
