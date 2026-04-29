@@ -37,9 +37,9 @@ public class Robot extends TimedRobot {
     // the DataLog file is open. Prefers USB stick; falls back to roboRIO storage.
     if (TelemetryConstants.SHOULD_LOG) {
       SignalLogger.start();
+      DataLogManager.start();
+      DriverStation.startDataLog(DataLogManager.getLog());
     }
-    DataLogManager.start();
-    DriverStation.startDataLog(DataLogManager.getLog());
     matchTracker = new MatchTracker();
     m_robotContainer = new RobotContainer();
   }

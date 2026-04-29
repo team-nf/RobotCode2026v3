@@ -116,7 +116,7 @@ public class ShooterConstants {
 
   public static final double TURRET_AGGRESSIVE_KS = 1.0 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
   public static final double TURRET_AGGRESSIVE_KV = 0.0 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
-  public static final double TURRET_AGGRESSIVE_KP = 3 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
+  public static final double TURRET_AGGRESSIVE_KP = 4 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
   public static final double TURRET_AGGRESSIVE_KI = 0.1 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
   public static final double TURRET_AGGRESSIVE_KD = 0.0 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
   public static final double TURRET_AGGRESSIVE_KA = 0.4 * TURRET_AGGRESSIVE_SIM_MULTIPLIER;
@@ -127,7 +127,7 @@ public class ShooterConstants {
   public static final double TURRET_GENTLE_KI = 0 * TURRET_GENTLE_SIM_MULTIPLIER;
   public static final double TURRET_GENTLE_KD = 0.01 * TURRET_GENTLE_SIM_MULTIPLIER;
 
-  public static final double TURRET_SMALL_ERROR_THRESHOLD_DEG = 12.0;
+  public static final double TURRET_SMALL_ERROR_THRESHOLD_DEG = 15.0;
 
   public static final int TURRET_AGGRESSIVE_SLOT = 0;
   public static final int TURRET_GENTLE_SLOT = 1;

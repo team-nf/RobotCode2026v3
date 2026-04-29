@@ -147,13 +147,6 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeArmCurrentSignal = intakeArmMotor.getStatorCurrent(false);
     intakeArmVoltageSignal = intakeArmMotor.getMotorVoltage(false);
 
-    intakeMotor.optimizeBusUtilization();
-    intakeMotor2.optimizeBusUtilization();
-    intakeArmMotor.optimizeBusUtilization();
-
-    intakeVelocitySignal.setUpdateFrequency(50);
-    intakeArmPositionSignal.setUpdateFrequency(50);
-
     intakeRollerSysIdControl = new VoltageOut(0).withEnableFOC(false);
     intakeArmSysIdControl = new VoltageOut(0).withEnableFOC(false);
     intakeRollerSysIdRoutine =
