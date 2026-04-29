@@ -24,13 +24,13 @@ public class TelemetryConstants {
   public static boolean SHOULD_SWERVE_FIELD_COMMUNICATE = false;
   public static boolean SHOULD_SWERVE_CTRE_COMMUNICATE = false;
 
-  public static boolean SHOULD_THEMACHINE_DATA_COMMUNICATE = true;
+  public static boolean SHOULD_THEMACHINE_DATA_COMMUNICATE = false;
 
   public static boolean SHOULD_THEMACHINE_SIM_POSES_COMMUNICATE = Robot.isSimulation();
   public static boolean SHOULD_SCHEDULER_COMMUNICATE = false;
 
   // Set to false to disable all DataLog recording (e.g. during practice to save storage).
-  public static final boolean SHOULD_LOG = true;
+  public static final boolean SHOULD_LOG = false;
 
   public static final int TELEMETRY_DECIMAL_PLACES = 2; // tweak as needed
   public static final double TELEMETRY_ROUNDING_FACTOR = Math.pow(10.0, TELEMETRY_DECIMAL_PLACES);

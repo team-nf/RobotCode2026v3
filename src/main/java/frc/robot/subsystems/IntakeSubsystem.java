@@ -147,6 +147,13 @@ public class IntakeSubsystem extends SubsystemBase {
     intakeArmCurrentSignal = intakeArmMotor.getStatorCurrent(false);
     intakeArmVoltageSignal = intakeArmMotor.getMotorVoltage(false);
 
+    intakeMotor.optimizeBusUtilization();
+    intakeMotor2.optimizeBusUtilization();
+    intakeArmMotor.optimizeBusUtilization();
+
+    intakeVelocitySignal.setUpdateFrequency(50);
+    intakeArmPositionSignal.setUpdateFrequency(50);
+
     intakeRollerSysIdControl = new VoltageOut(0).withEnableFOC(false);
     intakeArmSysIdControl = new VoltageOut(0).withEnableFOC(false);
     intakeRollerSysIdRoutine =
@@ -283,16 +290,18 @@ public class IntakeSubsystem extends SubsystemBase {
   public void logData() {
     logRollerVelocityRps.append(intakeVelocitySignal.getValueAsDouble() / IntakeConstants.INTAKE_GEAR_REDUCTION);
     logRollerGoalRps.append(intakeGoalVelocity);
-    logRollerCurrentA.append(intakeMotor.getSupplyCurrent().getValueAsDouble());
+    logRollerCurrentA.append(intakeCurrentSignal.getValueAsDouble());
     logExtensionMeters.append(getIntakeExtensionMeters());
     logExtensionGoalMeters.append(intakeGoalExtensionMeters);
-    logArmCurrentA.append(intakeArmMotor.getSupplyCurrent().getValueAsDouble());
+    logArmCurrentA.append(intakeArmCurrentSignal.getValueAsDouble());
     logIsDeployed.append(isIntakeDeployed());
     logIsRetracted.append(isIntakeRetracted());
     logIsHomed.append(intakeHomed);
   }
 
   public void publishTelemetry() {
+    refreshTelemetrySignals();
+
     double extensionMeters = getIntakeExtensionMeters();
 
     SmartDashboard.putNumber(
@@ -300,7 +309,7 @@ public class IntakeSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(intakeVelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/RollerCurrentA",
-        TelemetryConstants.roundTelemetry(intakeMotor.getSupplyCurrent().getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(intakeCurrentSignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/RollerVoltageV",
         TelemetryConstants.roundTelemetry(intakeVoltageSignal.getValueAsDouble()));
@@ -309,7 +318,7 @@ public class IntakeSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(intake2VelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/Roller2CurrentA",
-        TelemetryConstants.roundTelemetry(intakeMotor2.getSupplyCurrent().getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(intake2CurrentSignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/Roller2VoltageV",
         TelemetryConstants.roundTelemetry(intake2VoltageSignal.getValueAsDouble()));
@@ -322,7 +331,7 @@ public class IntakeSubsystem extends SubsystemBase {
         TelemetryConstants.roundTelemetry(intakeArmVelocitySignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/ExtensionMotorCurrentA",
-        TelemetryConstants.roundTelemetry(intakeArmMotor.getSupplyCurrent().getValueAsDouble()));
+        TelemetryConstants.roundTelemetry(intakeArmCurrentSignal.getValueAsDouble()));
     SmartDashboard.putNumber(
         "Intake/ExtensionMotorVoltageV",
         TelemetryConstants.roundTelemetry(intakeArmVoltageSignal.getValueAsDouble()));
@@ -343,17 +352,19 @@ public class IntakeSubsystem extends SubsystemBase {
   private void refreshStatusSignals() {
     BaseStatusSignal.refreshAll(
         intakeVelocitySignal,
-        // intakeCurrentSignal,
-        // intakeVoltageSignal,
+        intakeArmPositionSignal);
+  }
+
+  private void refreshTelemetrySignals() {
+    BaseStatusSignal.refreshAll(
+        intakeCurrentSignal,
+        intakeVoltageSignal,
         intake2VelocitySignal,
-        // intake2CurrentSignal,
-        // intake2VoltageSignal,
-        intakeArmPositionSignal
-        // ,
-        // intakeArmVelocitySignal,
-        // intakeArmCurrentSignal,
-        // intakeArmVoltageSignal
-        );
+        intake2CurrentSignal,
+        intake2VoltageSignal,
+        intakeArmVelocitySignal,
+        intakeArmCurrentSignal,
+        intakeArmVoltageSignal);
   }
 
   // --- SIMULATION ---

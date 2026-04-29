@@ -9,6 +9,7 @@ import static edu.wpi.first.units.Units.Meters;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.networktables.BooleanEntry;
+import edu.wpi.first.networktables.DoubleEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -99,6 +100,12 @@ public class RobotContainer {
   private final BooleanEntry telemetryEnabledEntry =
       NetworkTableInstance.getDefault().getBooleanTopic("Conf/EnableTelemetry").getEntry(false);
 
+  private final DoubleEntry fTimeCoefficientEntry =
+      NetworkTableInstance.getDefault().getDoubleTopic("Conf/FlightTimeCoefficient").getEntry(1.0);
+
+  private final DoubleEntry loopTimeOffsetEntry =
+      NetworkTableInstance.getDefault().getDoubleTopic("Conf/LoopTimeOffset").getEntry(0.01);
+
   // Sim telemetry is intentionally throttled to avoid NetworkTables bandwidth/GC spikes.
   private static final double SIM_TELEMETRY_PERIOD_SEC = 0.05; // 20 Hz
   private double nextSimTelemetryTimeSec = 0.0;
@@ -175,6 +182,8 @@ public class RobotContainer {
     SmartDashboard.putData("Conf/Auto Chooser", autoChooser);
     SmartDashboard.putBoolean("Conf/IsBlue", Container.isBlue);
     telemetryEnabledEntry.setDefault(false);
+    fTimeCoefficientEntry.setDefault(1.0);
+    loopTimeOffsetEntry.setDefault(0.01);
     // SysId commands are intentionally not published at startup to reduce dashboard load.
 
     if (Robot.isSimulation()) {
@@ -305,6 +314,8 @@ public class RobotContainer {
             "Conf/RobotContainerLoopMs", TelemetryConstants.roundTelemetry(loopTimeMs));
         SmartDashboard.putData(CommandScheduler.getInstance());
         publishTelemetry();
+        Container.fTimeCoefficient = fTimeCoefficientEntry.get(1.0);
+        Container.loopTimeOffset = loopTimeOffsetEntry.get(0.01);
       }
     }
 

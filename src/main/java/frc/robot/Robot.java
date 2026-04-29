@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.constants.TelemetryConstants;
 import frc.robot.utils.AllianceUtil;
 import frc.robot.utils.FuelSim;
 import frc.robot.utils.HopperSim;
@@ -34,7 +35,9 @@ public class Robot extends TimedRobot {
     AllianceUtil.refreshAllianceFromDriverStation();
     // Start loggers before RobotContainer so all subsystem log entries are created after
     // the DataLog file is open. Prefers USB stick; falls back to roboRIO storage.
-    SignalLogger.start();
+    if (TelemetryConstants.SHOULD_LOG) {
+      SignalLogger.start();
+    }
     DataLogManager.start();
     DriverStation.startDataLog(DataLogManager.getLog());
     matchTracker = new MatchTracker();

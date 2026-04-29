@@ -174,7 +174,7 @@ public class ShooterConstants {
   // Negative scale to match mechanical direction: CCW turret motion should increase turret angle.
   public static final double TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION = -45.0;
   // Throughbore absolute reading at turret-frame zero (which is robot-frame 180 deg).
-  public static final double TURRET_ABSOLUTE_ZERO_ROTATION = 0.327;
+  public static final double TURRET_ABSOLUTE_ZERO_ROTATION = 0.6875;
   // Turret index step size used for manual step commands.
   public static final double TURRET_STEP_DEGREES = 45.0;
   public static final double TURRET_STEP_EPSILON = 1e-6;
@@ -182,8 +182,8 @@ public class ShooterConstants {
   public static final double TURRET_ABSOLUTE_OFFSET_DEGREES =
       -TURRET_ABSOLUTE_ZERO_ROTATION * TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION;
   // Full turret working range in turret frame.
-  public static final Angle MIN_TURRET_ANGLE = Degrees.of(-182);
-  public static final Angle MAX_TURRET_ANGLE = Degrees.of(182);
+  public static final Angle MIN_TURRET_ANGLE = Degrees.of(-183);
+  public static final Angle MAX_TURRET_ANGLE = Degrees.of(183);
 
   private static final Mass FLYWHEEL_MASS = Kilogram.of(0.1);
   public static final Distance FLYWHEEL_RADIUS =
