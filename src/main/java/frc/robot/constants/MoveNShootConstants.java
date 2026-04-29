@@ -11,8 +11,8 @@ public class MoveNShootConstants {
 
   // Shoot (teleop) drive limits
   public static final double SHOOT_MAX_SPEED_FRACTION = 0.3;
-  public static final double SHOOT_TRANSLATION_SLEW_RATE = 2.25;
-  public static final double SHOOT_MAX_ANGULAR_RATE_RPS = 0.35;
+  public static final double SHOOT_TRANSLATION_SLEW_RATE = 2.0;
+  public static final double SHOOT_MAX_ANGULAR_RATE_RPS = 0.30;
   public static final int SHOOT_FILTER_SIZE = 4;
 
   // Pass (teleop) drive limits
