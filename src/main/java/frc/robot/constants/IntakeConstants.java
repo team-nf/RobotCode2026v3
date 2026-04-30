@@ -58,7 +58,7 @@ public class IntakeConstants {
 
   // Linear extension targets
   public static final Distance INTAKE_EXTENSION_RETRACTED = Millimeters.of(0);
-  public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(265);
+  public static final Distance INTAKE_EXTENSION_DEPLOYED = Millimeters.of(257);
   public static final Distance INTAKE_EXTENSION_FEED = Millimeters.of(90);
   public static final Distance INTAKE_EXTENSION_MAX = Millimeters.of(301);
   public static final Distance INTAKE_EXTENSION_ALLOWABLE_ERROR = Millimeters.of(2);

@@ -55,16 +55,16 @@ public final class ShooterCalculator {
     {28,   0,    0.65}, // 0.5 meters
     {28,   0,    0.71}, // 1.0 meters
     {28, 3,    1}, // 1.5 meters
-    {29.8, 5,  1}, // 2.0 meters
-    {31, 5,  1}, // 2.5 meters
-    {33,   6.5,    1.5}, // 3.0 meters
+    {29.8*0.96, 5,  1}, // 2.0 meters
+    {31.5*0.96, 5,  1}, // 2.5 meters
+    {34,   6.5,    1.5}, // 3.0 meters
     {34.5, 7.5,    1.6}, // 3.5 meters
-    {35.5,   10,    1.8}, // 4.0 meters
-    {37.5,   12,   2}, // 4.5 meters
-    {38.5,   14,   2.1}, // 5.0 meters
-    {39.0,   16, 2.1}, // 5.5 meters
-    {39.0, 17, 2.1}, // 6.0 meters
-    {41.0, 17, 2.3}, // 6.5 meters
+    {36.5,   10,    1.8}, // 4.0 meters
+    {38.5,   12,   2}, // 4.5 meters
+    {40.0,   14,   2.1}, // 5.0 meters
+    {41.5,   16, 2.1}, // 5.5 meters
+    {42.5, 17, 2.1}, // 6.0 meters
+    {43.7, 17, 2.1}, // 6.5 meters
   };
 
   public static Translation2d getHubTranslation() {
@@ -167,18 +167,18 @@ public final class ShooterCalculator {
     {30, 2.5, 1}, // 2.0 meters
     {32.5, 14.0, 1.00}, // 3.0 meters
     {36, 16.0, 1.6}, // 4.0 meters
-    {40, 16.0, 1.7}, // 5.0 meters
-    {43.0, 16.0, 1.9}, // 6.0 meters — formula unreliable past here; tune on field
-    {46, 16.0, 2.1}, // 7.0 meters
-    {49, 17.0, 2.3}, // 8.0 meters
-    {53, 20.0, 2.5}, // 9.0 meters
-    {56, 20.0, 2.6}, // 10.0 meters
-    {59, 20.0, 2.7}, // 11.0 meters
-    {63, 20.0, 2.8}, // 12.0 meters
-    {66, 20, 2.9}, // 13.0 meters
-    {69, 20.0, 3}, // 14.0 meters
-    {72, 20.0, 3.1}, // 15.0 meters
-    {75, 20.0, 3.2}  // 16.0 meters
+    {40, 20.0, 1.7}, // 5.0 meters
+    {43.0, 20.0, 1.9}, // 6.0 meters — formula unreliable past here; tune on field
+    {46, 20.0, 2.1}, // 7.0 meters
+    {49, 20.0, 2.3}, // 8.0 meters
+    {53, 22.0, 2.5}, // 9.0 meters
+    {56, 24.0, 2.6}, // 10.0 meters
+    {59, 24.0, 2.7}, // 11.0 meters
+    {63, 24.0, 2.8}, // 12.0 meters
+    {66, 24, 2.9}, // 13.0 meters
+    {69, 24.0, 3}, // 14.0 meters
+    {72, 24.0, 3.1}, // 15.0 meters
+    {75, 24.0, 3.2}  // 16.0 meters
 
   };
   private static final double PASS_LOOKUP_MIN_DISTANCE_METERS = 1.0;
@@ -288,7 +288,7 @@ public final class ShooterCalculator {
   }
 
   private static double[] calculatePassParametersFromDistance(double distanceMeters) {
-    passParams[0] = Math.max(MIN_FLYWHEEL_RPS, Math.min(getPassLookupValue(distanceMeters, 0), MAX_FLYWHEEL_RPS));
+    passParams[0] = Math.max(MIN_FLYWHEEL_RPS, Math.min(getPassLookupValue(distanceMeters, 0)*MoveNShootConstants.PassCoeff, MAX_FLYWHEEL_RPS));
     passParams[1] = Math.max(MIN_HOOD_DEG, Math.min(getPassLookupValue(distanceMeters, 1), MAX_HOOD_DEG));
     return passParams;
   }

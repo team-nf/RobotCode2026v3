@@ -33,7 +33,8 @@ public class VisionConstants {
   // Final stdDev = base * avgTagDist² / tagCount.
   // Tune these to balance how aggressively vision corrects odometry:
   //   lower = vision trusted more at a given distance/tag-count.
-  public static final double BASE_XY_STD_DEV_MT2 = 0.6;
+  public static final double BASE_XY_STD_DEV_MT2 = 0.5;
+  public static final double BASE_XY_STD_DEV_MT2_SHOOT = 0.2;
   public static final double BASE_XY_STD_DEV_MT1 = 0.5;
 
   // Floor on computed XY stdDev so no measurement ever gets infinite weight,

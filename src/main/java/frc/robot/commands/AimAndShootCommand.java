@@ -202,6 +202,8 @@ public class AimAndShootCommand extends Command {
   @Override
   public void execute() {
     // 1) Gather drivetrain state and derive shooter point kinematics.
+    swerveDrivetrain.enableShootPassAndMove();
+
     robotPose = swerveDrivetrain.getPose();
     speeds = swerveDrivetrain.getFieldSpeeds();
     heading = robotPose.getRotation().getRadians();
@@ -341,6 +343,7 @@ public class AimAndShootCommand extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
+    swerveDrivetrain.disableShootPassAndMove();
     hasSentShooterSetpoint = false;
   }
 

@@ -31,7 +31,7 @@ public class Robot extends TimedRobot {
   private final MatchTracker matchTracker;
 
   public Robot() {
-    DriverStation.waitForDsConnection(60.0);
+    DriverStation.waitForDsConnection(600.0);
     AllianceUtil.refreshAllianceFromDriverStation();
     // Start loggers before RobotContainer so all subsystem log entries are created after
     // the DataLog file is open. Prefers USB stick; falls back to roboRIO storage.

@@ -53,6 +53,7 @@ public class SwerveTeleopCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
+    swerveDrivetrain.disableShootPassAndMove();
     // Left stick = translation, right stick X = rotation.
     swerveDrivetrain.setControl(
         drive

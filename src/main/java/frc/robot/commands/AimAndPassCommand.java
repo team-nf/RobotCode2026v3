@@ -193,6 +193,8 @@ public class AimAndPassCommand extends Command {
   // Called every time the scheduler runs while the command is scheduled.
   @Override
   public void execute() {
+    swerveDrivetrain.enableShootPassAndMove();
+
     // 1) Determine current pass target from robot lane side.
     robotPose = swerveDrivetrain.getPose();
     speeds = swerveDrivetrain.getFieldSpeeds();
@@ -295,6 +297,7 @@ public class AimAndPassCommand extends Command {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
+    swerveDrivetrain.disableShootPassAndMove();
     hasSentPassSetpoint = false;
   }
 
