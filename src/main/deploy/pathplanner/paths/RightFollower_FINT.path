@@ -36,7 +36,7 @@
         "y": 3.35475
       },
       "prevControl": {
-        "x": 6.56124666961234,
+        "x": 6.561246669612343,
         "y": 3.339626234899528
       },
       "nextControl": {
@@ -64,32 +64,32 @@
     },
     {
       "anchor": {
-        "x": 2.4475331125827817,
-        "y": 2.633832781456953
+        "x": 2.60125,
+        "y": 2.870329545454546
       },
       "prevControl": {
-        "x": 2.716743597543074,
-        "y": 2.48417429043686
+        "x": 2.870460484960292,
+        "y": 2.7206710544344532
       },
       "nextControl": {
-        "x": 2.1889772727272727,
-        "y": 2.777568181818182
+        "x": 2.342694160144491,
+        "y": 3.014064945815775
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 1.7870113636363634,
-        "y": 4.581261363636363
+        "x": 0.8181704545454542,
+        "y": 5.838693181818183
       },
       "prevControl": {
-        "x": 2.0962159090909087,
-        "y": 4.065920454545453
+        "x": 2.632170454545454,
+        "y": 5.8180795454545455
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "MiddleEnd"
     }
   ],
   "rotationTargets": [
@@ -121,8 +121,8 @@
   "constraintZones": [
     {
       "name": "Constraints Zone",
-      "minWaypointRelativePos": 3.8515901060070656,
-      "maxWaypointRelativePos": 5.0,
+      "minWaypointRelativePos": 4.425493716337519,
+      "maxWaypointRelativePos": 4.937163375224414,
       "constraints": {
         "maxVelocity": 0.65,
         "maxAcceleration": 4.5,
@@ -185,12 +185,23 @@
     },
     {
       "name": "AutoShootSequenceNC",
-      "waypointRelativePos": 3.8657243816254394,
+      "waypointRelativePos": 4.452423698384202,
       "endWaypointRelativePos": 6.0,
       "command": {
         "type": "named",
         "data": {
           "name": "AutoShootSequenceNC"
+        }
+      }
+    },
+    {
+      "name": "Intake",
+      "waypointRelativePos": 4.937163375224415,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "IntakeNC"
         }
       }
     }
@@ -205,7 +216,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -91.10170611520638
+    "rotation": 177.83892051177352
   },
   "reversed": false,
   "folder": null,
