@@ -197,7 +197,7 @@ public class TheMachine {
   /** Spin up for shooting without feeding into flywheels yet. */
   public void getReady(double velocityRPS, double hoodAngleRotations, double turretAngleDegrees) {
     shooterSubsystem.shoot(velocityRPS, hoodAngleRotations, turretAngleDegrees);
-    feederSubsystem.feedGetReady();
+    feederSubsystem.idle();
     hopperSubsystem.idle();
     intakeSubsystem.intakeOrFeed();
     state = TheMachineState.GET_READY;

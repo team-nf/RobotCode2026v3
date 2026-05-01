@@ -546,6 +546,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
   public void addVisionMeasurementMT2() {
     // Keep Limelight orientation aligned with drivetrain heading.
+    if(isShootPassAndMove) mt2_std = VisionConstants.BASE_XY_STD_DEV_MT2_SHOOT;
+    else mt2_std = VisionConstants.BASE_XY_STD_DEV_MT2;
+
     tempRobotYaw = getHeading();
     LimelightHelpers.SetRobotOrientation_NoFlush(
         VisionConstants.LL_TURRET_NAME, tempRobotYaw, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -588,13 +591,21 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Apply accepted measurements, scaling trust by distance²/tagCount.
     if (!tempDoRejectUpdate) {
       if (!tempDoRejectTurret && llTurretEnabledEntry.get(true)) {
-        setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std, mt2_std, VisionConstants.HEADING_STD_DEV_IGNORED));
+        if(tempLimelightMeasurementTurret.avgTagDist < VisionConstants.GOOD_AVG_TAG_DIST)
+          setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std-0.2, mt2_std-0.2, VisionConstants.HEADING_STD_DEV_IGNORED));
+        else  
+          setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std, mt2_std, VisionConstants.HEADING_STD_DEV_IGNORED));
+
         addVisionMeasurement(
             tempLimelightMeasurementTurret.pose, tempLimelightMeasurementTurret.timestampSeconds);
       }
 
       if (!tempDoRejectFixed && llFixedEnabledEntry.get(true)) {
-        setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std, mt2_std, VisionConstants.HEADING_STD_DEV_IGNORED));
+        if(tempLimelightMeasurementFixed.avgTagDist < VisionConstants.GOOD_AVG_TAG_DIST)
+          setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std-0.2, mt2_std-0.2, VisionConstants.HEADING_STD_DEV_IGNORED));
+        else  
+          setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std, mt2_std, VisionConstants.HEADING_STD_DEV_IGNORED));
+
         addVisionMeasurement(
             tempLimelightMeasurementFixed.pose, tempLimelightMeasurementFixed.timestampSeconds);
       }
@@ -652,13 +663,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     if (!tempDoRejectUpdate) {
       if (!tempDoRejectTurret && llTurretEnabledEntry.get(true)) {
-        setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std, mt2_std, VisionConstants.HEADING_STD_DEV_IGNORED));
+        setVisionMeasurementStdDevs(VecBuilder.fill(VisionConstants.BASE_XY_STD_DEV_MT1, VisionConstants.BASE_XY_STD_DEV_MT1, VisionConstants.HEADING_STD_DEV_IGNORED));
         addVisionMeasurement(
             tempLimelightMeasurementTurret.pose, tempLimelightMeasurementTurret.timestampSeconds);
       }
 
       if (!tempDoRejectFixed && llFixedEnabledEntry.get(true)) {
-        setVisionMeasurementStdDevs(VecBuilder.fill(mt2_std, mt2_std, VisionConstants.HEADING_STD_DEV_IGNORED));
+        setVisionMeasurementStdDevs(VecBuilder.fill(VisionConstants.BASE_XY_STD_DEV_MT1, VisionConstants.BASE_XY_STD_DEV_MT1, VisionConstants.HEADING_STD_DEV_IGNORED));
         addVisionMeasurement(
             tempLimelightMeasurementFixed.pose, tempLimelightMeasurementFixed.timestampSeconds);
       }
@@ -746,9 +757,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
   private static final int DISABLED_VISION_LOOPS = 10; // ~5Hz at 20ms loop
 
   public void visionPeriodic() {
-    if(isShootPassAndMove) mt2_std = VisionConstants.BASE_XY_STD_DEV_MT2_SHOOT;
-    else mt2_std = VisionConstants.BASE_XY_STD_DEV_MT2;
-
     boolean wasEnabled = isEnabled;
     if (DriverStation.isEnabled() && !isEnabled) {
       // rising edge: mark enabled

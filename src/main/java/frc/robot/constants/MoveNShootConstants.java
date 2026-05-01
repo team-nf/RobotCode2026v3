@@ -10,10 +10,10 @@ public class MoveNShootConstants {
   public static final double TURRET_LOOKAHEAD_SEC = 0.1;
 
   // Shoot (teleop) drive limits
-  public static final double SHOOT_MAX_SPEED_FRACTION = 0.20;
+  public static final double SHOOT_MAX_SPEED_FRACTION = 0.15;
   public static final double SHOOT_TRANSLATION_SLEW_RATE = 1.5;
   public static final double SHOOT_MAX_ANGULAR_RATE_RPS = 0.30;
-  public static final int SHOOT_FILTER_SIZE = 4;
+  public static final int SHOOT_FILTER_SIZE = 3;
 
   // Pass (teleop) drive limits
   public static final double PASS_MAX_SPEED_FRACTION = 0.4;
@@ -27,6 +27,6 @@ public class MoveNShootConstants {
   public static final double SETPOINT_TURRET_DEG_DEADBAND = 0.50;
 
   public static final double ShootCoeff = 1.0;
-  public static final double PassCoeff = 1.03;
+  public static final double PassCoeff = 1.0;
   
 }

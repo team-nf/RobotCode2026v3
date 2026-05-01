@@ -500,6 +500,14 @@ public class IntakeSubsystem extends SubsystemBase {
     setIntakeSpeed(intakeGoalVelocity);
   }
 
+    public void feed_2() {
+    // Move to feed position and run rollers toward feeder path.
+    intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY_RPS;
+    intakeGoalExtensionMeters = IntakeConstants.INTAKE_EXTENSION_FEED_2_METERS;
+    setIntakeExtensionMeters(intakeGoalExtensionMeters);
+    setIntakeSpeed(intakeGoalVelocity);
+  }
+
   public void reverse() {
     // Reverse rollers; only run once intake is deployed to avoid stalling retracted geometry.
     intakeGoalVelocity = IntakeConstants.INTAKE_REVERSE_VELOCITY_RPS;
@@ -521,6 +529,8 @@ public class IntakeSubsystem extends SubsystemBase {
   /** Drives arm in reverse at zeroing output. Call repeatedly from a command execute loop. */
   public void driveArmReverseForZeroing() {
     intakeArmMotor.set(IntakeConstants.INTAKE_ARM_ZEROING_REVERSE_OUTPUT);
+    intakeGoalVelocity = IntakeConstants.INTAKE_FEEDING_VELOCITY_RPS;
+    setIntakeSpeed(intakeGoalVelocity);
   }
 
   /** Stops the arm motor. Call from command end() before seeding the encoder. */
@@ -561,7 +571,7 @@ public class IntakeSubsystem extends SubsystemBase {
     if(shouldIntake)
       intake();
     else
-      feed();
+      feed_2();
   }
 
 

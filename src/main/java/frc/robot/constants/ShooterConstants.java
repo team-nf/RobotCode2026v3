@@ -46,7 +46,7 @@ public class ShooterConstants {
   public static final Angle TURRET_ALLOWABLE_ERROR = Degrees.of(4);
   public static final AngularVelocity TURRET_ALLOWABLE_SPEED_TO_SHOOT = RotationsPerSecond.of(15);
 
-  public static final double TURRET_LOOKAHEAD_SEC = 0.02;
+  public static final double TURRET_LOOKAHEAD_SEC = 0.01;
 
   public static final double SHOOTER_KS = 0.16742;
   public static final double SHOOTER_KV = 0.11791;
@@ -65,7 +65,7 @@ public class ShooterConstants {
                   .withKI(SHOOTER_KI)
                   .withKD(SHOOTER_KD)
                   .withKA(SHOOTER_KA))
-          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(10).withPeakReverseVoltage(-10))
+          .withVoltage(new VoltageConfigs().withPeakForwardVoltage(11.5).withPeakReverseVoltage(-11.5))
           .withCurrentLimits(
               new CurrentLimitsConfigs()
                   .withSupplyCurrentLimitEnable(true)
@@ -174,7 +174,7 @@ public class ShooterConstants {
   // Negative scale to match mechanical direction: CCW turret motion should increase turret angle.
   public static final double TURRET_ABSOLUTE_DEGREES_PER_ENCODER_ROTATION = -45.0;
   // Throughbore absolute reading at turret-frame zero (which is robot-frame 180 deg).
-  public static final double TURRET_ABSOLUTE_ZERO_ROTATION = 0.6875;
+  public static final double TURRET_ABSOLUTE_ZERO_ROTATION = 0.41;
   // Turret index step size used for manual step commands.
   public static final double TURRET_STEP_DEGREES = 45.0;
   public static final double TURRET_STEP_EPSILON = 1e-6;

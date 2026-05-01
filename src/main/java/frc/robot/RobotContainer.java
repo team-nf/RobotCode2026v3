@@ -10,6 +10,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.DoubleEntry;
+import edu.wpi.first.networktables.IntegerEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -48,6 +49,8 @@ import frc.robot.constants.States.TheMachineStates.TheMachineState;
 import frc.robot.constants.TelemetryConstants;
 import frc.robot.constants.TheMachineConstants;
 import frc.robot.constants.TunerConstants;
+import frc.robot.constants.VisionConstants;
+import frc.robot.utils.LimelightHelpers;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.FeederSubsystem;
 import frc.robot.subsystems.HopperSubsystem;
@@ -105,6 +108,11 @@ public class RobotContainer {
 
   private final DoubleEntry loopTimeOffsetEntry =
       NetworkTableInstance.getDefault().getDoubleTopic("Conf/LoopTimeOffset").getEntry(0.01);
+
+  private final IntegerEntry turretLLExposureEntry =
+      NetworkTableInstance.getDefault().getIntegerTopic("Conf/Vision/TurretPipeline").getEntry(0);
+  private final IntegerEntry fixedLLExposureEntry =
+      NetworkTableInstance.getDefault().getIntegerTopic("Conf/Vision/FixedPipeline").getEntry(0);
 
   // Sim telemetry is intentionally throttled to avoid NetworkTables bandwidth/GC spikes.
   private static final double SIM_TELEMETRY_PERIOD_SEC = 0.05; // 20 Hz
@@ -184,6 +192,8 @@ public class RobotContainer {
     telemetryEnabledEntry.setDefault(false);
     fTimeCoefficientEntry.setDefault(1.0);
     loopTimeOffsetEntry.setDefault(0.01);
+    turretLLExposureEntry.setDefault(0);
+    fixedLLExposureEntry.setDefault(0);
     // SysId commands are intentionally not published at startup to reduce dashboard load.
 
     if (Robot.isSimulation()) {
@@ -270,7 +280,7 @@ public class RobotContainer {
         "AutoShootSequenceNC",
         new SequentialCommandGroup(
             new AimAndShootAutoCommand(m_drivetrainSubsystem, m_driverController, m_theMachine)
-                .withTimeout(5.5),
+                .withTimeout(6),
             new IdleDeployedCommand(m_theMachine).until(m_shooterSubsystem::isHoodClosed)));
     NamedCommands.registerCommand(
         "IdleDeployedNC",
@@ -290,6 +300,15 @@ public class RobotContainer {
   double tempPublishShooterY;
   edu.wpi.first.math.geometry.Pose2d tempPublishPassLeft;
   edu.wpi.first.math.geometry.Pose2d tempPublishPassRight;
+
+  public void disabledContainerPeriodic()
+  {
+    LimelightHelpers.setPipelineIndex(
+        VisionConstants.LL_TURRET_NAME, (int) turretLLExposureEntry.get(0));
+    LimelightHelpers.setPipelineIndex(
+        VisionConstants.LL_FIXED_NAME,  (int) fixedLLExposureEntry.get(0));
+  }
+
   public void containerPeriodic() {
     telemetryEnabled = telemetryEnabledEntry.get(false);
 

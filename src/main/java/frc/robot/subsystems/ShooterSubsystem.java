@@ -656,6 +656,8 @@ public class ShooterSubsystem extends SubsystemBase {
   /**
    * Pass-ready check uses wider tolerances than shoot-ready so moving pass mode can feed reliably.
    */
+  private boolean tempPassRPSReady = false;
+
   public boolean isReadyToPass() {
     tempFlywheelSpeedAbsRps = getFlywheel1SpeedAbs();
     tempFlywheelGoalAbsRps = Math.abs(flywheelGoalVelocity);
@@ -665,7 +667,13 @@ public class ShooterSubsystem extends SubsystemBase {
         Math.abs(normalizeToMinus180To180(getTurretAngleDegrees() - turretGoalAngleDegrees));
     tempTurretSpeedAbsRps = Math.abs(turretVelocitySignal.getValueAsDouble());
 
-    return tempFlywheelRps <= PASS_FLYWHEEL_ERROR_RPS
+    if (tempFlywheelGoalAbsRps < 75) {
+      tempPassRPSReady = tempFlywheelRps <= PASS_FLYWHEEL_ERROR_RPS;
+    }
+    else
+      tempPassRPSReady = true;
+
+    return tempPassRPSReady
         && tempHoodDegError <= PASS_HOOD_ERROR_DEG
         && tempTurretDegError <= PASS_TURRET_ERROR_DEG
         && tempFlywheelSpeedAbsRps > PASS_MIN_FLYWHEEL_RPS;

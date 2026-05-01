@@ -31,12 +31,12 @@ public class PoseConstants {
   public static final Pose2d BLUE_SHOOT_NEAR_TRENCH2_POSE =
       new Pose2d(3.01, 0.95, new Rotation2d(Math.toRadians(20.695)));
 
-  public static final Pose2d BLUE_HUB_AIM_POSE = new Pose2d(4.61, 4.02, new Rotation2d());
+  public static final Pose2d BLUE_HUB_AIM_POSE = new Pose2d(4.621, 4.02, new Rotation2d());
   public static final Pose2d RED_HUB_AIM_POSE = new Pose2d(11.95, 4.02, new Rotation2d());
 
-  public static final Pose2d BLUE_PASS_LEFT = new Pose2d(3.5, 6.0, new Rotation2d());
-  public static final Pose2d BLUE_PASS_RIGHT = new Pose2d(3.5, 2, new Rotation2d());
+  public static final Pose2d BLUE_PASS_LEFT = new Pose2d(1.5, 6.0, new Rotation2d());
+  public static final Pose2d BLUE_PASS_RIGHT = new Pose2d(1.5, 2, new Rotation2d());
 
-  public static final Pose2d RED_PASS_LEFT = new Pose2d(12.5, 6.0, new Rotation2d());
-  public static final Pose2d RED_PASS_RIGHT = new Pose2d(12.5, 2, new Rotation2d());
+  public static final Pose2d RED_PASS_LEFT = new Pose2d(14.5, 6.0, new Rotation2d());
+  public static final Pose2d RED_PASS_RIGHT = new Pose2d(14.5, 2, new Rotation2d());
 }

@@ -164,21 +164,21 @@ public final class ShooterCalculator {
   // Tune all three columns on the field.
   private static final double[][] PASS_LOOKUP_TABLE = {
     {30, 0, 1}, // 1.0 meters
-    {30, 2.5, 1}, // 2.0 meters
-    {32.5, 14.0, 1.00}, // 3.0 meters
-    {36, 16.0, 1.6}, // 4.0 meters
-    {40, 20.0, 1.7}, // 5.0 meters
-    {43.0, 20.0, 1.9}, // 6.0 meters — formula unreliable past here; tune on field
-    {46, 20.0, 2.1}, // 7.0 meters
-    {49, 20.0, 2.3}, // 8.0 meters
-    {53, 22.0, 2.5}, // 9.0 meters
-    {56, 24.0, 2.6}, // 10.0 meters
-    {59, 24.0, 2.7}, // 11.0 meters
-    {63, 24.0, 2.8}, // 12.0 meters
-    {66, 24, 2.9}, // 13.0 meters
-    {69, 24.0, 3}, // 14.0 meters
-    {72, 24.0, 3.1}, // 15.0 meters
-    {75, 24.0, 3.2}  // 16.0 meters
+    {30, 22, 1}, // 2.0 meters
+    {32.5, 22, 1.00}, // 3.0 meters
+    {36, 22.0, 1.6}, // 4.0 meters
+    {40, 22.0, 1.7}, // 5.0 meters
+    {43.0, 22.0, 1.7}, // 6.0 meters — formula unreliable past here; tune on field
+    {46, 22.0, 1.7}, // 7.0 meters
+    {52, 22.0, 1.7}, // 8.0 meters
+    {57.5, 22.0, 1.7}, // 9.0 meters
+    {65, 24.0, 1.7}, // 10.0 meters
+    {70, 24.0, 1.7}, // 11.0 meters
+    {85, 24.0, 1.7}, // 12.0 meters
+    {90, 24, 1.7}, // 13.0 meters
+    {90, 24.0, 1.7}, // 14.0 meters
+    {90, 24.0, 1.7}, // 15.0 meters
+    {90, 24.0, 2}  // 16.0 meters
 
   };
   private static final double PASS_LOOKUP_MIN_DISTANCE_METERS = 1.0;
